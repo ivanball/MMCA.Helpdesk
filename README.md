@@ -69,7 +69,7 @@ set `Authentication:JwtBearer:Authority`, and switch the controller back to `[Au
 Build-verified here:
 
 - `dotnet build MMCA.Helpdesk.slnx` -> 0 warnings, 0 errors.
-- `dotnet test --solution` -> 33 passing (7 domain + 26 architecture-fitness).
+- `dotnet test --solution` -> 40 passing (14 domain + 26 architecture-fitness).
 - `dotnet ef migrations add InitialCreate` -> generates `Tickets`, `TicketComments`, and the per-DB
   `OutboxMessages` table with audit, soft-delete, and concurrency columns.
 
