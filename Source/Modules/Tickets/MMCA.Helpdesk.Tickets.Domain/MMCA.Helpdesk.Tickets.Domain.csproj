@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <InternalsVisibleTo Include="MMCA.Helpdesk.Tickets.Application" />
+    <InternalsVisibleTo Include="MMCA.Helpdesk.Tickets.Domain.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="MMCA.Common.Domain" />
+    <ProjectReference Include="..\MMCA.Helpdesk.Tickets.Shared\MMCA.Helpdesk.Tickets.Shared.csproj" />
+  </ItemGroup>
+</Project>

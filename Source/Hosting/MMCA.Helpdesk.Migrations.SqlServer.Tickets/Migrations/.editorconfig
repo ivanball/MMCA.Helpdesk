@@ -1,0 +1,4 @@
+# Auto-generated EF Core migration files — disable all code style and analyzer enforcement.
+[*.cs]
+generated_code = true
+dotnet_analyzer_diagnostic.severity = none

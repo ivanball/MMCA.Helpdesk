@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="MMCA.Common.Shared" />
+    <!-- Domain reference is needed because the integration-event contract derives from
+         MMCA.Common.Domain.DomainEvents.BaseIntegrationEvent. -->
+    <PackageReference Include="MMCA.Common.Domain" />
+  </ItemGroup>
+</Project>

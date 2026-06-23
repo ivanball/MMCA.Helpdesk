@@ -1,0 +1,30 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Build.targets" />
+    <File Path="Directory.Packages.props" />
+    <File Path="global.json" />
+    <File Path="nuget.config" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/Source/Modules/Tickets/">
+    <Project Path="Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Shared/MMCA.Helpdesk.Tickets.Shared.csproj" />
+    <Project Path="Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Domain/MMCA.Helpdesk.Tickets.Domain.csproj" />
+    <Project Path="Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/MMCA.Helpdesk.Tickets.Application.csproj" />
+    <Project Path="Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Infrastructure/MMCA.Helpdesk.Tickets.Infrastructure.csproj" />
+    <Project Path="Source/Modules/Tickets/MMCA.Helpdesk.Tickets.API/MMCA.Helpdesk.Tickets.API.csproj" />
+  </Folder>
+  <Folder Name="/Source/Hosts/">
+    <Project Path="Source/Hosts/MMCA.Helpdesk.Web/MMCA.Helpdesk.Web.csproj" />
+    <Project Path="Source/Hosts/UI/MMCA.Helpdesk.UI.Web/MMCA.Helpdesk.UI.Web.csproj" />
+  </Folder>
+  <Folder Name="/Source/Hosting/">
+    <Project Path="Source/Hosting/MMCA.Helpdesk.AppHost/MMCA.Helpdesk.AppHost.csproj" />
+    <Project Path="Source/Hosting/MMCA.Helpdesk.Migrations.SqlServer.Tickets/MMCA.Helpdesk.Migrations.SqlServer.Tickets.csproj" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="Tests/Modules/Tickets/MMCA.Helpdesk.Tickets.Domain.Tests/MMCA.Helpdesk.Tickets.Domain.Tests.csproj" />
+    <Project Path="Tests/Architecture/MMCA.Helpdesk.Architecture.Tests/MMCA.Helpdesk.Architecture.Tests.csproj" />
+  </Folder>
+</Solution>

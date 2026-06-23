@@ -1,0 +1,8 @@
+<!-- Copy this file to local.props (gitignored) to build against MMCA.Common source instead of the
+     NuGet packages. The PackageReference -> ProjectReference swap lives in Directory.Build.targets. -->
+<Project>
+  <PropertyGroup>
+    <UseLocalMMCA>true</UseLocalMMCA>
+    <LocalMMCAPath>$(MSBuildThisFileDirectory)..\MMCA.Common\Source\</LocalMMCAPath>
+  </PropertyGroup>
+</Project>

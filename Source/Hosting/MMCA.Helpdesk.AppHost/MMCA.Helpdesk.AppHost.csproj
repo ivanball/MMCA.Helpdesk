@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Sdk Name="Aspire.AppHost.Sdk" Version="13.4.2" />
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsAspireHost>true</IsAspireHost>
+    <UserSecretsId>mmca-helpdesk-apphost</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.AppHost" />
+    <PackageReference Include="Aspire.Hosting.SqlServer" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Hosts\MMCA.Helpdesk.Web\MMCA.Helpdesk.Web.csproj" />
+    <ProjectReference Include="..\..\Hosts\UI\MMCA.Helpdesk.UI.Web\MMCA.Helpdesk.UI.Web.csproj" />
+    <PackageReference Include="MMCA.Common.Aspire" IsAspireProjectResource="false" />
+    <PackageReference Include="MMCA.Common.Aspire.Hosting" IsAspireProjectResource="false" />
+  </ItemGroup>
+
+</Project>

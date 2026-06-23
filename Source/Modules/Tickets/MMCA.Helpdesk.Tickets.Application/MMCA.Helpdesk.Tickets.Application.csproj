@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="MMCA.Common.Application" />
+    <PackageReference Include="Riok.Mapperly" PrivateAssets="all" />
+    <ProjectReference Include="..\MMCA.Helpdesk.Tickets.Domain\MMCA.Helpdesk.Tickets.Domain.csproj" />
+    <ProjectReference Include="..\MMCA.Helpdesk.Tickets.Shared\MMCA.Helpdesk.Tickets.Shared.csproj" />
+  </ItemGroup>
+</Project>

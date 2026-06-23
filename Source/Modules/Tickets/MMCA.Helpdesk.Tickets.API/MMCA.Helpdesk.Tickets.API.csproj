@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="MMCA.Common.API" />
+    <ProjectReference Include="..\MMCA.Helpdesk.Tickets.Application\MMCA.Helpdesk.Tickets.Application.csproj" />
+    <ProjectReference Include="..\MMCA.Helpdesk.Tickets.Infrastructure\MMCA.Helpdesk.Tickets.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

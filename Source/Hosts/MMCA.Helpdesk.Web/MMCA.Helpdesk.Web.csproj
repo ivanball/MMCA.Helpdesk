@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <ItemGroup>
+    <PackageReference Include="AspNetCore.HealthChecks.SqlServer" />
+    <PackageReference Include="MMCA.Common.Aspire" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Hosting\MMCA.Helpdesk.Migrations.SqlServer.Tickets\MMCA.Helpdesk.Migrations.SqlServer.Tickets.csproj" />
+    <ProjectReference Include="..\..\Modules\Tickets\MMCA.Helpdesk.Tickets.API\MMCA.Helpdesk.Tickets.API.csproj" />
+  </ItemGroup>
+  <!-- Source-mode pin (temporary): MMCA.Common.Aspire built from source pulls these transitively at the
+       bumped versions; CPM does not pin transitive versions, so VS under-resolves them and AddServiceDefaults
+       fails to load. Direct references let CPM pin them. Remove after MMCA.Common is released and consumers
+       bump (package mode then resolves these consistently). -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.ServiceDiscovery" />
+    <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
+    <PackageReference Include="OpenTelemetry.Api" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+  </ItemGroup>
+</Project>

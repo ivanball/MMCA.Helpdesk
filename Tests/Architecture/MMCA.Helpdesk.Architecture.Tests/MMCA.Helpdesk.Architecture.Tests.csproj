@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <NoWarn>$(NoWarn);xUnit1051;CA2263</NoWarn>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="AwesomeAssertions" />
+    <PackageReference Include="NetArchTest.eNhancedEdition" />
+    <PackageReference Include="coverlet.collector">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Framework anchors -->
+    <PackageReference Include="MMCA.Common.Shared" />
+    <PackageReference Include="MMCA.Common.Domain" />
+    <PackageReference Include="MMCA.Common.Application" />
+    <PackageReference Include="MMCA.Common.Infrastructure" />
+    <PackageReference Include="MMCA.Common.API" />
+    <!-- Shared fitness-function rule library + abstract test bases -->
+    <PackageReference Include="MMCA.Common.Testing.Architecture" />
+    <!-- Tickets module layers -->
+    <ProjectReference Include="..\..\..\Source\Modules\Tickets\MMCA.Helpdesk.Tickets.Domain\MMCA.Helpdesk.Tickets.Domain.csproj" />
+    <ProjectReference Include="..\..\..\Source\Modules\Tickets\MMCA.Helpdesk.Tickets.Application\MMCA.Helpdesk.Tickets.Application.csproj" />
+    <ProjectReference Include="..\..\..\Source\Modules\Tickets\MMCA.Helpdesk.Tickets.Infrastructure\MMCA.Helpdesk.Tickets.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\Source\Modules\Tickets\MMCA.Helpdesk.Tickets.Shared\MMCA.Helpdesk.Tickets.Shared.csproj" />
+    <ProjectReference Include="..\..\..\Source\Modules\Tickets\MMCA.Helpdesk.Tickets.API\MMCA.Helpdesk.Tickets.API.csproj" />
+  </ItemGroup>
+</Project>
