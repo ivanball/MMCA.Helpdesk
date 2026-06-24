@@ -21,3 +21,12 @@ public sealed class SharedLayerTests : SharedLayerTestsBase
 {
     protected override IArchitectureMap Map { get; } = new HelpdeskArchitectureMap();
 }
+
+// Opt into the cross-source specification rule: a spec must filter on its entity's own columns, not
+// navigate to another entity (which would not translate if that entity ever lives in a different data
+// source). Use CrossSourceSpecification for cross-source filters. Vacuous today (Tickets has no specs),
+// but keeps the reference app consistent and guards future specs.
+public sealed class SpecificationConventionTests : SpecificationConventionTestsBase
+{
+    protected override IArchitectureMap Map { get; } = new HelpdeskArchitectureMap();
+}

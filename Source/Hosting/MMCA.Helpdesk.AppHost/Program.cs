@@ -1,5 +1,5 @@
 // Aspire AppHost for the MMCA.Helpdesk monolith: a SQL Server container, one database, and the
-// single Web host. WithDataSource injects both the routing key and ConnectionStrings__
+// single Web host. WithSQLServerDataSource injects both the routing key and ConnectionStrings__
 // SQLServerConnectionString; with one data source they collapse onto a single physical database,
 // so the app behaves as a classic single-DB monolith. The extraction phase (GETTING-STARTED.md
 // Phase 8) adds per-service databases, a broker, a gateway, and JWKS discovery here.
@@ -16,7 +16,7 @@ var helpdeskDb = sql.AddDatabase("helpdesk", "Helpdesk");
 // resource. The web host CREATES the database via EF Migrate at startup, so waiting on the
 // database's existence would deadlock: it never exists until the app that is waiting runs.
 var web = builder.AddProject<Projects.MMCA_Helpdesk_Web>("web")
-    .WithDataSource(helpdeskDb, "Tickets")
+    .WithSQLServerDataSource(helpdeskDb, "Tickets")
     .WaitFor(sql)
     .WithExternalHttpEndpoints();
 
