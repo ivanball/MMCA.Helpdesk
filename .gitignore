@@ -5,8 +5,9 @@
 artifacts/
 nupkgs/
 
-## Local MMCA source override (developer-specific)
-local.props
+## Local MMCA source override is intentionally COMMITTED in this reference seed (unlike Store/ADC,
+## where local.props is gitignored) so a fresh clone alongside ../MMCA.Common builds against framework
+## source with no GitHub Packages token. Do not re-add local.props to this ignore list.
 
 ## EF / logs / user secrets
 logs/

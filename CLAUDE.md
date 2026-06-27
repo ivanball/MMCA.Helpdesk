@@ -18,16 +18,17 @@ file is only the Helpdesk-specific picture.
 
 ## Build, test, run
 
-This scaffold defaults to **local-source mode**: `local.props` (present and gitignored) sets
-`UseLocalMMCA=true` and points at `../MMCA.Common/Source`, so the `MMCA.Common.*` packages resolve via
-`ProjectReference` to the framework source — no GitHub Packages token needed. The
+This scaffold defaults to **local-source mode**: `local.props` (committed in this seed — unlike Store/ADC,
+where it is gitignored) sets `UseLocalMMCA=true` and points at `../MMCA.Common/Source`, so the
+`MMCA.Common.*` packages resolve via `ProjectReference` to the framework source — no GitHub Packages
+token needed. The
 `PackageReference`→`ProjectReference` swap lives in `Directory.Build.targets`; `nuget.config` only lists
 nuget.org. To consume published packages instead, delete `local.props` and add the GitHub feed (see
 GETTING-STARTED.md Phase 1). **Building requires `../MMCA.Common/Source` to exist on disk.**
 
 ```bash
 dotnet build MMCA.Helpdesk.slnx                       # warning-free under all analyzers
-dotnet test  --solution MMCA.Helpdesk.slnx            # 40 tests (14 domain + 26 architecture), NO database needed
+dotnet test  --solution MMCA.Helpdesk.slnx            # 44 tests (14 domain + 30 architecture), NO database needed
 dotnet run --project Source/Hosting/MMCA.Helpdesk.AppHost   # interactive terminal ONLY — see caveat below
 ```
 
