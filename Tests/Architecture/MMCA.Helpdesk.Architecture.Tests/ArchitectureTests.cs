@@ -30,3 +30,12 @@ public sealed class SpecificationConventionTests : SpecificationConventionTestsB
 {
     protected override IArchitectureMap Map { get; } = new HelpdeskArchitectureMap();
 }
+
+// Gate the integration-event schema-versioning convention (ADR-010): every concrete integration event
+// inherits BaseIntegrationEvent, declares an int SchemaVersion, and lives in a *.IntegrationEvents
+// namespace in the Shared layer. Tickets ships TicketOpenedIntegrationEvent, so this is non-vacuous and
+// closes the enforcement gap (the rule was previously only subclassed in ADC and Store).
+public sealed class EventConventionTests : EventConventionTestsBase
+{
+    protected override IArchitectureMap Map { get; } = new HelpdeskArchitectureMap();
+}
