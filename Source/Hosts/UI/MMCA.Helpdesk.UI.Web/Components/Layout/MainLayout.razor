@@ -1,6 +1,11 @@
 @inherits LayoutComponentBase
+@using MMCA.Common.UI.Components
+@using MMCA.Common.UI.Services
+@using MMCA.Common.UI.Theme
+@inject ThemeService ThemeService
+@implements IDisposable
 
-<MudThemeProvider />
+<MudThemeProvider Theme="MMCATheme.Instance" @bind-IsDarkMode="_isDarkMode" />
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
@@ -9,6 +14,9 @@
     <MudAppBar Elevation="1">
         <MudIcon Icon="@Icons.Material.Filled.SupportAgent" Class="mr-3" />
         <MudText Typo="Typo.h6">MMCA.Helpdesk</MudText>
+        <MudSpacer />
+        <CultureSwitcher />
+        <ThemeToggle />
     </MudAppBar>
     <MudMainContent>
         <MudContainer MaxWidth="MaxWidth.Large" Class="my-6">
@@ -16,3 +24,27 @@
         </MudContainer>
     </MudMainContent>
 </MudLayout>
+
+@code {
+    private bool _isDarkMode;
+
+    protected override void OnInitialized() => ThemeService.OnChange += OnThemeChanged;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await ThemeService.InitializeAsync();
+            _isDarkMode = ThemeService.IsDarkMode;
+            StateHasChanged();
+        }
+    }
+
+    private void OnThemeChanged(object? sender, EventArgs e)
+    {
+        _isDarkMode = ThemeService.IsDarkMode;
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose() => ThemeService.OnChange -= OnThemeChanged;
+}

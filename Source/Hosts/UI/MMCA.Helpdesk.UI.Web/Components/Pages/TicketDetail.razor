@@ -3,39 +3,40 @@
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
 @inject IDialogService DialogService
+@inject Microsoft.Extensions.Localization.IStringLocalizer<TicketDetail> L
 
-<PageTitle>Ticket @Id</PageTitle>
+<PageTitle>@L["Title", Id]</PageTitle>
 
-<MudButton StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="GoBack" Class="mb-4">Back to list</MudButton>
+<MudButton StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="GoBack" Class="mb-4">@L["Button.Back"]</MudButton>
 <MudButton StartIcon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="DeleteAsync" Disabled="_busy" Class="mb-4 ml-2">
-    Delete ticket
+    @L["Button.Delete"]
 </MudButton>
 
 @if (_ticket is null)
 {
-    <MudText>Loading ticket #@Id ...</MudText>
+    <MudText>@L["Loading", Id]</MudText>
 }
 else
 {
-    <MudText Typo="Typo.h4" GutterBottom="true">Ticket #@_ticket.Id</MudText>
+    <MudText Typo="Typo.h4" GutterBottom="true">@L["Heading", _ticket.Id]</MudText>
 
     <MudPaper Class="pa-4 mb-6" Elevation="1">
-        <MudText Typo="Typo.subtitle1" GutterBottom="true">Details</MudText>
-        <MudTextField @bind-Value="_title" Label="Title" Variant="Variant.Outlined" Class="mb-3" />
-        <MudTextField @bind-Value="_description" Label="Description" Variant="Variant.Outlined" Lines="3" Class="mb-3" />
+        <MudText Typo="Typo.subtitle1" GutterBottom="true">@L["Section.Details"]</MudText>
+        <MudTextField @bind-Value="_title" Label="@L["Field.Title"].Value" Variant="Variant.Outlined" Class="mb-3" />
+        <MudTextField @bind-Value="_description" Label="@L["Field.Description"].Value" Variant="Variant.Outlined" Lines="3" Class="mb-3" />
         <MudText Typo="Typo.body2" Class="mb-3">
-            Status: <b>@_ticket.Status</b> &nbsp;&middot;&nbsp; Requester: <b>@_ticket.RequesterUserId</b>
+            @L["Detail.Status"] <b>@_ticket.Status</b> &nbsp;&middot;&nbsp; @L["Detail.Requester"] <b>@_ticket.RequesterUserId</b>
         </MudText>
         <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveDetailsAsync" Disabled="_busy">
-            Save details
+            @L["Button.SaveDetails"]
         </MudButton>
     </MudPaper>
 
     <MudPaper Class="pa-4 mb-6" Elevation="1">
-        <MudText Typo="Typo.subtitle1" GutterBottom="true">Status</MudText>
+        <MudText Typo="Typo.subtitle1" GutterBottom="true">@L["Section.Status"]</MudText>
         <MudGrid>
             <MudItem xs="12" md="6">
-                <MudSelect T="TicketStatus" @bind-Value="_status" Label="Status" Variant="Variant.Outlined">
+                <MudSelect T="TicketStatus" @bind-Value="_status" Label="@L["Field.Status"].Value" Variant="Variant.Outlined">
                     @foreach (var status in Enum.GetValues<TicketStatus>())
                     {
                         <MudSelectItem Value="status">@status</MudSelectItem>
@@ -44,30 +45,30 @@ else
             </MudItem>
             <MudItem xs="12" md="6" Class="d-flex align-center">
                 <MudButton Color="Color.Secondary" Variant="Variant.Filled" OnClick="ChangeStatusAsync" Disabled="_busy">
-                    Change status
+                    @L["Button.ChangeStatus"]
                 </MudButton>
             </MudItem>
         </MudGrid>
     </MudPaper>
 
     <MudPaper Class="pa-4 mb-6" Elevation="1">
-        <MudText Typo="Typo.subtitle1" GutterBottom="true">Add a comment</MudText>
+        <MudText Typo="Typo.subtitle1" GutterBottom="true">@L["Section.AddComment"]</MudText>
         <MudGrid>
             <MudItem xs="12" md="10">
-                <MudTextField @bind-Value="_newComment" Label="Comment" Variant="Variant.Outlined" />
+                <MudTextField @bind-Value="_newComment" Label="@L["Field.Comment"].Value" Variant="Variant.Outlined" />
             </MudItem>
             <MudItem xs="12" md="2" Class="d-flex align-center">
                 <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="AddCommentAsync" Disabled="_busy" FullWidth="true">
-                    Add
+                    @L["Button.AddComment"]
                 </MudButton>
             </MudItem>
         </MudGrid>
     </MudPaper>
 
-    <MudText Typo="Typo.subtitle1" GutterBottom="true">Comments</MudText>
+    <MudText Typo="Typo.subtitle1" GutterBottom="true">@L["Section.Comments"]</MudText>
     @if (_ticket.Comments.Count == 0)
     {
-        <MudText>No comments yet.</MudText>
+        <MudText>@L["Empty.Comments"]</MudText>
     }
     else
     {
@@ -79,16 +80,16 @@ else
                     <MudTextField @bind-Value="_editCommentBody" Variant="Variant.Outlined" Class="mb-2" />
                     <MudButton Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled"
                                OnClick="@(() => SaveCommentAsync(comment.Id))" Disabled="_busy">
-                        Save
+                        @L["Button.SaveComment"]
                     </MudButton>
-                    <MudButton Size="Size.Small" OnClick="CancelEdit">Cancel</MudButton>
+                    <MudButton Size="Size.Small" OnClick="CancelEdit">@L["Button.CancelEdit"]</MudButton>
                 }
                 else
                 {
                     <div class="d-flex align-center justify-space-between">
                         <div>
                             <MudText>@comment.Body</MudText>
-                            <MudText Typo="Typo.caption">by user @comment.AuthorUserId</MudText>
+                            <MudText Typo="Typo.caption">@L["Comment.By", comment.AuthorUserId]</MudText>
                         </div>
                         <div>
                             <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
@@ -132,7 +133,7 @@ else
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Failed to load ticket: {ex.Message}", Severity.Error);
+            Snackbar.Add(L["Snackbar.LoadFailed", ex.Message], Severity.Error);
         }
         finally
         {
@@ -144,7 +145,7 @@ else
     {
         if (string.IsNullOrWhiteSpace(_title) || string.IsNullOrWhiteSpace(_description))
         {
-            Snackbar.Add("Title and description are required.", Severity.Warning);
+            Snackbar.Add(L["Snackbar.TitleDescriptionRequired"], Severity.Warning);
             return;
         }
 
@@ -152,12 +153,12 @@ else
         try
         {
             await Api.UpdateTicketAsync(Id, _title, _description);
-            Snackbar.Add("Ticket updated.", Severity.Success);
+            Snackbar.Add(L["Snackbar.Updated"], Severity.Success);
             await LoadAsync();
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Update failed: {ex.Message}", Severity.Error);
+            Snackbar.Add(L["Snackbar.UpdateFailed", ex.Message], Severity.Error);
         }
         finally
         {
@@ -171,12 +172,12 @@ else
         try
         {
             await Api.ChangeStatusAsync(Id, _status);
-            Snackbar.Add("Status updated.", Severity.Success);
+            Snackbar.Add(L["Snackbar.StatusUpdated"], Severity.Success);
             await LoadAsync();
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Status change failed: {ex.Message}", Severity.Error);
+            Snackbar.Add(L["Snackbar.StatusChangeFailed", ex.Message], Severity.Error);
         }
         finally
         {
@@ -188,7 +189,7 @@ else
     {
         if (string.IsNullOrWhiteSpace(_newComment))
         {
-            Snackbar.Add("Comment cannot be empty.", Severity.Warning);
+            Snackbar.Add(L["Snackbar.CommentEmpty"], Severity.Warning);
             return;
         }
 
@@ -201,7 +202,7 @@ else
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Add comment failed: {ex.Message}", Severity.Error);
+            Snackbar.Add(L["Snackbar.AddCommentFailed", ex.Message], Severity.Error);
         }
         finally
         {
@@ -225,7 +226,7 @@ else
     {
         if (string.IsNullOrWhiteSpace(_editCommentBody))
         {
-            Snackbar.Add("Comment cannot be empty.", Severity.Warning);
+            Snackbar.Add(L["Snackbar.CommentEmpty"], Severity.Warning);
             return;
         }
 
@@ -238,7 +239,7 @@ else
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Edit failed: {ex.Message}", Severity.Error);
+            Snackbar.Add(L["Snackbar.EditFailed", ex.Message], Severity.Error);
         }
         finally
         {
@@ -256,7 +257,7 @@ else
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Remove failed: {ex.Message}", Severity.Error);
+            Snackbar.Add(L["Snackbar.RemoveFailed", ex.Message], Severity.Error);
         }
         finally
         {
@@ -267,10 +268,10 @@ else
     private async Task DeleteAsync()
     {
         var confirmed = await DialogService.ShowMessageBoxAsync(
-            "Delete ticket",
-            $"Delete ticket #{Id}? Its comments are deleted too.",
-            yesText: "Delete",
-            cancelText: "Cancel");
+            L["Dialog.Delete.Title"],
+            L["Dialog.Delete.Message", Id],
+            yesText: L["Dialog.Delete.Confirm"],
+            cancelText: L["Dialog.Cancel"]);
         if (confirmed is not true)
         {
             return;
@@ -280,12 +281,12 @@ else
         try
         {
             await Api.DeleteTicketAsync(Id);
-            Snackbar.Add("Ticket deleted.", Severity.Success);
+            Snackbar.Add(L["Snackbar.Deleted"], Severity.Success);
             Nav.NavigateTo("/tickets");
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Delete failed: {ex.Message}", Severity.Error);
+            Snackbar.Add(L["Snackbar.DeleteFailed", ex.Message], Severity.Error);
             _busy = false;
         }
     }

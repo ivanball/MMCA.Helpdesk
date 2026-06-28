@@ -4,23 +4,24 @@
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
 @inject IDialogService DialogService
+@inject Microsoft.Extensions.Localization.IStringLocalizer<Tickets> L
 
-<PageTitle>Helpdesk Tickets</PageTitle>
+<PageTitle>@L["Title"]</PageTitle>
 
-<MudText Typo="Typo.h4" GutterBottom="true">Support Tickets</MudText>
+<MudText Typo="Typo.h4" GutterBottom="true">@L["Heading"]</MudText>
 
 <MudPaper Class="pa-4 mb-6" Elevation="1">
-    <MudText Typo="Typo.subtitle1" GutterBottom="true">Open a ticket</MudText>
+    <MudText Typo="Typo.subtitle1" GutterBottom="true">@L["Section.Open"]</MudText>
     <MudGrid>
         <MudItem xs="12" md="4">
-            <MudTextField @bind-Value="_title" Label="Title" Variant="Variant.Outlined" />
+            <MudTextField @bind-Value="_title" Label="@L["Field.Title"].Value" Variant="Variant.Outlined" />
         </MudItem>
         <MudItem xs="12" md="6">
-            <MudTextField @bind-Value="_description" Label="Description" Variant="Variant.Outlined" />
+            <MudTextField @bind-Value="_description" Label="@L["Field.Description"].Value" Variant="Variant.Outlined" />
         </MudItem>
         <MudItem xs="12" md="2" Class="d-flex align-center">
             <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="CreateAsync" Disabled="_busy" FullWidth="true">
-                Open
+                @L["Button.Open"]
             </MudButton>
         </MudItem>
     </MudGrid>
@@ -28,28 +29,28 @@
 
 <MudTable Items="_tickets" Hover="true" Loading="_busy" Dense="true" Elevation="1">
     <HeaderContent>
-        <MudTh>Id</MudTh>
-        <MudTh>Title</MudTh>
-        <MudTh>Status</MudTh>
-        <MudTh>Requester</MudTh>
-        <MudTh>Actions</MudTh>
+        <MudTh>@L["Column.Id"]</MudTh>
+        <MudTh>@L["Column.Title"]</MudTh>
+        <MudTh>@L["Column.Status"]</MudTh>
+        <MudTh>@L["Column.Requester"]</MudTh>
+        <MudTh>@L["Column.Actions"]</MudTh>
     </HeaderContent>
     <RowTemplate>
-        <MudTd DataLabel="Id">@context.Id</MudTd>
-        <MudTd DataLabel="Title">@context.Title</MudTd>
-        <MudTd DataLabel="Status">@context.Status</MudTd>
-        <MudTd DataLabel="Requester">@context.RequesterUserId</MudTd>
-        <MudTd DataLabel="Actions">
+        <MudTd DataLabel="@L["Column.Id"].Value">@context.Id</MudTd>
+        <MudTd DataLabel="@L["Column.Title"].Value">@context.Title</MudTd>
+        <MudTd DataLabel="@L["Column.Status"].Value">@context.Status</MudTd>
+        <MudTd DataLabel="@L["Column.Requester"].Value">@context.RequesterUserId</MudTd>
+        <MudTd DataLabel="@L["Column.Actions"].Value">
             <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary"
                        OnClick="@(() => Nav.NavigateTo($"/tickets/{context.Id}"))">
-                View
+                @L["Button.View"]
             </MudButton>
             <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
                            OnClick="@(() => DeleteAsync(context.Id))" Disabled="_busy" />
         </MudTd>
     </RowTemplate>
     <NoRecordsContent>
-        <MudText>No tickets yet. Open one above.</MudText>
+        <MudText>@L["Empty.Message"]</MudText>
     </NoRecordsContent>
 </MudTable>
 
@@ -70,7 +71,7 @@
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Failed to load tickets: {ex.Message}", Severity.Error);
+            Snackbar.Add(L["Snackbar.LoadFailed", ex.Message], Severity.Error);
         }
         finally
         {
@@ -81,10 +82,10 @@
     private async Task DeleteAsync(int id)
     {
         var confirmed = await DialogService.ShowMessageBoxAsync(
-            "Delete ticket",
-            $"Delete ticket #{id}? Its comments are deleted too.",
-            yesText: "Delete",
-            cancelText: "Cancel");
+            L["Dialog.Delete.Title"],
+            L["Dialog.Delete.Message", id],
+            yesText: L["Dialog.Delete.Confirm"],
+            cancelText: L["Dialog.Cancel"]);
         if (confirmed is not true)
         {
             return;
@@ -94,12 +95,12 @@
         try
         {
             await Api.DeleteTicketAsync(id);
-            Snackbar.Add("Ticket deleted.", Severity.Success);
+            Snackbar.Add(L["Snackbar.Deleted"], Severity.Success);
             await LoadAsync();
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Delete failed: {ex.Message}", Severity.Error);
+            Snackbar.Add(L["Snackbar.DeleteFailed", ex.Message], Severity.Error);
         }
         finally
         {
@@ -111,7 +112,7 @@
     {
         if (string.IsNullOrWhiteSpace(_title) || string.IsNullOrWhiteSpace(_description))
         {
-            Snackbar.Add("Title and description are required.", Severity.Warning);
+            Snackbar.Add(L["Snackbar.TitleDescriptionRequired"], Severity.Warning);
             return;
         }
 
@@ -119,14 +120,14 @@
         try
         {
             await Api.CreateTicketAsync(_title, _description, requesterUserId: 1);
-            Snackbar.Add("Ticket opened.", Severity.Success);
+            Snackbar.Add(L["Snackbar.Opened"], Severity.Success);
             _title = string.Empty;
             _description = string.Empty;
             await LoadAsync();
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Failed to open ticket: {ex.Message}", Severity.Error);
+            Snackbar.Add(L["Snackbar.OpenFailed", ex.Message], Severity.Error);
         }
         finally
         {
