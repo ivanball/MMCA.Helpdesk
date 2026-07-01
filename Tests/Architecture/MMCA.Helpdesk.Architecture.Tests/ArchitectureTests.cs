@@ -39,3 +39,12 @@ public sealed class EventConventionTests : EventConventionTestsBase
 {
     protected override IArchitectureMap Map { get; } = new HelpdeskArchitectureMap();
 }
+
+// Gate the ADR-016 lockstep invariant this seed participates in: all MMCA.Common.* pins in
+// Directory.Packages.props must share one version, so a partial sweep is caught at build time even in
+// this reference app (which defaults to local-source mode but keeps package-mode pins for consumers
+// who delete local.props).
+public sealed class FrameworkVersionConsistencyTests : FrameworkVersionConsistencyTestsBase
+{
+    protected override IArchitectureMap Map { get; } = new HelpdeskArchitectureMap();
+}

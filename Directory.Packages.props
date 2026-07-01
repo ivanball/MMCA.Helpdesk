@@ -77,7 +77,7 @@
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
     <!-- Lockstep with the resolved Microsoft.Testing.Platform (1.9.1, via xunit.v3). -->
     <PackageVersion Include="Microsoft.Testing.Extensions.Retry" Version="1.9.1" />
-    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.8" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.9" />
     <PackageVersion Include="Moq" Version="4.20.72" />
     <PackageVersion Include="Respawn" Version="7.0.0" />
     <PackageVersion Include="Testcontainers.CosmosDb" Version="4.11.0" />
@@ -106,21 +106,21 @@
     <PackageVersion Include="Grpc.AspNetCore.Server.Reflection" Version="2.80.0" />
     <PackageVersion Include="Grpc.Net.ClientFactory" Version="2.80.0" />
     <PackageVersion Include="Grpc.Tools" Version="2.81.0" />
-    <PackageVersion Include="MMCA.Common.Grpc" Version="1.95.0" />
+    <PackageVersion Include="MMCA.Common.Grpc" Version="1.96.0" />
     <!-- MMCA Common Packages -->
-    <PackageVersion Include="MMCA.Common.Shared" Version="1.95.0" />
-    <PackageVersion Include="MMCA.Common.Domain" Version="1.95.0" />
-    <PackageVersion Include="MMCA.Common.Application" Version="1.95.0" />
-    <PackageVersion Include="MMCA.Common.Infrastructure" Version="1.95.0" />
-    <PackageVersion Include="MMCA.Common.API" Version="1.95.0" />
-    <PackageVersion Include="MMCA.Common.Aspire" Version="1.95.0" />
-    <PackageVersion Include="MMCA.Common.Aspire.Hosting" Version="1.95.0" />
+    <PackageVersion Include="MMCA.Common.Shared" Version="1.96.0" />
+    <PackageVersion Include="MMCA.Common.Domain" Version="1.96.0" />
+    <PackageVersion Include="MMCA.Common.Application" Version="1.96.0" />
+    <PackageVersion Include="MMCA.Common.Infrastructure" Version="1.96.0" />
+    <PackageVersion Include="MMCA.Common.API" Version="1.96.0" />
+    <PackageVersion Include="MMCA.Common.Aspire" Version="1.96.0" />
+    <PackageVersion Include="MMCA.Common.Aspire.Hosting" Version="1.96.0" />
     <PackageVersion Include="Yarp.ReverseProxy" Version="2.3.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery.Yarp" Version="10.6.0" />
-    <PackageVersion Include="MMCA.Common.Testing" Version="1.95.0" />
-    <PackageVersion Include="MMCA.Common.Testing.E2E" Version="1.95.0" />
-    <PackageVersion Include="MMCA.Common.Testing.UI" Version="1.95.0" />
-    <PackageVersion Include="MMCA.Common.Testing.Architecture" Version="1.95.0" />
-    <PackageVersion Include="MMCA.Common.UI" Version="1.95.0" />
+    <PackageVersion Include="MMCA.Common.Testing" Version="1.96.0" />
+    <PackageVersion Include="MMCA.Common.Testing.E2E" Version="1.96.0" />
+    <PackageVersion Include="MMCA.Common.Testing.UI" Version="1.96.0" />
+    <PackageVersion Include="MMCA.Common.Testing.Architecture" Version="1.96.0" />
+    <PackageVersion Include="MMCA.Common.UI" Version="1.96.0" />
   </ItemGroup>
 </Project>
