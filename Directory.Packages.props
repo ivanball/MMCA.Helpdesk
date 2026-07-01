@@ -50,21 +50,21 @@
     <PackageVersion Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.23.0" />
     <PackageVersion Include="MiniProfiler.AspNetCore.Mvc" Version="4.5.4" />
     <PackageVersion Include="MiniProfiler.EntityFrameworkCore" Version="4.5.4" />
-    <PackageVersion Include="MudBlazor" Version="9.5.0" />
+    <PackageVersion Include="MudBlazor" Version="9.6.0" />
     <!-- bUnit v2 (BunitContext / Render API) — xUnit v3 / Microsoft Testing Platform compatible. -->
     <PackageVersion Include="bunit" Version="2.7.2" />
     <PackageVersion Include="NetArchTest.eNhancedEdition" Version="1.4.5" />
     <PackageVersion Include="NSwag.AspNetCore" Version="14.6.3" />
     <PackageVersion Include="Polly" Version="8.7.0" />
     <PackageVersion Include="Riok.Mapperly" Version="4.3.1" />
-    <PackageVersion Include="Scalar.AspNetCore" Version="2.13.14" />
+    <PackageVersion Include="Scalar.AspNetCore" Version="2.16.7" />
     <PackageVersion Include="Scrutor" Version="7.0.0" />
     <PackageVersion Include="StackExchange.Redis" Version="2.13.17" />
     <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
-    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.110" />
-    <PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.14.15" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.117" />
+    <PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="18.7.23" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
     <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.27.0.140913" />
     <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" />
@@ -82,7 +82,7 @@
     <PackageVersion Include="Respawn" Version="7.0.0" />
     <PackageVersion Include="Testcontainers.CosmosDb" Version="4.11.0" />
     <PackageVersion Include="Deque.AxeCore.Playwright" Version="4.12.0" />
-    <PackageVersion Include="Microsoft.Playwright" Version="1.60.0" />
+    <PackageVersion Include="Microsoft.Playwright" Version="1.61.0" />
     <PackageVersion Include="Testcontainers.MsSql" Version="4.11.0" />
     <!-- Aspire -->
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.4.6" />
@@ -97,8 +97,8 @@
     <PackageVersion Include="OpenTelemetry.Api" Version="1.16.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.16.0" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.16.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.15.2" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.15.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.16.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.16.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.15.1" />
     <!-- gRPC -->
     <PackageVersion Include="Google.Protobuf" Version="3.35.0" />
@@ -106,21 +106,21 @@
     <PackageVersion Include="Grpc.AspNetCore.Server.Reflection" Version="2.80.0" />
     <PackageVersion Include="Grpc.Net.ClientFactory" Version="2.80.0" />
     <PackageVersion Include="Grpc.Tools" Version="2.81.0" />
-    <PackageVersion Include="MMCA.Common.Grpc" Version="1.94.0" />
+    <PackageVersion Include="MMCA.Common.Grpc" Version="1.95.0" />
     <!-- MMCA Common Packages -->
-    <PackageVersion Include="MMCA.Common.Shared" Version="1.94.0" />
-    <PackageVersion Include="MMCA.Common.Domain" Version="1.94.0" />
-    <PackageVersion Include="MMCA.Common.Application" Version="1.94.0" />
-    <PackageVersion Include="MMCA.Common.Infrastructure" Version="1.94.0" />
-    <PackageVersion Include="MMCA.Common.API" Version="1.94.0" />
-    <PackageVersion Include="MMCA.Common.Aspire" Version="1.94.0" />
-    <PackageVersion Include="MMCA.Common.Aspire.Hosting" Version="1.94.0" />
+    <PackageVersion Include="MMCA.Common.Shared" Version="1.95.0" />
+    <PackageVersion Include="MMCA.Common.Domain" Version="1.95.0" />
+    <PackageVersion Include="MMCA.Common.Application" Version="1.95.0" />
+    <PackageVersion Include="MMCA.Common.Infrastructure" Version="1.95.0" />
+    <PackageVersion Include="MMCA.Common.API" Version="1.95.0" />
+    <PackageVersion Include="MMCA.Common.Aspire" Version="1.95.0" />
+    <PackageVersion Include="MMCA.Common.Aspire.Hosting" Version="1.95.0" />
     <PackageVersion Include="Yarp.ReverseProxy" Version="2.3.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery.Yarp" Version="10.6.0" />
-    <PackageVersion Include="MMCA.Common.Testing" Version="1.94.0" />
-    <PackageVersion Include="MMCA.Common.Testing.E2E" Version="1.94.0" />
-    <PackageVersion Include="MMCA.Common.Testing.UI" Version="1.94.0" />
-    <PackageVersion Include="MMCA.Common.Testing.Architecture" Version="1.94.0" />
-    <PackageVersion Include="MMCA.Common.UI" Version="1.94.0" />
+    <PackageVersion Include="MMCA.Common.Testing" Version="1.95.0" />
+    <PackageVersion Include="MMCA.Common.Testing.E2E" Version="1.95.0" />
+    <PackageVersion Include="MMCA.Common.Testing.UI" Version="1.95.0" />
+    <PackageVersion Include="MMCA.Common.Testing.Architecture" Version="1.95.0" />
+    <PackageVersion Include="MMCA.Common.UI" Version="1.95.0" />
   </ItemGroup>
-</Project>
+</Project>
