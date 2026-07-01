@@ -71,6 +71,9 @@ app.MapGet("/culture/set", (string culture, string? redirectUri, HttpContext con
 });
 
 app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
+    .AddInteractiveServerRenderMode()
+    // The shared SSR /Error page (MMCA.Common.UI.Web): UseExceptionHandler("/Error") above re-executes
+    // to that route, which this host does not define itself.
+    .AddAdditionalAssemblies(typeof(MMCA.Common.UI.Web._Imports).Assembly);
 
 await app.RunAsync();

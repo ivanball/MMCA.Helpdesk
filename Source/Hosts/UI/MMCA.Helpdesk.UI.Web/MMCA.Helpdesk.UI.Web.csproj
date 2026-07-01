@@ -5,6 +5,10 @@
     <!-- For ServiceExceptionHelper (surfaces ProblemDetails domain messages), the framework's shared
          UI helper. Only the static helper is used here; the Common.UI components/auth services are not. -->
     <PackageReference Include="MMCA.Common.UI" />
+    <!-- For the shared SSR /Error page: UseExceptionHandler("/Error") re-executes to that route, which
+         previously had no page in this host (production errors 404'd). The router picks it up via
+         AddAdditionalAssemblies in Program.cs. -->
+    <PackageReference Include="MMCA.Common.UI.Web" />
   </ItemGroup>
   <ItemGroup>
     <!-- For TicketDTO (and CollectionResult<T> transitively from MMCA.Common.Shared). -->
