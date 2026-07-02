@@ -9,7 +9,7 @@ using MMCA.Helpdesk.Tickets.Shared.Tickets;
 namespace MMCA.Helpdesk.Tickets.Domain.Tickets;
 
 /// <summary>
-/// Support-ticket aggregate root. Created through the <see cref="Open"/> factory (returns a
+/// Support-ticket aggregate root. Created through the <see cref="Create"/> factory (returns a
 /// <see cref="Result{T}"/>), mutated through guarded methods that raise <see cref="TicketChanged"/>
 /// domain events. Comments are growable children managed via <see cref="AddComment"/>.
 /// </summary>
@@ -36,15 +36,15 @@ public sealed class Ticket : AuditableAggregateRootEntity<TicketIdentifierType>
         Status = TicketStatus.Open;
     }
 
-    public static Result<Ticket> Open(
+    public static Result<Ticket> Create(
         TicketIdentifierType? id,
         string title,
         string description,
         int requesterUserId)
     {
         var validation = Result.Combine(
-            TicketInvariants.EnsureTitleIsValid(title, nameof(Open)),
-            TicketInvariants.EnsureDescriptionIsValid(description, nameof(Open)));
+            TicketInvariants.EnsureTitleIsValid(title, nameof(Create)),
+            TicketInvariants.EnsureDescriptionIsValid(description, nameof(Create)));
         if (validation.IsFailure)
         {
             return Result.Failure<Ticket>(validation.Errors);

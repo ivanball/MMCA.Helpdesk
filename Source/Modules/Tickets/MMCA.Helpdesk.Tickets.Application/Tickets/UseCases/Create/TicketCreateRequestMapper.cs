@@ -14,7 +14,7 @@ public sealed class TicketCreateRequestMapper
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        return Task.FromResult(Ticket.Open(
+        return Task.FromResult(Ticket.Create(
             id: null,
             title: request.Title,
             description: request.Description,

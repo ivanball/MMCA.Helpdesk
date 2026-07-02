@@ -9,9 +9,9 @@ namespace MMCA.Helpdesk.Tickets.Domain.Tests.Tickets;
 public class TicketTests
 {
     [Fact]
-    public void Open_WithValidData_ReturnsSuccess()
+    public void Create_WithValidData_ReturnsSuccess()
     {
-        var result = Ticket.Open(id: null, "Cannot log in", "The login page returns a 500.", requesterUserId: 42);
+        var result = Ticket.Create(id: null, "Cannot log in", "The login page returns a 500.", requesterUserId: 42);
 
         result.IsSuccess.Should().BeTrue();
         result.Value!.Title.Should().Be("Cannot log in");
@@ -20,9 +20,9 @@ public class TicketTests
     }
 
     [Fact]
-    public void Open_DoesNotRaiseDomainEvent_CreationIsSignalledByIntegrationEvent()
+    public void Create_DoesNotRaiseDomainEvent_CreationIsSignalledByIntegrationEvent()
     {
-        var result = Ticket.Open(id: null, "Title", "Description", requesterUserId: 1);
+        var result = Ticket.Create(id: null, "Title", "Description", requesterUserId: 1);
 
         result.IsSuccess.Should().BeTrue();
         // The aggregate omits an "Added" domain event because the Id is DB-generated; the create
@@ -31,9 +31,9 @@ public class TicketTests
     }
 
     [Fact]
-    public void Open_WithEmptyTitle_ReturnsFailure()
+    public void Create_WithEmptyTitle_ReturnsFailure()
     {
-        var result = Ticket.Open(id: null, "   ", "Description", requesterUserId: 1);
+        var result = Ticket.Create(id: null, "   ", "Description", requesterUserId: 1);
 
         result.IsFailure.Should().BeTrue();
         result.Errors.Should().Contain(e => e.Code == "Ticket.Title.Invalid");
@@ -172,5 +172,5 @@ public class TicketTests
     }
 
     private static Ticket CreateOpenTicket() =>
-        Ticket.Open(id: null, "Title", "Description", requesterUserId: 1).Value!;
+        Ticket.Create(id: null, "Title", "Description", requesterUserId: 1).Value!;
 }

@@ -36,7 +36,7 @@ Single test — target the project and pass a Microsoft Testing Platform filter 
 `--filter`):
 
 ```bash
-dotnet test --project Tests/Modules/Tickets/MMCA.Helpdesk.Tickets.Domain.Tests/MMCA.Helpdesk.Tickets.Domain.Tests.csproj -- -method "*Open_WithEmptyTitle*"
+dotnet test --project Tests/Modules/Tickets/MMCA.Helpdesk.Tickets.Domain.Tests/MMCA.Helpdesk.Tickets.Domain.Tests.csproj -- -method "*Create_WithEmptyTitle*"
 dotnet test --project Tests/Architecture/MMCA.Helpdesk.Architecture.Tests/MMCA.Helpdesk.Architecture.Tests.csproj -- -class "*ModuleIsolationTests*"
 ```
 
@@ -75,12 +75,13 @@ ADR-014). `ModuleLoader` discovers `IModule` implementations and registers them 
 
 **Aggregate conventions** (`Source/Modules/Tickets/.../Domain/Tickets/Ticket.cs`) — these are the
 patterns the reference app exists to demonstrate, copy them when adding entities:
-- Created through a static `Open(...)` **factory returning `Result<Ticket>`** (never a public ctor);
-  invariants live in `TicketInvariants` as `Result`-returning methods composed with `Result.Combine`.
+- Created through a static `Create(...)` **factory returning `Result<Ticket>`** (never a public ctor;
+  the framework-wide factory name, enforced by `EntityConventionTests`); invariants live in
+  `TicketInvariants` as `Result`-returning methods composed with `Result.Combine`.
 - `[IdValueGenerated]` + the `TicketIdentifierType = int` alias → IDs are **database-generated**. The
   factory therefore raises **no "Added" domain event** (the id is still 0); creation is signalled
   *after commit* by `CreateTicketHandler` publishing `TicketOpenedIntegrationEvent` with the real id.
-  A `TicketTests` case asserts `DomainEvents` is empty after `Open` — don't "fix" it.
+  A `TicketTests` case asserts `DomainEvents` is empty after `Create`; don't "fix" it.
 - Mutations (`AddComment`, `UpdateDetails`, `ChangeStatus`, `Delete`) raise a `TicketChanged` **domain
   event** via `AddDomainEvent`, dispatched in-process after `SaveChangesAsync` within the same
   transaction (consumed by `TicketChangedAuditHandler`). `Delete()` cascade-soft-deletes comments.

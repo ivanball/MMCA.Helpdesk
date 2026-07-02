@@ -85,13 +85,13 @@ public sealed class TicketsController(
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<TicketDTO>> UpdateAsync(
         TicketIdentifierType id,
-        UpdateTicketRequest request,
+        TicketUpdateRequest request,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
         var result = await updateHandler.HandleAsync(
-            new UpdateTicketCommand(id, request.Title, request.Description),
+            new UpdateTicketCommand(id, request.Title, request.Description) { RowVersion = request.RowVersion },
             cancellationToken).ConfigureAwait(false);
         return result.IsFailure ? HandleFailure(result.Errors) : Ok(result.Value);
     }
