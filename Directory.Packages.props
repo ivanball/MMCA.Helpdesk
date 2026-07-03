@@ -106,22 +106,22 @@
     <PackageVersion Include="Grpc.AspNetCore.Server.Reflection" Version="2.80.0" />
     <PackageVersion Include="Grpc.Net.ClientFactory" Version="2.80.0" />
     <PackageVersion Include="Grpc.Tools" Version="2.81.0" />
-    <PackageVersion Include="MMCA.Common.Grpc" Version="1.100.0" />
+    <PackageVersion Include="MMCA.Common.Grpc" Version="1.101.0" />
     <!-- MMCA Common Packages -->
-    <PackageVersion Include="MMCA.Common.Shared" Version="1.100.0" />
-    <PackageVersion Include="MMCA.Common.Domain" Version="1.100.0" />
-    <PackageVersion Include="MMCA.Common.Application" Version="1.100.0" />
-    <PackageVersion Include="MMCA.Common.Infrastructure" Version="1.100.0" />
-    <PackageVersion Include="MMCA.Common.API" Version="1.100.0" />
-    <PackageVersion Include="MMCA.Common.Aspire" Version="1.100.0" />
-    <PackageVersion Include="MMCA.Common.Aspire.Hosting" Version="1.100.0" />
+    <PackageVersion Include="MMCA.Common.Shared" Version="1.101.0" />
+    <PackageVersion Include="MMCA.Common.Domain" Version="1.101.0" />
+    <PackageVersion Include="MMCA.Common.Application" Version="1.101.0" />
+    <PackageVersion Include="MMCA.Common.Infrastructure" Version="1.101.0" />
+    <PackageVersion Include="MMCA.Common.API" Version="1.101.0" />
+    <PackageVersion Include="MMCA.Common.Aspire" Version="1.101.0" />
+    <PackageVersion Include="MMCA.Common.Aspire.Hosting" Version="1.101.0" />
     <PackageVersion Include="Yarp.ReverseProxy" Version="2.3.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery.Yarp" Version="10.6.0" />
-    <PackageVersion Include="MMCA.Common.Testing" Version="1.100.0" />
-    <PackageVersion Include="MMCA.Common.Testing.E2E" Version="1.100.0" />
-    <PackageVersion Include="MMCA.Common.Testing.UI" Version="1.100.0" />
-    <PackageVersion Include="MMCA.Common.Testing.Architecture" Version="1.100.0" />
-    <PackageVersion Include="MMCA.Common.UI" Version="1.100.0" />
-    <PackageVersion Include="MMCA.Common.UI.Web" Version="1.100.0" />
+    <PackageVersion Include="MMCA.Common.Testing" Version="1.101.0" />
+    <PackageVersion Include="MMCA.Common.Testing.E2E" Version="1.101.0" />
+    <PackageVersion Include="MMCA.Common.Testing.UI" Version="1.101.0" />
+    <PackageVersion Include="MMCA.Common.Testing.Architecture" Version="1.101.0" />
+    <PackageVersion Include="MMCA.Common.UI" Version="1.101.0" />
+    <PackageVersion Include="MMCA.Common.UI.Web" Version="1.101.0" />
   </ItemGroup>
 </Project>
