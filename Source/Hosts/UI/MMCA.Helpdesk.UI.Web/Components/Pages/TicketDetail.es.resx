@@ -1,45 +1,141 @@
 <?xml version="1.0" encoding="utf-8"?>
 <root>
-  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
-  <resheader name="version"><value>2.0</value></resheader>
-  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
-  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
-  <data name="Title" xml:space="preserve"><value>Ticket {0}</value></data>
-  <data name="Button.Back" xml:space="preserve"><value>Volver a la lista</value></data>
-  <data name="Button.Delete" xml:space="preserve"><value>Eliminar ticket</value></data>
-  <data name="Loading" xml:space="preserve"><value>Cargando el ticket n.º {0} ...</value></data>
-  <data name="Heading" xml:space="preserve"><value>Ticket n.º {0}</value></data>
-  <data name="Section.Details" xml:space="preserve"><value>Detalles</value></data>
-  <data name="Field.Title" xml:space="preserve"><value>Título</value></data>
-  <data name="Field.Description" xml:space="preserve"><value>Descripción</value></data>
-  <data name="Detail.Status" xml:space="preserve"><value>Estado:</value></data>
-  <data name="Detail.Requester" xml:space="preserve"><value>Solicitante:</value></data>
-  <data name="Button.SaveDetails" xml:space="preserve"><value>Guardar detalles</value></data>
-  <data name="Section.Status" xml:space="preserve"><value>Estado</value></data>
-  <data name="Field.Status" xml:space="preserve"><value>Estado</value></data>
-  <data name="Button.ChangeStatus" xml:space="preserve"><value>Cambiar estado</value></data>
-  <data name="Section.AddComment" xml:space="preserve"><value>Agregar un comentario</value></data>
-  <data name="Field.Comment" xml:space="preserve"><value>Comentario</value></data>
-  <data name="Button.AddComment" xml:space="preserve"><value>Agregar</value></data>
-  <data name="Section.Comments" xml:space="preserve"><value>Comentarios</value></data>
-  <data name="Empty.Comments" xml:space="preserve"><value>Aún no hay comentarios.</value></data>
-  <data name="Comment.By" xml:space="preserve"><value>por el usuario {0}</value></data>
-  <data name="Button.SaveComment" xml:space="preserve"><value>Guardar</value></data>
-  <data name="Button.CancelEdit" xml:space="preserve"><value>Cancelar</value></data>
-  <data name="Snackbar.TitleDescriptionRequired" xml:space="preserve"><value>El título y la descripción son obligatorios.</value></data>
-  <data name="Snackbar.LoadFailed" xml:space="preserve"><value>No se pudo cargar el ticket: {0}</value></data>
-  <data name="Snackbar.Updated" xml:space="preserve"><value>Ticket actualizado.</value></data>
-  <data name="Snackbar.UpdateFailed" xml:space="preserve"><value>No se pudo actualizar: {0}</value></data>
-  <data name="Snackbar.StatusUpdated" xml:space="preserve"><value>Estado actualizado.</value></data>
-  <data name="Snackbar.StatusChangeFailed" xml:space="preserve"><value>No se pudo cambiar el estado: {0}</value></data>
-  <data name="Snackbar.CommentEmpty" xml:space="preserve"><value>El comentario no puede estar vacío.</value></data>
-  <data name="Snackbar.AddCommentFailed" xml:space="preserve"><value>No se pudo agregar el comentario: {0}</value></data>
-  <data name="Snackbar.EditFailed" xml:space="preserve"><value>No se pudo editar: {0}</value></data>
-  <data name="Snackbar.RemoveFailed" xml:space="preserve"><value>No se pudo eliminar: {0}</value></data>
-  <data name="Dialog.Delete.Title" xml:space="preserve"><value>Eliminar ticket</value></data>
-  <data name="Dialog.Delete.Message" xml:space="preserve"><value>¿Eliminar el ticket n.º {0}? Sus comentarios también se eliminarán.</value></data>
-  <data name="Dialog.Delete.Confirm" xml:space="preserve"><value>Eliminar</value></data>
-  <data name="Dialog.Cancel" xml:space="preserve"><value>Cancelar</value></data>
-  <data name="Snackbar.Deleted" xml:space="preserve"><value>Ticket eliminado.</value></data>
-  <data name="Snackbar.DeleteFailed" xml:space="preserve"><value>No se pudo eliminar: {0}</value></data>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Title" xml:space="preserve">
+    <value>Ticket {0}</value>
+  </data>
+  <data name="Button.Back" xml:space="preserve">
+    <value>Volver a la lista</value>
+  </data>
+  <data name="Button.Delete" xml:space="preserve">
+    <value>Eliminar ticket</value>
+  </data>
+  <data name="Loading" xml:space="preserve">
+    <value>Cargando el ticket n.º {0} ...</value>
+  </data>
+  <data name="Heading" xml:space="preserve">
+    <value>Ticket n.º {0}</value>
+  </data>
+  <data name="Section.Details" xml:space="preserve">
+    <value>Detalles</value>
+  </data>
+  <data name="Field.Title" xml:space="preserve">
+    <value>Título</value>
+  </data>
+  <data name="Field.Description" xml:space="preserve">
+    <value>Descripción</value>
+  </data>
+  <data name="Detail.Status" xml:space="preserve">
+    <value>Estado:</value>
+  </data>
+  <data name="Detail.Requester" xml:space="preserve">
+    <value>Solicitante:</value>
+  </data>
+  <data name="Button.SaveDetails" xml:space="preserve">
+    <value>Guardar detalles</value>
+  </data>
+  <data name="Section.Status" xml:space="preserve">
+    <value>Estado</value>
+  </data>
+  <data name="Field.Status" xml:space="preserve">
+    <value>Estado</value>
+  </data>
+  <data name="Button.ChangeStatus" xml:space="preserve">
+    <value>Cambiar estado</value>
+  </data>
+  <data name="Section.AddComment" xml:space="preserve">
+    <value>Agregar un comentario</value>
+  </data>
+  <data name="Field.Comment" xml:space="preserve">
+    <value>Comentario</value>
+  </data>
+  <data name="Button.AddComment" xml:space="preserve">
+    <value>Agregar</value>
+  </data>
+  <data name="Section.Comments" xml:space="preserve">
+    <value>Comentarios</value>
+  </data>
+  <data name="Empty.Comments" xml:space="preserve">
+    <value>Aún no hay comentarios.</value>
+  </data>
+  <data name="Comment.By" xml:space="preserve">
+    <value>por el usuario {0}</value>
+  </data>
+  <data name="Button.SaveComment" xml:space="preserve">
+    <value>Guardar</value>
+  </data>
+  <data name="Button.CancelEdit" xml:space="preserve">
+    <value>Cancelar</value>
+  </data>
+  <data name="Snackbar.TitleDescriptionRequired" xml:space="preserve">
+    <value>El título y la descripción son obligatorios.</value>
+  </data>
+  <data name="Snackbar.LoadFailed" xml:space="preserve">
+    <value>No se pudo cargar el ticket: {0}</value>
+  </data>
+  <data name="Snackbar.Updated" xml:space="preserve">
+    <value>Ticket actualizado.</value>
+  </data>
+  <data name="Snackbar.UpdateFailed" xml:space="preserve">
+    <value>No se pudo actualizar: {0}</value>
+  </data>
+  <data name="Snackbar.StatusUpdated" xml:space="preserve">
+    <value>Estado actualizado.</value>
+  </data>
+  <data name="Snackbar.StatusChangeFailed" xml:space="preserve">
+    <value>No se pudo cambiar el estado: {0}</value>
+  </data>
+  <data name="Snackbar.CommentEmpty" xml:space="preserve">
+    <value>El comentario no puede estar vacío.</value>
+  </data>
+  <data name="Snackbar.AddCommentFailed" xml:space="preserve">
+    <value>No se pudo agregar el comentario: {0}</value>
+  </data>
+  <data name="Snackbar.EditFailed" xml:space="preserve">
+    <value>No se pudo editar: {0}</value>
+  </data>
+  <data name="Snackbar.RemoveFailed" xml:space="preserve">
+    <value>No se pudo eliminar: {0}</value>
+  </data>
+  <data name="Dialog.Delete.Title" xml:space="preserve">
+    <value>Eliminar ticket</value>
+  </data>
+  <data name="Dialog.Delete.Message" xml:space="preserve">
+    <value>¿Eliminar el ticket n.º {0}? Sus comentarios también se eliminarán.</value>
+  </data>
+  <data name="Dialog.Delete.Confirm" xml:space="preserve">
+    <value>Eliminar</value>
+  </data>
+  <data name="Dialog.Cancel" xml:space="preserve">
+    <value>Cancelar</value>
+  </data>
+  <data name="Snackbar.Deleted" xml:space="preserve">
+    <value>Ticket eliminado.</value>
+  </data>
+  <data name="Snackbar.DeleteFailed" xml:space="preserve">
+    <value>No se pudo eliminar: {0}</value>
+  </data>
+  <data name="Status.Open" xml:space="preserve">
+    <value>Abierto</value>
+  </data>
+  <data name="Status.Closed" xml:space="preserve">
+    <value>Cerrado</value>
+  </data>
+  <data name="Status.Resolved" xml:space="preserve">
+    <value>Resuelto</value>
+  </data>
+  <data name="Status.InProgress" xml:space="preserve">
+    <value>En curso</value>
+  </data>
 </root>

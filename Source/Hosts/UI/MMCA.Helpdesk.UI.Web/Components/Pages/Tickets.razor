@@ -38,7 +38,8 @@
     <RowTemplate>
         <MudTd DataLabel="@L["Column.Id"].Value">@context.Id</MudTd>
         <MudTd DataLabel="@L["Column.Title"].Value">@context.Title</MudTd>
-        <MudTd DataLabel="@L["Column.Status"].Value">@context.Status</MudTd>
+        @* Enum display localizes via Status.* keys; the wire/enum value itself stays untranslated. *@
+        <MudTd DataLabel="@L["Column.Status"].Value">@L[$"Status.{context.Status}"]</MudTd>
         <MudTd DataLabel="@L["Column.Requester"].Value">@context.RequesterUserId</MudTd>
         <MudTd DataLabel="@L["Column.Actions"].Value">
             <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary"

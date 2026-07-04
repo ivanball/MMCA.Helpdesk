@@ -28,7 +28,7 @@ GETTING-STARTED.md Phase 1). **Building requires `../MMCA.Common/Source` to exis
 
 ```bash
 dotnet build MMCA.Helpdesk.slnx                       # warning-free under all analyzers
-dotnet test  --solution MMCA.Helpdesk.slnx            # 44 tests (14 domain + 30 architecture), NO database needed
+dotnet test  --solution MMCA.Helpdesk.slnx            # 84 tests (14 domain + 70 architecture), NO database needed
 dotnet run --project Source/Hosting/MMCA.Helpdesk.AppHost   # interactive terminal ONLY — see caveat below
 ```
 

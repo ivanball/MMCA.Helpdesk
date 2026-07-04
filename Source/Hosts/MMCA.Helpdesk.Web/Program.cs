@@ -5,6 +5,7 @@ using MMCA.Common.Application.Modules;
 using MMCA.Common.Application.Settings;
 using MMCA.Common.Aspire;
 using MMCA.Common.Infrastructure;
+using MMCA.Helpdesk.Tickets.API.Resources;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -64,6 +65,11 @@ services.AddOptions<ModulesSettings>()
 var modulesSettings = builder.Configuration.GetSection(ModulesSettings.SectionName).Get<ModulesSettings>() ?? [];
 
 services.AddAPI(modulesSettings);
+
+// Contribute the Tickets module's error-code translations to the edge localizer (ADR-027): domain
+// error text (TicketInvariants codes like "Ticket.Closed") now returns localized ProblemDetails
+// messages; request localization itself already runs inside UseCommonMiddlewarePipeline().
+services.AddErrorResources<TicketsErrorResources>();
 
 using var loggerFactory = LoggerFactory.Create(logging => logging.AddConsole());
 var moduleLoader = new ModuleLoader

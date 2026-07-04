@@ -112,8 +112,31 @@ public sealed class SliceCohesionTests : SliceCohesionTestsBase
     protected override IArchitectureMap Map { get; } = new HelpdeskArchitectureMap();
 }
 
+// Translation completeness (ADR-027): the seed ships real en + es localization (the Tickets pages'
+// resx pairs + the Tickets error resources), so every base .resx must keep a complete, non-empty
+// Spanish sibling. The prior "single-locale" N/A rationale was factually stale once the es resources
+// shipped; this gate makes the bilingual state enforced rather than assumed.
+public sealed class TranslationCompletenessTests : LocalizationResourceTestsBase
+{
+    protected override IReadOnlyCollection<string> RequiredCultures => ["es"];
+
+    // Non-vacuous floor: Tickets + TicketDetail page pairs and the TicketsErrorResources pair.
+    protected override int MinimumBaseResources => 3;
+}
+
+// Localized-text convention (ADR-027): no hard-coded user-visible literal (snackbar messages, page
+// Title properties, <PageTitle> markup, breadcrumb labels, literal NavItems) may ship in razor files;
+// text resolves through IStringLocalizer resources so it follows the selected language.
+public sealed class LocalizedTextConventionTests : LocalizedTextConventionTestsBase
+{
+    protected override IArchitectureMap Map { get; } = new HelpdeskArchitectureMap();
+
+    // The seed has 6 razor files; a floor of 5 catches a wrong scan root.
+    protected override int MinimumScannedFiles => 5;
+}
+
 // NOT adopted (legitimately inapplicable, not an enforcement gap): ConstructorDependencyCountTestsBase
 // scans Application *Service classes and deliberately fails when it finds none (anti-vacuity guard).
 // This seed's Application layer is handlers-only. Subclass it (ceiling 7, matching ADC) as soon as the
-// first Application *Service appears. LocalizationResource/DataResidency/BrandColorToken/FormsConvention
-// stay N/A for the same reduced-scope reasons (single-locale, single-region, no branded CSS, MudForm-less).
+// first Application *Service appears. DataResidency/BrandColorToken/FormsConvention stay N/A for
+// reduced-scope reasons (single-region, no branded CSS, MudForm-less).

@@ -25,7 +25,8 @@ else
         <MudTextField @bind-Value="_title" Label="@L["Field.Title"].Value" Variant="Variant.Outlined" Class="mb-3" />
         <MudTextField @bind-Value="_description" Label="@L["Field.Description"].Value" Variant="Variant.Outlined" Lines="3" Class="mb-3" />
         <MudText Typo="Typo.body2" Class="mb-3">
-            @L["Detail.Status"] <b>@_ticket.Status</b> &nbsp;&middot;&nbsp; @L["Detail.Requester"] <b>@_ticket.RequesterUserId</b>
+            @* Enum display localizes via Status.* keys; the wire/enum value itself stays untranslated. *@
+            @L["Detail.Status"] <b>@L[$"Status.{_ticket.Status}"]</b> &nbsp;&middot;&nbsp; @L["Detail.Requester"] <b>@_ticket.RequesterUserId</b>
         </MudText>
         <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveDetailsAsync" Disabled="_busy">
             @L["Button.SaveDetails"]
@@ -39,7 +40,7 @@ else
                 <MudSelect T="TicketStatus" @bind-Value="_status" Label="@L["Field.Status"].Value" Variant="Variant.Outlined">
                     @foreach (var status in Enum.GetValues<TicketStatus>())
                     {
-                        <MudSelectItem Value="status">@status</MudSelectItem>
+                        <MudSelectItem Value="status">@L[$"Status.{status}"]</MudSelectItem>
                     }
                 </MudSelect>
             </MudItem>

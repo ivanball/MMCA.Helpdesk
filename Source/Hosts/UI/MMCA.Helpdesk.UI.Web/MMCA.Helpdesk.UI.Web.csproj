@@ -2,8 +2,9 @@
   <ItemGroup>
     <PackageReference Include="MudBlazor" />
     <PackageReference Include="MMCA.Common.Aspire" />
-    <!-- For ServiceExceptionHelper (surfaces ProblemDetails domain messages), the framework's shared
-         UI helper. Only the static helper is used here; the Common.UI components/auth services are not. -->
+    <!-- For ServiceExceptionHelper (surfaces ProblemDetails domain messages) plus the shared Common.UI
+         components this host renders in its layout: CultureSwitcher + ThemeToggle (ADR-027/028) and the
+         MMCATheme/ThemeService pair. The Common.UI auth services/pages are not used (issuer-less seed). -->
     <PackageReference Include="MMCA.Common.UI" />
     <!-- For the shared SSR /Error page: UseExceptionHandler("/Error") re-executes to that route, which
          previously had no page in this host (production errors 404'd). The router picks it up via
