@@ -113,7 +113,7 @@ public sealed class Ticket : AuditableAggregateRootEntity<TicketIdentifierType>
             return statusValidation;
         }
 
-        var commentResult = GetCommentOrNotFound(commentId, nameof(EditComment));
+        var commentResult = GetChildOrNotFound(_comments, commentId, nameof(EditComment));
         if (commentResult.IsFailure)
         {
             return Result.Failure(commentResult.Errors);
@@ -138,7 +138,7 @@ public sealed class Ticket : AuditableAggregateRootEntity<TicketIdentifierType>
             return statusValidation;
         }
 
-        var commentResult = GetCommentOrNotFound(commentId, nameof(RemoveComment));
+        var commentResult = GetChildOrNotFound(_comments, commentId, nameof(RemoveComment));
         if (commentResult.IsFailure)
         {
             return Result.Failure(commentResult.Errors);
@@ -184,14 +184,5 @@ public sealed class Ticket : AuditableAggregateRootEntity<TicketIdentifierType>
         AddDomainEvent(new TicketChanged(DomainEntityState.Deleted, Id));
 
         return result;
-    }
-
-    private Result<TicketComment> GetCommentOrNotFound(TicketCommentIdentifierType commentId, string source)
-    {
-        var comment = _comments.FirstOrDefault(c => c.Id == commentId && !c.IsDeleted);
-        return comment is null
-            ? Result.Failure<TicketComment>(
-                Error.NotFound.WithSource(source).WithTarget(nameof(TicketComment)))
-            : Result.Success(comment);
     }
 }

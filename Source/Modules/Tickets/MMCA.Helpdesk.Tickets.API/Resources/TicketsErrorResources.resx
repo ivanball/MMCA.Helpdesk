@@ -61,13 +61,22 @@
   <data name="Ticket.Closed" xml:space="preserve">
     <value>Comments cannot be added to a closed ticket.</value>
   </data>
-  <data name="Ticket.Description.Invalid" xml:space="preserve">
-    <value>Description is required and must be at most 4000 characters.</value>
+  <data name="Ticket.Description.Empty" xml:space="preserve">
+    <value>Ticket description cannot be empty.</value>
   </data>
-  <data name="Ticket.Title.Invalid" xml:space="preserve">
-    <value>Title is required and must be at most 200 characters.</value>
+  <data name="Ticket.Description.TooLong" xml:space="preserve">
+    <value>Ticket description cannot exceed 4000 characters.</value>
   </data>
-  <data name="Ticket.Comment.Body.Invalid" xml:space="preserve">
-    <value>Comment body is required and must be at most 4000 characters.</value>
+  <data name="Ticket.Title.Empty" xml:space="preserve">
+    <value>Ticket title cannot be empty.</value>
+  </data>
+  <data name="Ticket.Title.TooLong" xml:space="preserve">
+    <value>Ticket title cannot exceed 200 characters.</value>
+  </data>
+  <data name="Ticket.Comment.Body.Empty" xml:space="preserve">
+    <value>Comment body cannot be empty.</value>
+  </data>
+  <data name="Ticket.Comment.Body.TooLong" xml:space="preserve">
+    <value>Comment body cannot exceed 4000 characters.</value>
   </data>
 </root>

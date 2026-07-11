@@ -36,7 +36,7 @@ public class TicketTests
         var result = Ticket.Create(id: null, "   ", "Description", requesterUserId: 1);
 
         result.IsFailure.Should().BeTrue();
-        result.Errors.Should().Contain(e => e.Code == "Ticket.Title.Invalid");
+        result.Errors.Should().Contain(e => e.Code == "Ticket.Title.Empty");
     }
 
     [Fact]
@@ -108,7 +108,7 @@ public class TicketTests
         var result = ticket.UpdateDetails("   ", "New description");
 
         result.IsFailure.Should().BeTrue();
-        result.Errors.Should().Contain(e => e.Code == "Ticket.Title.Invalid");
+        result.Errors.Should().Contain(e => e.Code == "Ticket.Title.Empty");
     }
 
     [Fact]

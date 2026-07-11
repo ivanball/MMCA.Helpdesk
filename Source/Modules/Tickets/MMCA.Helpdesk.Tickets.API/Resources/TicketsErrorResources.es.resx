@@ -61,13 +61,22 @@
   <data name="Ticket.Closed" xml:space="preserve">
     <value>No se pueden agregar comentarios a un ticket cerrado.</value>
   </data>
-  <data name="Ticket.Description.Invalid" xml:space="preserve">
-    <value>La descripción es obligatoria y debe tener como máximo 4000 caracteres.</value>
+  <data name="Ticket.Description.Empty" xml:space="preserve">
+    <value>La descripción del ticket no puede estar vacía.</value>
   </data>
-  <data name="Ticket.Title.Invalid" xml:space="preserve">
-    <value>El título es obligatorio y debe tener como máximo 200 caracteres.</value>
+  <data name="Ticket.Description.TooLong" xml:space="preserve">
+    <value>La descripción del ticket no puede superar los 4000 caracteres.</value>
   </data>
-  <data name="Ticket.Comment.Body.Invalid" xml:space="preserve">
-    <value>El texto del comentario es obligatorio y debe tener como máximo 4000 caracteres.</value>
+  <data name="Ticket.Title.Empty" xml:space="preserve">
+    <value>El título del ticket no puede estar vacío.</value>
+  </data>
+  <data name="Ticket.Title.TooLong" xml:space="preserve">
+    <value>El título del ticket no puede superar los 200 caracteres.</value>
+  </data>
+  <data name="Ticket.Comment.Body.Empty" xml:space="preserve">
+    <value>El texto del comentario no puede estar vacío.</value>
+  </data>
+  <data name="Ticket.Comment.Body.TooLong" xml:space="preserve">
+    <value>El texto del comentario no puede superar los 4000 caracteres.</value>
   </data>
 </root>
