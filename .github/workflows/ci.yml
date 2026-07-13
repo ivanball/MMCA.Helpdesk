@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# MMCA.Helpdesk is the runnable reference app for the framework. It builds against MMCA.Common
+# SOURCE (its committed local.props sets UseLocalMMCA=true and points at ../MMCA.Common/Source), so
+# CI checks out MMCA.Common as a sibling and needs no GitHub Packages token. The full test run
+# (domain + architecture) needs no database and runs headless; the Aspire round-trip is not run here.
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout MMCA.Helpdesk (this PR)
+        uses: actions/checkout@v5
+        with:
+          path: MMCA.Helpdesk
+          fetch-depth: 0
+
+      - name: Checkout MMCA.Common (source companion)
+        uses: actions/checkout@v5
+        with:
+          repository: ivanball/MMCA.Common
+          ref: main
+          path: MMCA.Common
+          fetch-depth: 0 # MinVer needs full history
+          # Public repo builds with the default token; if MMCA.Common is private, set a
+          # COMMON_SOURCE_PAT secret with contents:read on it.
+          token: ${{ secrets.COMMON_SOURCE_PAT || github.token }}
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build (against MMCA.Common source)
+        working-directory: MMCA.Helpdesk
+        run: dotnet build MMCA.Helpdesk.slnx -c Release
+
+      - name: Test (domain + architecture, no DB)
+        working-directory: MMCA.Helpdesk
+        run: dotnet test --solution MMCA.Helpdesk.slnx -c Release --no-build --minimum-expected-tests 1
