@@ -1,0 +1,11 @@
+# Code owners for MMCA.Helpdesk.
+# https://docs.github.com/en/repositories/managing-your-repos-settings-and-features/customizing-your-repository/about-code-owners
+#
+# Helpdesk is the runnable reference app for the framework. It defaults to local-source
+# mode (builds against ../MMCA.Common/Source), so contributors need no GitHub Packages token.
+#
+# Today the main ruleset requires 0 approving reviews (transitional), so this file only
+# auto-requests review from the owners below.
+
+# Default owner for everything in the repo.
+*                           @ivanball

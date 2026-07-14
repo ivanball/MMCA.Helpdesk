@@ -1,0 +1,5 @@
+# Line endings: this repo's .editorconfig mandates `end_of_line = crlf` for all files, and the
+# analyzers enforce it (IDE0055). Blobs are stored normalized to LF; force a CRLF working tree on
+# checkout on EVERY platform so the analyzer passes on Linux CI, not only on Windows (where autocrlf
+# happened to hide it). Without this, a fresh Linux checkout gets LF working files and IDE0055 fails.
+* text=auto eol=crlf
