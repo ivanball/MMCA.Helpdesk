@@ -125,3 +125,10 @@ surface the domain error message before the generic `EnsureSuccessStatusCode` fa
   `HelpdeskArchitectureMap` (which enumerates every framework + module layer assembly, ADR-015). If you
   add a module or layer assembly, register it in that map or the layering/isolation rules silently stop
   covering it.
+
+## Contribution Flow (PR-based)
+
+`main` is server-protected: no direct pushes, and no modifications committed directly on `main`,
+documentation-only changes included (this file too). For any modification, branch off an up-to-date
+`main` first, commit there, push the branch, open a PR, let the required checks go green (see
+`CONTRIBUTING.md`), then squash-merge. Merges here are not deploys.
