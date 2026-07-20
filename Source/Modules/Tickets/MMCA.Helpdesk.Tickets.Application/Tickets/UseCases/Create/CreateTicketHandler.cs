@@ -38,9 +38,10 @@ public sealed class CreateTicketHandler(
         await repository.AddAsync(entity, cancellationToken).ConfigureAwait(false);
         await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        // Publish AFTER the commit so the database-generated ticket Id is populated when the event
-        // reaches consumers. PublishAsync persists the event to the outbox and dispatches it in-process;
-        // over a broker once Tickets is extracted.
+        // Published after the commit so the database-generated ticket id is populated by the time the
+        // event reaches consumers. The publisher persists the event to the outbox and dispatches it
+        // in-process today, and will route it over a broker once Tickets is extracted, with no handler
+        // code change required.
         await integrationEventPublisher.PublishAsync(
             new TicketOpenedIntegrationEvent(entity.Id, entity.RequesterUserId),
             cancellationToken).ConfigureAwait(false);

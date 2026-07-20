@@ -11,7 +11,6 @@ public record class TicketDTO : IBaseDTO<TicketIdentifierType>, IConcurrencyAwar
     public required TicketIdentifierType Id { get; init; }
 
     /// <inheritdoc />
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification = "byte[] round-trips the EF rowversion concurrency token")]
     public byte[]? RowVersion { get; init; }
     public required string Title { get; init; }
     public required string Description { get; init; }
