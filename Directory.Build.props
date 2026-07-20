@@ -17,15 +17,6 @@
     <NoWarn>$(NoWarn);CS1591;RMG020;EXTEXP0001</NoWarn>
   </PropertyGroup>
 
-  <!-- Transitive advisory (SQLite via EF Core Sqlite, pulled transitively through
-       MMCA.Common.Infrastructure). SQLitePCLRaw 2.1.12 (published 2026-07-14) patched the advisory;
-       MMCA.Common pins SQLitePCLRaw.bundle_e_sqlite3 2.1.12 directly in MMCA.Common.Infrastructure
-       (Common PR #85). This suppression stays only until that lands on Common main (Helpdesk builds
-       against Common source), then it must be removed (updated 2026-07-20). -->
-  <ItemGroup>
-    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-2m69-gcr7-jv3q" />
-  </ItemGroup>
-
   <ItemGroup Condition="'$(MSBuildProjectExtension)' != '.dcproj'">
     <PackageReference Include="Meziantou.Analyzer">
       <PrivateAssets>all</PrivateAssets>
