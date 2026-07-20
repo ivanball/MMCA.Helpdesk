@@ -62,7 +62,8 @@ app.MapGet("/culture/set", (string culture, string? redirectUri, HttpContext con
                 Path = "/",
                 Expires = DateTimeOffset.UtcNow.AddYears(1),
                 IsEssential = true,
-                HttpOnly = false,
+                HttpOnly = true,
+                Secure = true,
                 SameSite = SameSiteMode.Lax,
             });
     }
