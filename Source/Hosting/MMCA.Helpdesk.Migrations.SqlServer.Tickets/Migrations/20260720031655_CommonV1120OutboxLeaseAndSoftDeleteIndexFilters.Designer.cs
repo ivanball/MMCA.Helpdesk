@@ -4,6 +4,7 @@ using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MMCA.Helpdesk.Migrations.SqlServer.Tickets.Migrations
 {
     [DbContext(typeof(SQLServerDbContext))]
-    partial class SQLServerDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260720031655_CommonV1120OutboxLeaseAndSoftDeleteIndexFilters")]
+    partial class CommonV1120OutboxLeaseAndSoftDeleteIndexFilters
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
