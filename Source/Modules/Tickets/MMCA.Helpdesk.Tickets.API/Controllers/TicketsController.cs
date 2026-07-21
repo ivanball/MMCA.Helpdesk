@@ -1,3 +1,4 @@
+using System.Globalization;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -74,7 +75,7 @@ public sealed class TicketsController(
         // route-link generation against the versioned base GetById route throws "No route matches the
         // supplied values".
         var dto = result.Value!;
-        var locationUri = new Uri($"Tickets/{dto.Id}", UriKind.Relative);
+        var locationUri = new Uri(string.Create(CultureInfo.InvariantCulture, $"Tickets/{dto.Id}"), UriKind.Relative);
         return Created(locationUri, dto);
     }
 

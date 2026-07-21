@@ -1,4 +1,4 @@
-using System.Net.Http.Json;
+using System.Globalization;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.UI.Services;
 using MMCA.Helpdesk.Tickets.Shared.Tickets;
@@ -32,7 +32,7 @@ public sealed class HelpdeskApiClient(HttpClient httpClient)
     public async Task<TicketDTO?> GetTicketAsync(int id, CancellationToken cancellationToken = default)
     {
         using var response = await httpClient
-            .GetAsync(new Uri($"Tickets/{id}/details", UriKind.Relative), cancellationToken)
+            .GetAsync(new Uri(string.Create(CultureInfo.InvariantCulture, $"Tickets/{id}/details"), UriKind.Relative), cancellationToken)
             .ConfigureAwait(false);
         await ServiceExceptionHelper.ThrowIfDomainExceptionAsync(response, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
@@ -54,7 +54,7 @@ public sealed class HelpdeskApiClient(HttpClient httpClient)
     public async Task UpdateTicketAsync(int id, string title, string description, CancellationToken cancellationToken = default)
     {
         using var response = await httpClient
-            .PutAsJsonAsync($"/Tickets/{id}", new { Title = title, Description = description }, cancellationToken)
+            .PutAsJsonAsync(string.Create(CultureInfo.InvariantCulture, $"/Tickets/{id}"), new { Title = title, Description = description }, cancellationToken)
             .ConfigureAwait(false);
         await ServiceExceptionHelper.ThrowIfDomainExceptionAsync(response, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
@@ -63,7 +63,7 @@ public sealed class HelpdeskApiClient(HttpClient httpClient)
     public async Task DeleteTicketAsync(int id, CancellationToken cancellationToken = default)
     {
         using var response = await httpClient
-            .DeleteAsync(new Uri($"Tickets/{id}", UriKind.Relative), cancellationToken)
+            .DeleteAsync(new Uri(string.Create(CultureInfo.InvariantCulture, $"Tickets/{id}"), UriKind.Relative), cancellationToken)
             .ConfigureAwait(false);
         await ServiceExceptionHelper.ThrowIfDomainExceptionAsync(response, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
@@ -72,7 +72,7 @@ public sealed class HelpdeskApiClient(HttpClient httpClient)
     public async Task ChangeStatusAsync(int id, TicketStatus status, CancellationToken cancellationToken = default)
     {
         using var response = await httpClient
-            .PutAsJsonAsync($"/Tickets/{id}/status", new { Status = status }, cancellationToken)
+            .PutAsJsonAsync(string.Create(CultureInfo.InvariantCulture, $"/Tickets/{id}/status"), new { Status = status }, cancellationToken)
             .ConfigureAwait(false);
         await ServiceExceptionHelper.ThrowIfDomainExceptionAsync(response, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
@@ -81,7 +81,7 @@ public sealed class HelpdeskApiClient(HttpClient httpClient)
     public async Task AddCommentAsync(int id, string body, int authorUserId, CancellationToken cancellationToken = default)
     {
         using var response = await httpClient
-            .PostAsJsonAsync($"/Tickets/{id}/comments", new { Body = body, AuthorUserId = authorUserId }, cancellationToken)
+            .PostAsJsonAsync(string.Create(CultureInfo.InvariantCulture, $"/Tickets/{id}/comments"), new { Body = body, AuthorUserId = authorUserId }, cancellationToken)
             .ConfigureAwait(false);
         await ServiceExceptionHelper.ThrowIfDomainExceptionAsync(response, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
@@ -90,7 +90,7 @@ public sealed class HelpdeskApiClient(HttpClient httpClient)
     public async Task EditCommentAsync(int id, int commentId, string body, CancellationToken cancellationToken = default)
     {
         using var response = await httpClient
-            .PutAsJsonAsync($"/Tickets/{id}/comments/{commentId}", new { Body = body }, cancellationToken)
+            .PutAsJsonAsync(string.Create(CultureInfo.InvariantCulture, $"/Tickets/{id}/comments/{commentId}"), new { Body = body }, cancellationToken)
             .ConfigureAwait(false);
         await ServiceExceptionHelper.ThrowIfDomainExceptionAsync(response, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
@@ -99,7 +99,7 @@ public sealed class HelpdeskApiClient(HttpClient httpClient)
     public async Task RemoveCommentAsync(int id, int commentId, CancellationToken cancellationToken = default)
     {
         using var response = await httpClient
-            .DeleteAsync(new Uri($"Tickets/{id}/comments/{commentId}", UriKind.Relative), cancellationToken)
+            .DeleteAsync(new Uri(string.Create(CultureInfo.InvariantCulture, $"Tickets/{id}/comments/{commentId}"), UriKind.Relative), cancellationToken)
             .ConfigureAwait(false);
         await ServiceExceptionHelper.ThrowIfDomainExceptionAsync(response, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();

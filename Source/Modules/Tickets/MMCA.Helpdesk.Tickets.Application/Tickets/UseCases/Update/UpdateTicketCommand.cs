@@ -14,7 +14,6 @@ public sealed record UpdateTicketCommand(
     : ICacheInvalidating
 {
     /// <summary>The client's last-seen concurrency token; null skips the conflict check (ADR-035).</summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification = "byte[] round-trips the EF rowversion concurrency token")]
     public byte[]? RowVersion { get; init; }
 
     public string CachePrefix => $"{typeof(Ticket).FullName}:";

@@ -17,6 +17,16 @@
     <NoWarn>$(NoWarn);CS1591;RMG020;EXTEXP0001</NoWarn>
   </PropertyGroup>
 
+  <!-- Test-wide suppressions (mirrors MMCA.Common): xUnit1051 (CancellationToken propagation) for
+       every test project; CA2263 (prefer generic overload) for the NetArchTest-based architecture
+       tests. Kept here so individual test csproj files carry no per-project NoWarn duplication. -->
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('Tests'))">
+    <NoWarn>$(NoWarn);xUnit1051</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Architecture.Tests'))">
+    <NoWarn>$(NoWarn);CA2263</NoWarn>
+  </PropertyGroup>
+
   <ItemGroup Condition="'$(MSBuildProjectExtension)' != '.dcproj'">
     <PackageReference Include="Meziantou.Analyzer">
       <PrivateAssets>all</PrivateAssets>

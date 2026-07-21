@@ -124,9 +124,10 @@ public sealed class TranslationCompletenessTests : LocalizationResourceTestsBase
     protected override int MinimumBaseResources => 3;
 }
 
-// Localized-text convention (ADR-027): no hard-coded user-visible literal (snackbar messages, page
-// Title properties, <PageTitle> markup, breadcrumb labels, literal NavItems) may ship in razor files;
-// text resolves through IStringLocalizer resources so it follows the selected language.
+// Localized-text convention (ADR-027): user-visible literals (snackbar messages, page title
+// properties, PageTitle markup, breadcrumb labels, and literal nav items) are disallowed in razor
+// files. All display text must resolve through IStringLocalizer resources so it follows the selected
+// language.
 public sealed class LocalizedTextConventionTests : LocalizedTextConventionTestsBase
 {
     protected override IArchitectureMap Map { get; } = new HelpdeskArchitectureMap();
