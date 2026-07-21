@@ -28,7 +28,7 @@ GETTING-STARTED.md Phase 1). **Building requires `../MMCA.Common/Source` to exis
 
 ```bash
 dotnet build MMCA.Helpdesk.slnx                       # warning-free under all analyzers
-dotnet test  --solution MMCA.Helpdesk.slnx            # 84 tests (14 domain + 70 architecture), NO database needed
+dotnet test  --solution MMCA.Helpdesk.slnx            # 86 tests (14 domain + 72 architecture), NO database needed
 dotnet run --project Source/Hosting/MMCA.Helpdesk.AppHost   # interactive terminal ONLY — see caveat below
 ```
 
@@ -67,7 +67,9 @@ The one module, `Tickets`, is split across five projects under `Source/Modules/T
 `Source/Hosting/` (AppHost + migrations).
 
 **The host DI sequence is load-bearing and fixed** (`Source/Hosts/MMCA.Helpdesk.Web/Program.cs`):
-`AddApplication()` → `AddInfrastructure()` → `AddAPI(modulesSettings)` → `ModuleLoader.DiscoverAndRegister(...)`
+`AddApplication()` → `AddInfrastructure()` → `AddAPI(modulesSettings)` →
+`AddErrorResources<TicketsErrorResources>()` (module error-code translations for localized
+ProblemDetails, ADR-027) → `ModuleLoader.DiscoverAndRegister(...)`
 → `AddBrokerMessaging()` → **`AddApplicationDecorators()` must come last** (it wraps the
 convention-scanned handlers in the FeatureGate→Logging→Caching→Validating→Transactional pipeline; see
 ADR-014). `ModuleLoader` discovers `IModule` implementations and registers them in topological order —
@@ -132,3 +134,13 @@ surface the domain error message before the generic `EnsureSuccessStatusCode` fa
 documentation-only changes included (this file too). For any modification, branch off an up-to-date
 `main` first, commit there, push the branch, open a PR, let the required checks go green (see
 `CONTRIBUTING.md`), then squash-merge. Merges here are not deploys.
+
+- **Commit messages use Scoped Commits** (`<scope>: <description>`), not Conventional Commits (see
+  `CONTRIBUTING.md`).
+- **The one required check is `build-and-test`** (`.github/workflows/ci.yml`): Release build + the
+  headless domain/architecture tests. CI checks out `ivanball/MMCA.Common@main` as a sibling and
+  builds against its source (local-source mode, no package token), so a change merged to MMCA.Common
+  `main` can break Helpdesk CI with no Helpdesk-side change; if CI goes red on an untouched area,
+  diff recent Common commits first.
+- Helpdesk keeps no `packages.lock.json` files; framework version bumps arrive as `Bump MMCA.Common
+  to vX.Y.Z` PRs cut by `/push-release`.
