@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this repo is
 
 MMCA.Helpdesk is the **runnable reference application** for the [MMCA.Common](../MMCA.Common)
-framework — the worked companion to `../MMCA.Common/GETTING-STARTED.md`, where every step in that
+framework: the worked companion to `../MMCA.Common/GETTING-STARTED.md`, where every step in that
 guide maps to real code here. It is deliberately **minimal and monolith-first**: one business module
 (`Tickets`) exercised end to end through all five layers, built to demonstrate the framework's "build
 the monolith now, extract a service later" path.
@@ -13,14 +13,17 @@ the monolith now, extract a service later" path.
 The workspace-level `../CLAUDE.md` covers the conventions shared across MMCA.Common / Store / ADC /
 Helpdesk (.NET 10, `LangVersion: preview`, the five error-severity analyzers + `TreatWarningsAsErrors`,
 Result pattern, DDD+CQRS, soft-delete, audit fields, identifier type aliases, Microsoft Testing
-Platform + xUnit v3). **Don't re-derive those here** — read that file for the cross-cutting rules. This
+Platform + xUnit v3). **Don't re-derive those here**: read that file for the cross-cutting rules. This
 file is only the Helpdesk-specific picture.
+
+Reinforced prose rule: never use accents, tildes, or em-dashes, and never use the words "seam" or
+"seams" (banned workspace-wide); prefer "boundary", "extension point", "pipeline", or "layer".
 
 ## Build, test, run
 
-This scaffold defaults to **local-source mode**: `local.props` (committed in this seed — unlike Store/ADC,
+This scaffold defaults to **local-source mode**: `local.props` (committed in this seed, unlike Store/ADC,
 where it is gitignored) sets `UseLocalMMCA=true` and points at `../MMCA.Common/Source`, so the
-`MMCA.Common.*` packages resolve via `ProjectReference` to the framework source — no GitHub Packages
+`MMCA.Common.*` packages resolve via `ProjectReference` to the framework source: no GitHub Packages
 token needed. The
 `PackageReference`→`ProjectReference` swap lives in `Directory.Build.targets`; `nuget.config` only lists
 nuget.org. To consume published packages instead, delete `local.props` and add the GitHub feed (see
@@ -29,10 +32,10 @@ GETTING-STARTED.md Phase 1). **Building requires `../MMCA.Common/Source` to exis
 ```bash
 dotnet build MMCA.Helpdesk.slnx                       # warning-free under all analyzers
 dotnet test  --solution MMCA.Helpdesk.slnx            # 86 tests (14 domain + 72 architecture), NO database needed
-dotnet run --project Source/Hosting/MMCA.Helpdesk.AppHost   # interactive terminal ONLY — see caveat below
+dotnet run --project Source/Hosting/MMCA.Helpdesk.AppHost   # interactive terminal ONLY, see caveat below
 ```
 
-Single test — target the project and pass a Microsoft Testing Platform filter after `--` (NOT VSTest
+Single test: target the project and pass a Microsoft Testing Platform filter after `--` (NOT VSTest
 `--filter`):
 
 ```bash
@@ -51,18 +54,18 @@ dotnet ef migrations add <Name> \
 ```
 
 **Run caveats (important):**
-- The Aspire AppHost **stalls if launched headless** — only run it in an interactive terminal.
+- The Aspire AppHost **stalls if launched headless**: only run it in an interactive terminal.
 - The full POST/GET round-trip needs a **reachable SQL Server**; there is none in the sandbox, so
   integration/E2E behavior can't be run-verified here (matches the workspace `feedback_no_local_sql_for_tests`).
   Unit + architecture tests need no DB and do run.
 - The Aspire dashboard exposes three resources: `sql`, `web` (the API), `ui` (Blazor). Open **`ui`** to
-  use the app. The `web` API serves `GET/POST /Tickets`, `/health`, `/alive` — **no page at `/`, so the
+  use the app. The `web` API serves `GET/POST /Tickets`, `/health`, `/alive`: **no page at `/`, so the
   API root returns 404 by design.**
 
 ## Architecture: how a request flows
 
 The one module, `Tickets`, is split across five projects under `Source/Modules/Tickets/` (`Shared`,
-`Domain`, `Application`, `Infrastructure`, `API`) — the canonical layer layout. Hosts live separately:
+`Domain`, `Application`, `Infrastructure`, `API`): the canonical layer layout. Hosts live separately:
 `Source/Hosts/MMCA.Helpdesk.Web` (the API monolith), `Source/Hosts/UI/MMCA.Helpdesk.UI.Web` (Blazor),
 `Source/Hosting/` (AppHost + migrations).
 
@@ -72,10 +75,10 @@ The one module, `Tickets`, is split across five projects under `Source/Modules/T
 ProblemDetails, ADR-027) → `ModuleLoader.DiscoverAndRegister(...)`
 → `AddBrokerMessaging()` → **`AddApplicationDecorators()` must come last** (it wraps the
 convention-scanned handlers in the FeatureGate→Logging→Caching→Validating→Transactional pipeline; see
-ADR-014). `ModuleLoader` discovers `IModule` implementations and registers them in topological order —
+ADR-014). `ModuleLoader` discovers `IModule` implementations and registers them in topological order:
 `TicketsModule` is a leaf with no dependencies.
 
-**Aggregate conventions** (`Source/Modules/Tickets/.../Domain/Tickets/Ticket.cs`) — these are the
+**Aggregate conventions** (`Source/Modules/Tickets/.../Domain/Tickets/Ticket.cs`): these are the
 patterns the reference app exists to demonstrate, copy them when adding entities:
 - Created through a static `Create(...)` **factory returning `Result<Ticket>`** (never a public ctor;
   the framework-wide factory name, enforced by `EntityConventionTests`); invariants live in
@@ -96,19 +99,19 @@ extracted, with no handler change (ADR-003 / ADR-008). Integration events carry 
 
 **Use cases / wiring:** handlers implement `ICommandHandler<,>` / `IQueryHandler<,>` and are
 **convention-scanned by Scrutor** via `ScanModuleApplicationServices<ClassReference>()` in the module's
-`Application/DependencyInjection.cs` (which uses the C# `extension(IServiceCollection)` syntax) — you do
+`Application/DependencyInjection.cs` (which uses the C# `extension(IServiceCollection)` syntax): you do
 not register each handler by hand. Read endpoints come from `EntityControllerBase`; writes inject
 handlers directly into `TicketsController`. Mapping is **manual via Mapperly** source-generators
 (`*DTOMapper`, `*RequestMapper`), not AutoMapper (ADR-001). Failures map to RFC 9457 ProblemDetails
 through `HandleFailure`.
 
 **Persistence:** `ModuleApplicationDbContext` is abstract and only declares the module's `DbSet`s; the
-concrete runtime context is the single `SQLServerDbContext` from MMCA.Common — **one instance per
+concrete runtime context is the single `SQLServerDbContext` from MMCA.Common: **one instance per
 database, never a per-module context class** (ADR-006). EF entity configurations are auto-discovered by
 assembly-name convention, which is why `Infrastructure/DependencyInjection.cs` is a near no-op.
 
 **UI** (`Source/Hosts/UI/...`): Blazor Server + MudBlazor calling the API **server-side** via the typed
-`HelpdeskApiClient` + Aspire service discovery (base address `https+http://web` from config) — no
+`HelpdeskApiClient` + Aspire service discovery (base address `https+http://web` from config): no
 browser CORS, no token. On failure it calls `ServiceExceptionHelper.ThrowIfDomainExceptionAsync` to
 surface the domain error message before the generic `EnsureSuccessStatusCode` fallback.
 
@@ -120,7 +123,7 @@ surface the domain error message before the generic `EnsureSuccessStatusCode` fa
   set the authority, and flip the controller back to `[Authorize]`. Don't add `[Authorize]` without an
   issuer or the pipeline rejects every request.
 - **Extraction is host-only.** Turning Tickets into its own service (Phase 8) changes only the
-  hosting/AppHost (per-service DB, broker, YARP gateway, JWKS) — the
+  hosting/AppHost (per-service DB, broker, YARP gateway, JWKS): the
   Domain/Application/Shared/Infrastructure/API code does **not** change. Preserve that property.
 - **Architecture fitness functions are real tests.** `Tests/Architecture/` subclasses the shared
   NetArchTest rule bases from `MMCA.Common.Testing.Architecture`, parameterized by
