@@ -90,7 +90,7 @@ patterns the reference app exists to demonstrate, copy them when adding entities
 
 **Two event paths, deliberately distinct:** *domain events* (`TicketChanged`) are intra-module, dispatched
 synchronously post-save; *integration events* (`TicketOpenedIntegrationEvent`) go through the outbox
-(`IIntegrationEventPublisher.PublishAsync`) — in-process in the monolith, over a broker once Tickets is
+(`IEventBus.PublishAsync`): in-process in the monolith, over a broker once Tickets is
 extracted, with no handler change (ADR-003 / ADR-008). Integration events carry a `SchemaVersion`
 (ADR-010).
 
