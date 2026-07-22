@@ -19,7 +19,7 @@ namespace MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.Create;
 public sealed class CreateTicketHandler(
     IUnitOfWork unitOfWork,
     IEntityRequestMapper<Ticket, TicketCreateRequest, TicketIdentifierType> requestMapper,
-    IIntegrationEventPublisher integrationEventPublisher,
+    IEventBus eventBus,
     TicketDTOMapper dtoMapper) : ICommandHandler<TicketCreateRequest, Result<TicketDTO>>
 {
     public async Task<Result<TicketDTO>> HandleAsync(TicketCreateRequest command, CancellationToken cancellationToken = default)
@@ -42,7 +42,7 @@ public sealed class CreateTicketHandler(
         // event reaches consumers. The publisher persists the event to the outbox and dispatches it
         // in-process today, and will route it over a broker once Tickets is extracted, with no handler
         // code change required.
-        await integrationEventPublisher.PublishAsync(
+        await eventBus.PublishAsync(
             new TicketOpenedIntegrationEvent(entity.Id, entity.RequesterUserId),
             cancellationToken).ConfigureAwait(false);
 
