@@ -5,8 +5,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this repo is
 
 MMCA.Helpdesk is the **runnable reference application** for the [MMCA.Common](../MMCA.Common)
-framework: the worked companion to `../MMCA.Common/GETTING-STARTED.md`, where every step in that
-guide maps to real code here. It is deliberately **minimal and monolith-first**: one business module
+framework: the worked companion to the getting-started guide, which is canonical in the Website repo
+(`../Website/docs-src/guides/common-GETTING-STARTED.md`, published at
+<https://ivanball.github.io/docs/guides/common-GETTING-STARTED.html>) and where every step maps to
+real code here. It is deliberately **minimal and monolith-first**: one business module
 (`Tickets`) exercised end to end through all five layers, built to demonstrate the framework's "build
 the monolith now, extract a service later" path.
 
@@ -26,12 +28,13 @@ where it is gitignored) sets `UseLocalMMCA=true` and points at `../MMCA.Common/S
 `MMCA.Common.*` packages resolve via `ProjectReference` to the framework source: no GitHub Packages
 token needed. The
 `PackageReference`→`ProjectReference` swap lives in `Directory.Build.targets`; `nuget.config` only lists
-nuget.org. To consume published packages instead, delete `local.props` and add the GitHub feed (see
-GETTING-STARTED.md Phase 1). **Building requires `../MMCA.Common/Source` to exist on disk.**
+nuget.org. To consume published packages instead, just delete `local.props`: since v1.128.0 the
+`MMCA.Common.*` packages are published to **nuget.org** (ADR-053), so no extra feed and no token are
+needed. **Building in local-source mode requires `../MMCA.Common/Source` to exist on disk.**
 
 ```bash
 dotnet build MMCA.Helpdesk.slnx                       # warning-free under all analyzers
-dotnet test  --solution MMCA.Helpdesk.slnx            # 86 tests (14 domain + 72 architecture), NO database needed
+dotnet test  --solution MMCA.Helpdesk.slnx            # 87 tests (domain + architecture), NO database needed
 dotnet run --project Source/Hosting/MMCA.Helpdesk.AppHost   # interactive terminal ONLY, see caveat below
 ```
 
