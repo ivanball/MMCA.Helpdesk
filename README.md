@@ -1,10 +1,18 @@
 # MMCA.Helpdesk
 
-A minimal, runnable **reference application** built on the [MMCA.Common](../MMCA.Common) framework
-(.NET 10, DDD + Clean Architecture + CQRS). It is the worked companion to
-[`MMCA.Common/GETTING-STARTED.md`](../MMCA.Common/GETTING-STARTED.md): every step in that guide maps
-to real code here. It is built **monolith-first** (the framework's "build the monolith now, extract a
-service later" path).
+A minimal, runnable **reference application** built on the
+[MMCA.Common](https://github.com/ivanball/MMCA.Common) framework (.NET 10, DDD + Clean Architecture +
+CQRS). It is the worked companion to
+[Getting Started](https://ivanball.github.io/docs/guides/common-GETTING-STARTED.html): every step in
+that guide maps to real code here. It is built **monolith-first** (the framework's "build the
+monolith now, extract a service later" path).
+
+**New here? Start with this repository.** It is the fastest way to see the framework work end to end:
+one module, five layers, one command to run.
+
+- The framework: <https://github.com/ivanball/MMCA.Common> (`dotnet add package MMCA.Common.API`)
+- Full documentation, ADRs, and scorecards: <https://ivanball.github.io/docs/>
+- Long-form articles on the patterns used here: <https://ivanball.github.io/writing.html>
 
 The domain is a small support-ticket app: a `Ticket` aggregate with `TicketComment` children, opened
 through a factory that returns `Result<T>`, mutated through guarded methods that raise domain events,
@@ -32,9 +40,10 @@ Tests/
 ## Build, test, run
 
 This scaffold defaults to **local-source mode**: `local.props` sets `UseLocalMMCA=true` and points at
-`../MMCA.Common/Source`, so it builds against the framework source with no GitHub Packages token. To
-consume the published NuGet packages instead, delete `local.props` and add the GitHub feed to
-`nuget.config` (see GETTING-STARTED.md, Phase 1).
+`../MMCA.Common/Source`, so it builds against the framework source when you have both repositories
+checked out side by side. To consume the published packages instead, delete `local.props`: the
+`MMCA.Common.*` packages are on nuget.org, so no extra feed and no token are needed
+(see [Getting Started](https://ivanball.github.io/docs/guides/common-GETTING-STARTED.html), Phase 1).
 
 ```bash
 # Build everything (warning-free under the five analyzers + TreatWarningsAsErrors)
@@ -69,11 +78,12 @@ set `Authentication:JwtBearer:Authority`, and switch the controller back to `[Au
 Build-verified here:
 
 - `dotnet build MMCA.Helpdesk.slnx` -> 0 warnings, 0 errors.
-- `dotnet test --solution` -> 86 passing (14 domain + 72 architecture-fitness).
+- `dotnet test --solution` -> 87 passing (domain + architecture-fitness), no database needed.
 - `dotnet ef migrations add InitialCreate` -> generates `Tickets`, `TicketComments`, and the per-DB
   `OutboxMessages` table with audit, soft-delete, and concurrency columns.
 
 End-to-end run (POST/GET against SQL, and the Phase 8 extraction into a Tickets service behind a
 gateway) needs a reachable SQL Server and an Identity issuer, and is described step by step in
-[GETTING-STARTED.md](../MMCA.Common/GETTING-STARTED.md). The monolith-to-service change is **host-only**:
+[Getting Started](https://ivanball.github.io/docs/guides/common-GETTING-STARTED.html). The
+monolith-to-service change is **host-only**:
 the Tickets Domain/Application/Shared/Infrastructure/API code does not change.
