@@ -1,5 +1,4 @@
 using MMCA.Common.Application.UseCases;
-using MMCA.Helpdesk.Tickets.Domain.Tickets;
 
 namespace MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.Update;
 
@@ -16,5 +15,5 @@ public sealed record UpdateTicketCommand(
     /// <summary>The client's last-seen concurrency token; null skips the conflict check (ADR-035).</summary>
     public byte[]? RowVersion { get; init; }
 
-    public string CachePrefix => $"{typeof(Ticket).FullName}:";
+    public string CachePrefix => TicketCacheKeys.Prefix;
 }

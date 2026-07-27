@@ -15,7 +15,7 @@ dotnet build MMCA.Helpdesk.slnx -c Release
 dotnet test  --solution MMCA.Helpdesk.slnx
 ```
 
-The full test run (domain + architecture) needs no database and runs headless. Only the Aspire
+The full test run (domain + application + architecture) needs no database and runs headless. Only the Aspire
 round-trip needs SQL.
 
 ## Commit messages: Scoped Commits

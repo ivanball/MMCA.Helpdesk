@@ -1,5 +1,4 @@
 using MMCA.Common.Application.UseCases;
-using MMCA.Helpdesk.Tickets.Domain.Tickets;
 using MMCA.Helpdesk.Tickets.Shared.Tickets;
 
 namespace MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.ChangeStatus;
@@ -10,5 +9,5 @@ namespace MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.ChangeStatus;
 public sealed record ChangeTicketStatusCommand(TicketIdentifierType TicketId, TicketStatus Status)
     : ICacheInvalidating
 {
-    public string CachePrefix => $"{typeof(Ticket).FullName}:";
+    public string CachePrefix => TicketCacheKeys.Prefix;
 }
