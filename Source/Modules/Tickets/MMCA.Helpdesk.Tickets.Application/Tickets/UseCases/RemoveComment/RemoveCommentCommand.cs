@@ -1,5 +1,4 @@
 using MMCA.Common.Application.UseCases;
-using MMCA.Helpdesk.Tickets.Domain.Tickets;
 
 namespace MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.RemoveComment;
 
@@ -10,5 +9,5 @@ public sealed record RemoveCommentCommand(
     TicketIdentifierType TicketId,
     TicketCommentIdentifierType CommentId) : ICacheInvalidating
 {
-    public string CachePrefix => $"{typeof(Ticket).FullName}:";
+    public string CachePrefix => TicketCacheKeys.Prefix;
 }

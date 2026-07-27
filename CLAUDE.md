@@ -34,7 +34,7 @@ needed. **Building in local-source mode requires `../MMCA.Common/Source` to exis
 
 ```bash
 dotnet build MMCA.Helpdesk.slnx                       # warning-free under all analyzers
-dotnet test  --solution MMCA.Helpdesk.slnx            # 87 tests (domain + architecture), NO database needed
+dotnet test  --solution MMCA.Helpdesk.slnx            # 91 tests (domain + application + architecture), NO database needed
 dotnet run --project Source/Hosting/MMCA.Helpdesk.AppHost   # interactive terminal ONLY, see caveat below
 ```
 
@@ -93,6 +93,13 @@ patterns the reference app exists to demonstrate, copy them when adding entities
 - Mutations (`AddComment`, `UpdateDetails`, `ChangeStatus`, `Delete`) raise a `TicketChanged` **domain
   event** via `AddDomainEvent`, dispatched in-process after `SaveChangesAsync` within the same
   transaction (consumed by `TicketChangedAuditHandler`). `Delete()` cascade-soft-deletes comments.
+
+**The caching pair is wired, not just available:** `GetTicketByIdQuery` implements `IQueryCacheable`
+and every ticket command implements `ICacheInvalidating`, both keyed through `TicketCacheKeys` (the
+one place the module names cache entries). The decorator matches the two by **string prefix**, so a
+read key that drifts out of `TicketCacheKeys.Prefix` goes stale silently: `TicketCacheInvalidationTests`
+is what catches that, plus the two rules worth remembering (invalidation runs only on success, and
+outside the transaction). Keep both halves pointing at `TicketCacheKeys`.
 
 **Two event paths, deliberately distinct:** *domain events* (`TicketChanged`) are intra-module, dispatched
 synchronously post-save; *integration events* (`TicketOpenedIntegrationEvent`) go through the outbox

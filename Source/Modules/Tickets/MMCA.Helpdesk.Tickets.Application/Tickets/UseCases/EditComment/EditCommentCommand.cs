@@ -1,5 +1,4 @@
 using MMCA.Common.Application.UseCases;
-using MMCA.Helpdesk.Tickets.Domain.Tickets;
 
 namespace MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.EditComment;
 
@@ -11,5 +10,5 @@ public sealed record EditCommentCommand(
     TicketCommentIdentifierType CommentId,
     string Body) : ICacheInvalidating
 {
-    public string CachePrefix => $"{typeof(Ticket).FullName}:";
+    public string CachePrefix => TicketCacheKeys.Prefix;
 }

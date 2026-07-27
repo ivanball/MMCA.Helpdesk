@@ -25,6 +25,7 @@
   </Folder>
   <Folder Name="/Tests/">
     <Project Path="Tests/Modules/Tickets/MMCA.Helpdesk.Tickets.Domain.Tests/MMCA.Helpdesk.Tickets.Domain.Tests.csproj" />
+    <Project Path="Tests/Modules/Tickets/MMCA.Helpdesk.Tickets.Application.Tests/MMCA.Helpdesk.Tickets.Application.Tests.csproj" />
     <Project Path="Tests/Architecture/MMCA.Helpdesk.Architecture.Tests/MMCA.Helpdesk.Architecture.Tests.csproj" />
   </Folder>
 </Solution>
