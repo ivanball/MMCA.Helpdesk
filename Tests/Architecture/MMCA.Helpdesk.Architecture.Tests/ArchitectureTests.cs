@@ -50,7 +50,7 @@ public sealed class FrameworkVersionConsistencyTests : FrameworkVersionConsisten
 }
 
 // Gate the ADR-035 optimistic-concurrency round-trip: every *UpdateRequest must implement
-// IConcurrencyAware. Non-vacuous since TicketUpdateRequest adopted the seam (drift plan H2).
+// IConcurrencyAware. Non-vacuous since TicketUpdateRequest adopted the extension point (drift plan H2).
 public sealed class ConcurrencyConventionTests : ConcurrencyConventionTestsBase
 {
     protected override IArchitectureMap Map { get; } = new HelpdeskArchitectureMap();
