@@ -22,10 +22,12 @@ services.AddOptions<ApplicationSettings>()
 var applicationSettings = builder.Configuration.GetSection(ApplicationSettings.SectionName).Get<ApplicationSettings>()
     ?? throw new InvalidOperationException("ApplicationSettings section is not configured.");
 
-services.AddHealthChecks()
-    .AddSqlServer(
-        builder.Configuration.GetConnectionString("SQLServerConnectionString")
-        ?? throw new InvalidOperationException("SQLServerConnectionString is not configured."));
+// SQL is REQUIRED: a host that cannot resolve its own connection string fails fast at startup
+// rather than reporting healthy and taking traffic it cannot serve. Redis/RabbitMQ checks come
+// along when configured but are tagged "optional" upstream, so they report on /health WITHOUT
+// gating /health/ready: a dependency the app degrades gracefully without must never pull every
+// replica from rotation.
+builder.AddInfrastructureHealthChecks(requireSqlServer: true);
 
 services.AddCommonCors(builder.Configuration);
 services.AddCommonApiVersioning();
