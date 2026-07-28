@@ -1,14 +1,9 @@
 @inherits LayoutComponentBase
 @using MMCA.Common.UI.Components
-@using MMCA.Common.UI.Services
-@using MMCA.Common.UI.Theme
-@inject ThemeService ThemeService
-@implements IDisposable
 
-<MudThemeProvider Theme="MMCATheme.Instance" @bind-IsDarkMode="_isDarkMode" />
-<MudPopoverProvider />
-<MudDialogProvider />
-<MudSnackbarProvider />
+@* The four Mud providers (theme, popover, dialog, snackbar) and the ADR-028 dark/light lifecycle are
+   owned by the framework's MmcaThemeProviders, so this layout carries only the Helpdesk chrome. *@
+<MmcaThemeProviders />
 
 <MudLayout>
     <MudAppBar Elevation="1">
@@ -24,27 +19,3 @@
         </MudContainer>
     </MudMainContent>
 </MudLayout>
-
-@code {
-    private bool _isDarkMode;
-
-    protected override void OnInitialized() => ThemeService.OnChange += OnThemeChanged;
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            await ThemeService.InitializeAsync();
-            _isDarkMode = ThemeService.IsDarkMode;
-            StateHasChanged();
-        }
-    }
-
-    private void OnThemeChanged(object? sender, EventArgs e)
-    {
-        _isDarkMode = ThemeService.IsDarkMode;
-        InvokeAsync(StateHasChanged);
-    }
-
-    public void Dispose() => ThemeService.OnChange -= OnThemeChanged;
-}
