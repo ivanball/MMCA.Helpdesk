@@ -16,13 +16,13 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout MMCA.Helpdesk (this PR)
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           path: MMCA.Helpdesk
           fetch-depth: 0
 
       - name: Checkout MMCA.Common (source companion)
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           repository: ivanball/MMCA.Common
           ref: main
@@ -32,7 +32,7 @@ jobs:
           # COMMON_SOURCE_PAT secret with contents:read on it.
           token: ${{ secrets.COMMON_SOURCE_PAT || github.token }}
 
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 
