@@ -22,6 +22,11 @@ builder.Services.AddMudServices();
 builder.Services.AddLocalization();
 builder.Services.AddScoped<ThemeService>();
 
+// CultureSwitcher delegates the actual switch to ICultureApplier, which AddUIShared would normally
+// register; this seed does not call AddUIShared (it has no ApiSettings-backed APIClient pipeline), so
+// the Blazor Web default is registered here. It navigates to the /culture/set endpoint mapped below.
+builder.Services.AddScoped<ICultureApplier, EndpointCultureApplier>();
+
 // Server-side typed client to the API. The base address ("https+http://web") comes from config so
 // the service-discovery handler (from AddServiceDefaults) resolves the "web" API resource at runtime.
 var apiBaseAddress = builder.Configuration["Api:BaseAddress"]
@@ -38,7 +43,13 @@ if (!app.Environment.IsDevelopment())
 }
 
 // Set CurrentUICulture from the culture cookie / Accept-Language so SSR prerender uses the right locale.
-string[] supportedCultures = [.. SupportedCultures.All];
+// Pseudo-localization (ADR-027 section 8) is a Development-only diagnostic locale; CultureSwitcher only
+// offers it there, so both this allowlist and /culture/set below must accept it under the same condition
+// or the menu entry silently no-ops. Mirrors UseCommonRequestLocalization in MMCA.Common.API.
+var allowPseudo = app.Environment.IsDevelopment();
+string[] supportedCultures = allowPseudo
+    ? [.. SupportedCultures.All, SupportedCultures.PseudoLocale]
+    : [.. SupportedCultures.All];
 app.UseRequestLocalization(new RequestLocalizationOptions()
     .SetDefaultCulture(SupportedCultures.Default)
     .AddSupportedCultures(supportedCultures)
@@ -52,7 +63,7 @@ app.MapDefaultEndpoints();
 // Culture switch endpoint (ADR-027): writes the standard ASP.NET culture cookie and reloads.
 app.MapGet("/culture/set", (string culture, string? redirectUri, HttpContext context) =>
 {
-    if (SupportedCultures.IsSupported(culture))
+    if (SupportedCultures.IsSupported(culture) || allowPseudo && SupportedCultures.IsPseudoLocale(culture))
     {
         context.Response.Cookies.Append(
             CookieRequestCultureProvider.DefaultCookieName,
