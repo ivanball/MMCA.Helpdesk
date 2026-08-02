@@ -42,8 +42,8 @@ Single test: target the project and pass a Microsoft Testing Platform filter aft
 `--filter`):
 
 ```bash
-dotnet test --project Tests/Modules/Tickets/MMCA.Helpdesk.Tickets.Domain.Tests/MMCA.Helpdesk.Tickets.Domain.Tests.csproj -- -method "*Create_WithEmptyTitle*"
-dotnet test --project Tests/Architecture/MMCA.Helpdesk.Architecture.Tests/MMCA.Helpdesk.Architecture.Tests.csproj -- -class "*ModuleIsolationTests*"
+dotnet test --project Tests/Modules/Tickets/MMCA.Helpdesk.Tickets.Domain.Tests/MMCA.Helpdesk.Tickets.Domain.Tests.csproj -- --filter-method "*Create_WithEmptyTitle*"
+dotnet test --project Tests/Architecture/MMCA.Helpdesk.Architecture.Tests/MMCA.Helpdesk.Architecture.Tests.csproj -- --filter-class "*ModuleIsolationTests*"
 ```
 
 EF migration (the design-time factory `DesignTimeSQLServerDbContextFactory` never opens a DB connection
