@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Builds in package mode against the pinned MMCA.Common.* release from nuget.org: no token, no extra
+# feed, no sibling checkout. The domain, application, and architecture-fitness tests need no
+# database and run headless here; the Aspire round-trip needs a real SQL Server and is not run.
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore MMCA.Helpdesk.slnx
+
+      - name: Build
+        run: dotnet build MMCA.Helpdesk.slnx -c Release --no-restore
+
+      - name: Test
+        run: dotnet test --solution MMCA.Helpdesk.slnx -c Release --no-build --minimum-expected-tests 1

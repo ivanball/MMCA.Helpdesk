@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Ivan Ball-llovera",
+  "classifications": [ "CQRS", "DDD", "Clean Architecture", "MMCA" ],
+  "identity": "MMCA.Templates.Slice.Query",
+  "name": "MMCA query slice (query + handler)",
+  "shortName": "mmca-query",
+  "description": "One read-side vertical slice for an existing MMCA module: a cacheable query record plus its handler loading the aggregate through IUnitOfWork and mapping it to a DTO. Generated into a folder named after the use case.",
+  "tags": {
+    "language": "C#",
+    "type": "item"
+  },
+  "sourceName": "GetTicketById",
+  "defaultName": "GetTicketById",
+  "preferNameDirectory": true,
+
+  "symbols": {
+    "app": {
+      "type": "parameter",
+      "datatype": "text",
+      "isRequired": true,
+      "replaces": "MMCA.Helpdesk",
+      "description": "The solution / root namespace this slice belongs to, for example Contoso.Support."
+    },
+    "module": {
+      "type": "parameter",
+      "datatype": "text",
+      "isRequired": true,
+      "replaces": "Tickets",
+      "description": "The module this slice goes into, plural PascalCase, for example Billing."
+    },
+    "aggregate": {
+      "type": "parameter",
+      "datatype": "text",
+      "isRequired": true,
+      "replaces": "Ticket",
+      "description": "The aggregate root the handler loads, singular PascalCase, for example Invoice."
+    },
+    "aggregateLower": {
+      "type": "derived",
+      "valueSource": "aggregate",
+      "valueTransform": "lowerCase",
+      "replaces": "ticket",
+      "description": "Lower-case aggregate name: local variables and the prose in the doc comments."
+    },
+    "moduleLower": {
+      "type": "derived",
+      "valueSource": "module",
+      "valueTransform": "lowerCase",
+      "replaces": "tickets",
+      "description": "Lower-case module name."
+    },
+    "useCaseNamespace": {
+      "type": "derived",
+      "valueSource": "name",
+      "valueTransform": "toUseCaseNamespace",
+      "replaces": "UseCases.GetById",
+      "description": "The use-case namespace segment, derived from the slice name so the folder, the namespace, and the type names agree."
+    }
+  },
+
+  "forms": {
+    "toUseCaseNamespace": { "identifier": "replace", "pattern": "^", "replacement": "UseCases." },
+    "lowerCase": { "identifier": "lowerCase" }
+  },
+
+  "postActions": [
+    {
+      "description": "Wire the slice up.",
+      "manualInstructions": [
+        {
+          "text": "1. Map the query in your module's controller (reads usually come from EntityControllerBase; add an action for this one).\n2. Keep its CacheKey inside your module's *CacheKeys.Prefix. The caching decorator matches reads to invalidating commands by STRING PREFIX, so a key that drifts out of the prefix goes stale silently and nothing fails.\n3. Handlers are convention-scanned by Scrutor, so there is no DI registration to add."
+        }
+      ],
+      "actionId": "AC1156F7-BB77-4DB8-B28F-24EEBCCA1E5C",
+      "continueOnError": true
+    }
+  ]
+}

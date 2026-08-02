@@ -1,0 +1,19 @@
+## Build output
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+artifacts/
+nupkgs/
+
+## Local MMCA.Common source override (see local.props.template). Machine-specific: never commit it.
+local.props
+
+## EF / logs / user secrets
+logs/
+*.user
+*.suo
+.vs/
+
+## Rider / VS Code
+.idea/
+.vscode/

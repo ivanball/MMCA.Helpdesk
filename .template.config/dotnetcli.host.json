@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json.schemastore.org/dotnetcli.host",
+  "symbolInfo": {
+    "module": {
+      "longName": "module",
+      "shortName": "m"
+    },
+    "aggregate": {
+      "longName": "aggregate",
+      "shortName": "a"
+    },
+    "frameworkVersion": {
+      "longName": "framework-version",
+      "shortName": "f"
+    },
+    "localMmca": {
+      "longName": "local-mmca",
+      "shortName": ""
+    },
+    "skipRestore": {
+      "longName": "no-restore",
+      "shortName": ""
+    }
+  },
+  "usageExamples": [
+    "-n Contoso.Support",
+    "-n Contoso.Support --module Orders --aggregate Order",
+    "-n Fabrikam.Desk --module Reservations --aggregate Reservation --framework-version 1.135.0",
+    "-n Contoso.Support --local-mmca"
+  ]
+}
