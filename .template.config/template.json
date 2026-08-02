@@ -1,0 +1,169 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Ivan Ball-llovera",
+  "classifications": [ "Cloud", "Web", "API", "Blazor", "Aspire", "DDD", "CQRS", "Clean Architecture", "Modular Monolith" ],
+  "identity": "MMCA.Templates.App",
+  "name": "MMCA modular monolith (DDD + CQRS + Aspire)",
+  "shortName": "mmca-app",
+  "description": "A complete modular-monolith solution on the MMCA.Common framework: one business module across all five layers, a REST API host, a Blazor Server + MudBlazor UI host, an Aspire AppHost, a per-database migrations project, and domain + application + architecture-fitness test projects. Build the monolith now, extract a module into its own service later.",
+  "tags": {
+    "language": "C#",
+    "type": "solution"
+  },
+  "sourceName": "MMCA.Helpdesk",
+  "defaultName": "MMCA.App",
+  "preferNameDirectory": true,
+
+  "forms": {
+    "toUnderscores": {
+      "identifier": "replace",
+      "pattern": "\\.",
+      "replacement": "_"
+    },
+    "toLastSegment": {
+      "identifier": "replace",
+      "pattern": "^.*\\.",
+      "replacement": ""
+    },
+    "toLastSegmentLower": {
+      "identifier": "chain",
+      "steps": [ "toLastSegment", "lowerCase" ]
+    },
+    "toLastSegmentUpper": {
+      "identifier": "chain",
+      "steps": [ "toLastSegment", "upperCase" ]
+    },
+    "lowerCase": { "identifier": "lowerCase" },
+    "upperCase": { "identifier": "upperCase" }
+  },
+
+  "symbols": {
+    "appNameUnderscores": {
+      "type": "derived",
+      "valueSource": "name",
+      "valueTransform": "toUnderscores",
+      "replaces": "MMCA_Helpdesk",
+      "description": "Underscore form of the app name. Aspire generates a Projects.<Underscored_Project_Name> type per referenced project, so the AppHost needs this form."
+    },
+    "appShortName": {
+      "type": "derived",
+      "valueSource": "name",
+      "valueTransform": "toLastSegment",
+      "replaces": "Helpdesk",
+      "fileRename": "Helpdesk",
+      "description": "Last dotted segment of the app name (Contoso.Support -> Support). Names the architecture map, the typed API client, and the Aspire database resource."
+    },
+    "appShortNameLower": {
+      "type": "derived",
+      "valueSource": "name",
+      "valueTransform": "toLastSegmentLower",
+      "replaces": "helpdesk",
+      "description": "Lower-case short name: the Aspire resource id and the default JWT audience."
+    },
+    "appShortNameUpper": {
+      "type": "derived",
+      "valueSource": "name",
+      "valueTransform": "toLastSegmentUpper",
+      "replaces": "HELPDESK",
+      "description": "Upper-case short name: the design-time connection-string environment variable."
+    },
+
+    "module": {
+      "type": "parameter",
+      "datatype": "text",
+      "defaultValue": "Tickets",
+      "replaces": "Tickets",
+      "fileRename": "Tickets",
+      "description": "Name of the first business module, plural PascalCase (for example Orders, Billing, Reservations)."
+    },
+    "moduleLower": {
+      "type": "derived",
+      "valueSource": "module",
+      "valueTransform": "lowerCase",
+      "replaces": "tickets",
+      "description": "Lower-case module name: routes, the Aspire database name, and the data-source key."
+    },
+    "moduleUpper": {
+      "type": "derived",
+      "valueSource": "module",
+      "valueTransform": "upperCase",
+      "replaces": "TICKETS",
+      "description": "Upper-case module name: the design-time connection-string environment variable."
+    },
+
+    "aggregate": {
+      "type": "parameter",
+      "datatype": "text",
+      "defaultValue": "Ticket",
+      "replaces": "Ticket",
+      "fileRename": "Ticket",
+      "description": "Name of the module's aggregate root, singular PascalCase (for example Order, Invoice, Reservation)."
+    },
+    "aggregateLower": {
+      "type": "derived",
+      "valueSource": "aggregate",
+      "valueTransform": "lowerCase",
+      "replaces": "ticket",
+      "description": "Lower-case aggregate name: local variables, route segments, and resource-string prose."
+    },
+
+    "frameworkVersion": {
+      "type": "parameter",
+      "datatype": "text",
+      "defaultValue": "1.135.0",
+      "replaces": "1.135.0",
+      "description": "The MMCA.Common package version to pin. Every MMCA.Common.* entry moves together (ADR-016); there is no phased rollout and no version skew across the set."
+    },
+
+    "localMmca": {
+      "type": "parameter",
+      "datatype": "bool",
+      "defaultValue": "false",
+      "description": "Emit a local.props that builds against ../MMCA.Common/Source via ProjectReference instead of consuming the published nuget.org packages. Use this only when the app sits beside the framework source in the same workspace."
+    },
+
+    "skipRestore": {
+      "type": "parameter",
+      "datatype": "bool",
+      "defaultValue": "false",
+      "description": "Skip the automatic restore after the solution is created."
+    }
+  },
+
+  "sources": [
+    {
+      "modifiers": [
+        {
+          "condition": "(!localMmca)",
+          "exclude": [ "local.props" ]
+        }
+      ],
+      "exclude": [
+        ".template.config/**",
+        ".git/**",
+        ".vs/**",
+        "**/bin/**",
+        "**/obj/**",
+        "artifacts/**",
+        "nupkgs/**",
+        "**/*.user",
+        "**/*.suo"
+      ]
+    }
+  ],
+
+  "primaryOutputs": [
+    { "path": "MMCA.Helpdesk.slnx" }
+  ],
+
+  "postActions": [
+    {
+      "id": "restore",
+      "condition": "(!skipRestore)",
+      "description": "Restore NuGet packages required by this solution.",
+      "manualInstructions": [ { "text": "Run 'dotnet restore'" } ],
+      "actionId": "210D431B-A78B-4D2F-B762-4ED3E3EA9025",
+      "continueOnError": true
+    }
+  ]
+}

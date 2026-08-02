@@ -1,0 +1,70 @@
+name: Release templates
+
+# Publishes the MMCA.Templates dotnet-new pack to nuget.org on a templates-vX.Y.Z tag.
+#
+# THE FILENAME OF THIS WORKFLOW IS LOAD-BEARING. nuget.org trusted publishing is keyless OIDC and
+# the policy is pinned to owner + repository + this exact workflow filename. Renaming this file
+# silently breaks publishing, and there is no API-key secret to fall back on. If you must rename it,
+# update the nuget.org trusted-publishing policy for MMCA.Templates in the same change.
+#
+# This package is deliberately NOT called MMCA.Common.Templates: the MMCA.Common.* names carry the
+# ADR-016 lockstep-versioning contract and ship from the MMCA.Common repo under its own trusted
+# publishing policy. This one ships from MMCA.Helpdesk on its own cadence, and pins the framework
+# version as a template parameter instead.
+
+on:
+  push:
+    tags: [ 'templates-v*' ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write   # required for nuget.org trusted publishing (keyless OIDC)
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Resolve version from tag
+        id: version
+        run: |
+          VERSION="${GITHUB_REF_NAME#templates-v}"
+          if [ "$VERSION" = "$GITHUB_REF_NAME" ]; then
+            VERSION="0.0.0-dev.${GITHUB_RUN_NUMBER}"   # workflow_dispatch, not a tag
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Publishing MMCA.Templates $VERSION"
+
+      # The gate, not a formality: it generates two solutions, builds them in package mode against
+      # the released MMCA.Common, runs their tests, and fails on any residual seed token. A template
+      # that produces a red solution is worse than no template.
+      - name: Smoke (generate, build, test)
+        run: pwsh build/templates/smoke.ps1
+
+      - name: Pack
+        run: |
+          pwsh build/templates/stage.ps1 -Clean
+          dotnet pack build/templates/MMCA.Templates.csproj -o ./nupkgs \
+            -p:PackageVersion=${{ steps.version.outputs.VERSION }}
+
+      # Auth is trusted publishing, not a stored API key: this job's OIDC token is exchanged for a
+      # key that lives one hour, so there is no long-lived secret to leak or rotate. Request it
+      # immediately before the push: it expires in an hour and is single-use. The owner guard keeps
+      # a fork from attempting an exchange it can never satisfy.
+      - name: NuGet login (OIDC to short-lived key)
+        if: startsWith(github.ref, 'refs/tags/') && github.repository_owner == 'ivanball'
+        uses: NuGet/login@v1
+        id: nuget-login
+        with:
+          user: ivanball # nuget.org profile name, not an email; public, so not a secret
+
+      - name: Push to nuget.org
+        if: startsWith(github.ref, 'refs/tags/') && github.repository_owner == 'ivanball'
+        run: dotnet nuget push ./nupkgs/*.nupkg --source "https://api.nuget.org/v3/index.json" --api-key ${{ steps.nuget-login.outputs.NUGET_API_KEY }} --skip-duplicate

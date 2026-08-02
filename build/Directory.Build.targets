@@ -1,0 +1,4 @@
+<!-- Stops the repo-root Directory.Build.targets (the local-source PackageReference ->
+     ProjectReference swap) from reaching the packaging projects under build/. -->
+<Project>
+</Project>

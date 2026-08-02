@@ -10,6 +10,19 @@ monolith now, extract a service later" path).
 **New here? Start with this repository.** It is the fastest way to see the framework work end to end:
 one module, five layers, one command to run.
 
+**Starting your own app?** Do not copy this repo by hand. It is also the source of the
+`MMCA.Templates` `dotnet new` pack, so you can scaffold the same structure under your own names:
+
+```bash
+dotnet new install MMCA.Templates
+dotnet new mmca-app -n Contoso.Support --module Orders --aggregate Order
+```
+
+That is a green build, passing architecture-fitness tests, and a migration-ready solution in
+seconds. See [Templates](https://ivanball.github.io/docs/guides/common-TEMPLATES.html) for the three
+templates and every parameter, and `build/templates/README.md` for how the pack is built from this
+tree.
+
 - The framework: <https://github.com/ivanball/MMCA.Common> (`dotnet add package MMCA.Common.API`)
 - Full documentation, ADRs, and scorecards: <https://ivanball.github.io/docs/>
 - Long-form articles on the patterns used here: <https://ivanball.github.io/writing.html>

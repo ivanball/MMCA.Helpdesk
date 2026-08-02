@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json.schemastore.org/dotnetcli.host",
+  "symbolInfo": {
+    "app": { "longName": "app", "shortName": "" },
+    "module": { "longName": "module", "shortName": "m" },
+    "aggregate": { "longName": "aggregate", "shortName": "a" },
+    "domainMethod": { "longName": "domain-method", "shortName": "" }
+  },
+  "usageExamples": [
+    "-n ArchiveInvoice --app Contoso.Support --module Billing --aggregate Invoice --domain-method Archive"
+  ]
+}

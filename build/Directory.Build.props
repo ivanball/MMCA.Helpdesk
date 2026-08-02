@@ -1,0 +1,6 @@
+<!-- Stops the repo-root Directory.Build.props from reaching the packaging projects under build/.
+     Those settings (net10.0, the five analyzers, the module identifier-alias Compile links, the
+     local-source import) describe the SEED. A template pack compiles nothing and must not inherit
+     them. Do not add settings here: put them in the packaging project itself. -->
+<Project>
+</Project>

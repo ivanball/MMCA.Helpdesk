@@ -1,0 +1,93 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Ivan Ball-llovera",
+  "classifications": [ "CQRS", "DDD", "Clean Architecture", "MMCA" ],
+  "identity": "MMCA.Templates.Slice.Command",
+  "name": "MMCA command slice (command + handler)",
+  "shortName": "mmca-command",
+  "description": "One write-side vertical slice for an existing MMCA module: a command record wired for cache invalidation, plus its handler loading the aggregate through IUnitOfWork and returning Result. Generated into a folder named after the use case.",
+  "tags": {
+    "language": "C#",
+    "type": "item"
+  },
+  "sourceName": "DeleteTicket",
+  "defaultName": "DeleteTicket",
+  "preferNameDirectory": true,
+
+  "symbols": {
+    "app": {
+      "type": "parameter",
+      "datatype": "text",
+      "isRequired": true,
+      "replaces": "MMCA.Helpdesk",
+      "description": "The solution / root namespace this slice belongs to, for example Contoso.Support."
+    },
+    "module": {
+      "type": "parameter",
+      "datatype": "text",
+      "isRequired": true,
+      "replaces": "Tickets",
+      "description": "The module this slice goes into, plural PascalCase, for example Billing."
+    },
+    "aggregate": {
+      "type": "parameter",
+      "datatype": "text",
+      "isRequired": true,
+      "replaces": "Ticket",
+      "description": "The aggregate root the handler loads, singular PascalCase, for example Invoice."
+    },
+    "aggregateLower": {
+      "type": "derived",
+      "valueSource": "aggregate",
+      "valueTransform": "lowerCase",
+      "replaces": "ticket",
+      "description": "Lower-case aggregate name: local variables and the prose in the doc comments."
+    },
+    "moduleLower": {
+      "type": "derived",
+      "valueSource": "module",
+      "valueTransform": "lowerCase",
+      "replaces": "tickets",
+      "description": "Lower-case module name."
+    },
+    "useCaseNamespace": {
+      "type": "derived",
+      "valueSource": "name",
+      "valueTransform": "toUseCaseNamespace",
+      "replaces": "UseCases.Delete",
+      "description": "The use-case namespace segment. Derived from the slice name so the folder, the namespace, and the type names agree. Matching the compound 'UseCases.Delete' rather than a bare 'Delete' is what keeps the aggregate's own Delete() method call out of this rename."
+    },
+    "domainMethod": {
+      "type": "parameter",
+      "datatype": "text",
+      "defaultValue": "Delete",
+      "description": "The guarded method this command calls on the aggregate. Add it to your aggregate returning Result before the slice will compile."
+    },
+    "domainMethodCall": {
+      "type": "derived",
+      "valueSource": "domainMethod",
+      "valueTransform": "toMethodCall",
+      "replaces": ".Delete()",
+      "description": "The full call expression. The token has to carry the dot and the parentheses, and so does the replacement: binding the bare parameter to '.Delete()' substitutes just the method name and leaves 'aggregateDelete', which does not compile."
+    }
+  },
+
+  "forms": {
+    "toUseCaseNamespace": { "identifier": "replace", "pattern": "^", "replacement": "UseCases." },
+    "toMethodCall": { "identifier": "replace", "pattern": "^(.+)$", "replacement": ".$1()" },
+    "lowerCase": { "identifier": "lowerCase" }
+  },
+
+  "postActions": [
+    {
+      "description": "Wire the slice up.",
+      "manualInstructions": [
+        {
+          "text": "1. Add the guarded method this command calls to your aggregate, returning Result.\n2. Map the command in your module's controller (writes inject handlers directly).\n3. Handlers are convention-scanned by Scrutor, so there is no DI registration to add."
+        }
+      ],
+      "actionId": "AC1156F7-BB77-4DB8-B28F-24EEBCCA1E5C",
+      "continueOnError": true
+    }
+  ]
+}

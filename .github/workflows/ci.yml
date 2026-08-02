@@ -43,3 +43,32 @@ jobs:
       - name: Test (domain + architecture, no DB)
         working-directory: MMCA.Helpdesk
         run: dotnet test --solution MMCA.Helpdesk.slnx -c Release --no-build --minimum-expected-tests 1
+
+  # This repo doubles as the source of the MMCA.Templates dotnet-new pack: the seed IS the template,
+  # so there is no second copy to drift. That makes this job load-bearing rather than redundant with
+  # build-and-test above, for two reasons:
+  #
+  #   1. build-and-test builds in LOCAL-SOURCE mode against MMCA.Common's main. A generated app
+  #      builds in PACKAGE mode against a RELEASED version from nuget.org. A source-mode build can
+  #      pass where package-mode Release fails on an analyzer, so a green seed proves nothing about
+  #      the template's output.
+  #   2. It sweeps the generated tree for residual Helpdesk / Ticket tokens. sourceName and the
+  #      symbol replacements run as separate passes, and a token that only appears nested inside
+  #      another (Ticket inside Tickets) is where a rename silently half-applies.
+  #
+  # It also generates a module and applies the five wire-ups the template can only print, which is
+  # what keeps those manualInstructions from going stale.
+  template-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      # No MMCA.Common checkout on purpose: generated apps restore the pinned MMCA.Common.* release
+      # from nuget.org with no token and no extra feed, and that is exactly the path being proven.
+      - name: Stage, pack, generate, build, test
+        run: pwsh build/templates/smoke.ps1

@@ -1,0 +1,20 @@
+<!-- Local MMCA.Common source override, emitted because you passed --local-mmca.
+
+     It swaps every MMCA.Common.* PackageReference for a ProjectReference under LocalMMCAPath (the
+     swap itself lives in Directory.Build.targets), so this app builds against framework source
+     instead of the published nuget.org packages. It needs ..\MMCA.Common\Source to exist on disk.
+
+     After editing MMCA.Common source, rebuild MMCA.Common in Debug BEFORE this app, or the IDE
+     binds the stale last-built Debug reference assembly and reports phantom CS0103 errors against
+     the members you just added. It is not a code bug.
+
+     A local source-mode build can also pass where a package-mode Release build fails on an
+     analyzer, so treat a green local build as necessary, not sufficient.
+
+     Delete this file to go back to consuming the published packages. It is gitignored. -->
+<Project>
+  <PropertyGroup>
+    <UseLocalMMCA>true</UseLocalMMCA>
+    <LocalMMCAPath>$(MSBuildThisFileDirectory)..\MMCA.Common\Source\</LocalMMCAPath>
+  </PropertyGroup>
+</Project>

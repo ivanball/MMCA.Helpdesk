@@ -1,0 +1,62 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The dotnet-new template pack. It compiles nothing: it ships the STAGED MMCA.Helpdesk tree as
+       template content. Run build/templates/stage.ps1 first; staging is the only mechanical step,
+       and it is what keeps the template from being a second copy of the seed.
+
+       Deliberately NOT named MMCA.Common.Templates: the MMCA.Common.* names carry the ADR-016
+       lockstep-versioning contract and ship from the MMCA.Common repo. This package ships from
+       MMCA.Helpdesk on its own cadence and pins the framework version as a parameter instead. -->
+
+  <PropertyGroup>
+    <PackageId>MMCA.Templates</PackageId>
+    <PackageType>Template</PackageType>
+    <Version>1.0.0</Version>
+    <Title>MMCA solution and module templates</Title>
+    <Authors>Ivan Ball-llovera</Authors>
+    <Description>dotnet new templates for the MMCA.Common framework (.NET 10, DDD, Clean Architecture, CQRS): scaffold a complete modular-monolith solution, add a module across all five layers, or add a single vertical slice. Generates a warning-free, test-passing, migration-ready solution with a REST API host, a Blazor Server + MudBlazor UI host, an Aspire AppHost, and architecture-fitness tests.</Description>
+    <PackageTags>dotnet-new;templates;template;ddd;cqrs;clean-architecture;modular-monolith;aspire;blazor;mmca</PackageTags>
+    <PackageProjectUrl>https://github.com/ivanball/MMCA.Helpdesk</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/ivanball/MMCA.Helpdesk</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+
+    <TargetFramework>net10.0</TargetFramework>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <IncludeContentInPack>true</IncludeContentInPack>
+    <EnableDefaultItems>false</EnableDefaultItems>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+
+    <!-- NuGet excludes dot-prefixed files by default. That would silently drop .template.config
+         (the template would not be recognized at all), .editorconfig (the five analyzers would stop
+         being enforced in every generated app), and .gitattributes. -->
+    <NoDefaultExcludes>true</NoDefaultExcludes>
+
+    <!-- NU5128: no lib/ or ref/ folder, which is correct for a content-only template pack. -->
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+
+    <StagingRoot>$(MSBuildThisFileDirectory)..\..\artifacts\template-staging\</StagingRoot>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- PackagePath must spell out the FULL destination, filename included. Without any PackagePath
+         every file flattens into content\<filename> and silently collides (five Program.cs, four
+         GlobalUsings.cs, three appsettings.json). With a directory-only PackagePath (one ending in
+         a separator) NuGet appends the item's relative path to it and the tree comes out doubled:
+         content/mmca-app/Source/X/mmca-app/Source/X/File.cs. Both produce a package that installs
+         cleanly and generates a broken solution. -->
+    <Content Include="$(StagingRoot)**\*"
+             Exclude="$(StagingRoot)**\bin\**;$(StagingRoot)**\obj\**"
+             PackagePath="content\%(RecursiveDir)%(Filename)%(Extension)" />
+    <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <Target Name="EnsureStaged" BeforeTargets="Build;Pack">
+    <Error Condition="!Exists('$(StagingRoot)mmca-app\.template.config\template.json')"
+           Text="Template content is not staged. Run 'pwsh build/templates/stage.ps1' first, then pack. Expected: $(StagingRoot)mmca-app\.template.config\template.json" />
+  </Target>
+
+</Project>

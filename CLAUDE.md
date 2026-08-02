@@ -21,6 +21,35 @@ file is only the Helpdesk-specific picture.
 Reinforced prose rule: never use accents, tildes, or em-dashes, and never use the words "seam" or
 "seams" (banned workspace-wide); prefer "boundary", "extension point", "pipeline", or "layer".
 
+## This repo is ALSO the dotnet-new template source
+
+The `MMCA.Templates` pack (`mmca-app`, `mmca-module`, `mmca-command`, `mmca-query`) is packed from
+**this tree**, not from a copy. `.template.config/` at the root makes the seed itself a template;
+`build/templates/stage.ps1` is the only mechanical step, dropping the files that belong to this repo
+rather than to a generated app and laying `build/templates/overlay/` on top. Consequences:
+
+- **Never create a parallel copy of the solution for the template.** The single-source property is
+  the whole design: the app whose CI keeps it green IS what adopters get.
+- **Renaming or moving anything the staging script anchors on breaks the pack loudly**, by design:
+  `stage.ps1` throws rather than shipping a half-staged template. Update the anchors there.
+- **The seed's own green CI does NOT prove the template works.** `build-and-test` builds in
+  local-source mode against MMCA.Common's `main`; a generated app builds in package mode against a
+  released version, and local mode can pass where package-mode Release fails on an analyzer
+  (workspace memory `feedback_localprops_masks_ci_analyzers`). The `template-smoke` job is the real
+  gate: run `pwsh build/templates/smoke.ps1` before touching anything under `build/templates/`,
+  `templates/`, or `.template.config/`.
+- **Two things the scaffold deliberately does not hand over**, both because a rename invalidates
+  them and no fixed value is right for every generated name: using-directive order (SA1210 is
+  relaxed in the staged `.editorconfig` only) and the `IntegrationEventContractTests` subclass (an
+  inherited wire-contract freeze guarantees nothing; adopters freeze their own). Both are documented
+  in the generated README.
+- `MMCA.Templates` is deliberately **not** named `MMCA.Common.Templates`: that prefix carries the
+  ADR-016 lockstep-versioning contract and ships from the MMCA.Common repo. This one ships from here
+  on its own cadence and pins the framework version as a template parameter.
+- Releasing it is a `templates-vX.Y.Z` tag, which runs `.github/workflows/release-templates.yml`.
+  **That filename is load-bearing**: nuget.org trusted publishing is keyless OIDC pinned to
+  owner + repo + workflow filename, with no API-key fallback.
+
 ## Build, test, run
 
 This scaffold defaults to **local-source mode**: `local.props` (committed in this seed, unlike Store/ADC,
