@@ -2,10 +2,12 @@
 
 A minimal, runnable **reference application** built on the
 [MMCA.Common](https://github.com/ivanball/MMCA.Common) framework (.NET 10, DDD + Clean Architecture +
-CQRS). It is the worked companion to
-[Getting Started](https://ivanball.github.io/docs/guides/common-GETTING-STARTED.html): every step in
-that guide maps to real code here. It is built **monolith-first** (the framework's "build the
-monolith now, extract a service later" path).
+CQRS). It is the worked companion to the two adoption paths: the six-step
+[Getting Started](https://ivanball.github.io/docs/guides/common-GETTING-STARTED.html), which scaffolds
+a solution from this tree with `dotnet new mmca-app`, and
+[Building by Hand](https://ivanball.github.io/docs/guides/common-BUILD-BY-HAND.html), whose every phase
+maps to real code here. It is built **monolith-first** (the framework's "build the monolith now,
+extract a service later" path).
 
 **New here? Start with this repository.** It is the fastest way to see the framework work end to end:
 one module, five layers, one command to run.
@@ -19,9 +21,11 @@ dotnet new mmca-app -n Contoso.Support --module Orders --aggregate Order
 ```
 
 That is a green build, passing architecture-fitness tests, and a migration-ready solution in
-seconds. See [Templates](https://ivanball.github.io/docs/guides/common-TEMPLATES.html) for the three
-templates and every parameter, and `build/templates/README.md` for how the pack is built from this
-tree.
+seconds. [Getting Started](https://ivanball.github.io/docs/guides/common-GETTING-STARTED.html) walks
+that from nothing to a running app in six steps;
+[Templates](https://ivanball.github.io/docs/guides/common-TEMPLATES.html) documents all four
+templates and every parameter; and `build/templates/README.md` covers how the pack is built from
+this tree.
 
 - The framework: <https://github.com/ivanball/MMCA.Common> (`dotnet add package MMCA.Common.API`)
 - Full documentation, ADRs, and scorecards: <https://ivanball.github.io/docs/>
@@ -56,7 +60,7 @@ This scaffold defaults to **local-source mode**: `local.props` sets `UseLocalMMC
 `../MMCA.Common/Source`, so it builds against the framework source when you have both repositories
 checked out side by side. To consume the published packages instead, delete `local.props`: the
 `MMCA.Common.*` packages are on nuget.org, so no extra feed and no token are needed
-(see [Getting Started](https://ivanball.github.io/docs/guides/common-GETTING-STARTED.html), Phase 1).
+(see [Building by Hand](https://ivanball.github.io/docs/guides/common-BUILD-BY-HAND.html), Phase 1).
 
 ```bash
 # Build everything (warning-free under the five analyzers + TreatWarningsAsErrors)
@@ -83,7 +87,8 @@ no page at `/` on the API host, so opening the API root returns 404 by design).
 
 This seed ships **without an Identity issuer**, so it runs issuer-less: the API host registers a bare
 auth scheme and `TicketsController` is `[AllowAnonymous]`, so the endpoints are reachable with no token.
-To add real RS256/JWKS auth, add the Identity module (see guide's Phase 8),
+To add real RS256/JWKS auth, add the Identity module (see
+[Building by Hand](https://ivanball.github.io/docs/guides/common-BUILD-BY-HAND.html), Phase 8),
 set `Authentication:JwtBearer:Authority`, and switch the controller back to `[Authorize]`.
 
 ## Status
@@ -97,6 +102,6 @@ Build-verified here:
 
 End-to-end run (POST/GET against SQL, and the Phase 8 extraction into a Tickets service behind a
 gateway) needs a reachable SQL Server and an Identity issuer, and is described step by step in
-[Getting Started](https://ivanball.github.io/docs/guides/common-GETTING-STARTED.html). The
+[Building by Hand](https://ivanball.github.io/docs/guides/common-BUILD-BY-HAND.html). The
 monolith-to-service change is **host-only**:
 the Tickets Domain/Application/Shared/Infrastructure/API code does not change.
