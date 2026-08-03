@@ -22,7 +22,8 @@ per-database migrations project, and domain, application, and architecture-fitne
 |---|---|
 | `mmca-app` | the whole solution: build plumbing, one module, both hosts, the AppHost, migrations, tests |
 | `mmca-module` | a new business module across all five layers, plus its test and migrations projects |
-| `mmca-slice` | one vertical slice (command or query) inside an existing module |
+| `mmca-command` | one write-side vertical slice inside an existing module: command record + handler |
+| `mmca-query` | one read-side vertical slice inside an existing module: cacheable query record + handler |
 
 ## `mmca-app` parameters
 
@@ -36,7 +37,10 @@ per-database migrations project, and domain, application, and architecture-fitne
 | `--no-restore` | off | skip the restore after generation |
 
 Full reference: <https://ivanball.github.io/docs/guides/common-TEMPLATES.html>.
-Getting started: <https://ivanball.github.io/docs/guides/common-GETTING-STARTED.html>.
+Getting started (six steps to a running app):
+<https://ivanball.github.io/docs/guides/common-GETTING-STARTED.html>.
+What the generated code does, phase by phase:
+<https://ivanball.github.io/docs/guides/common-BUILD-BY-HAND.html>.
 
 ## How this package is built
 

@@ -1,8 +1,11 @@
 # Contributing to MMCA.Helpdesk
 
 MMCA.Helpdesk is the runnable reference app for the MMCA.Common framework: a single `Tickets`
-module exercised end to end through all five layers. It is the worked companion to
-`../MMCA.Common/GETTING-STARTED.md`. The full contributor reference is [CLAUDE.md](CLAUDE.md).
+module exercised end to end through all five layers. It is the worked companion to the two adoption
+guides, [Getting Started](https://ivanball.github.io/docs/guides/common-GETTING-STARTED.html) (the
+`dotnet new mmca-app` path) and
+[Building by Hand](https://ivanball.github.io/docs/guides/common-BUILD-BY-HAND.html) (phase by
+phase). The full contributor reference is [CLAUDE.md](CLAUDE.md).
 
 ## Onboarding: no token needed
 

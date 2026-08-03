@@ -106,20 +106,42 @@ dotnet test --project Tests/Architecture/MMCA.Helpdesk.Architecture.Tests/MMCA.H
 
 ## Adding to it
 
+A whole module across all five layers, plus its test and migrations projects:
+
 ```bash
-dotnet new mmca-module -n Billing --aggregate Invoice   # a new module across all five layers
-dotnet new mmca-slice --module Tickets --use-case ArchiveTicket --kind command
+dotnet new mmca-module -n Billing --app MMCA.Helpdesk --aggregate Invoice
 ```
 
-`mmca-module` prints the four wire-ups it cannot perform for you (the solution entries, the
-identifier-alias link, the architecture-map lines, and the host's `AddErrorResources` call).
+`mmca-module` prints the five wire-ups it cannot perform for you (the solution entries, the host and
+architecture-test project references, the identifier-alias link, the architecture-map lines, and the
+host's `AddErrorResources` call). Until they are done the module is invisible to the host and to the
+fitness rules.
+
+A single vertical slice, run from the module's `UseCases` folder:
+
+```bash
+cd Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/Tickets/UseCases
+
+dotnet new mmca-command -n ArchiveTicket --app MMCA.Helpdesk --module Tickets \
+  --aggregate Ticket --domain-method Archive
+
+dotnet new mmca-query -n GetTicketByNumber --app MMCA.Helpdesk --module Tickets \
+  --aggregate Ticket
+```
+
+Handlers are convention-scanned, so there is no DI registration to add. Add the `--domain-method` to
+your aggregate before the command slice compiles, and keep the query's `CacheKey` inside your
+module's `*CacheKeys.Prefix`: the caching decorator matches reads to invalidating commands by string
+prefix, so a key that drifts out of it goes stale silently.
 
 ## Where to look next
 
-- **[Getting started](https://ivanball.github.io/docs/guides/common-GETTING-STARTED.html)**: what
-  each generated file does and why.
+- **[Getting started](https://ivanball.github.io/docs/guides/common-GETTING-STARTED.html)**: the
+  six-step path from this solution to a running, migrated app.
+- **[Building by hand](https://ivanball.github.io/docs/guides/common-BUILD-BY-HAND.html)**: what each
+  generated file does and why, phase by phase.
 - **[Template reference](https://ivanball.github.io/docs/guides/common-TEMPLATES.html)**: every
-  parameter of the three templates.
+  parameter of all four templates.
 - **[The ADRs](https://ivanball.github.io/docs/adr/README.html)**: the reasoning behind each pattern.
 - **[MMCA.Helpdesk](https://github.com/ivanball/MMCA.Helpdesk)**: the reference app this solution was
   generated from, kept build- and test-verified.

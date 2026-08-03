@@ -5,10 +5,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this repo is
 
 MMCA.Helpdesk is the **runnable reference application** for the [MMCA.Common](../MMCA.Common)
-framework: the worked companion to the getting-started guide, which is canonical in the Website repo
-(`../Website/docs-src/guides/common-GETTING-STARTED.md`, published at
-<https://ivanball.github.io/docs/guides/common-GETTING-STARTED.html>) and where every step maps to
-real code here. It is deliberately **minimal and monolith-first**: one business module
+framework: the worked companion to the two adoption guides, both canonical in the Website repo under
+`../Website/docs-src/guides/`. `common-GETTING-STARTED.md`
+(<https://ivanball.github.io/docs/guides/common-GETTING-STARTED.html>) is the six-step path that
+scaffolds a solution from this tree with `dotnet new mmca-app`; `common-BUILD-BY-HAND.md`
+(<https://ivanball.github.io/docs/guides/common-BUILD-BY-HAND.html>) is the phase-by-phase
+walkthrough, and **every one of its phases maps to real code here**. It is deliberately **minimal and
+monolith-first**: one business module
 (`Tickets`) exercised end to end through all five layers, built to demonstrate the framework's "build
 the monolith now, extract a service later" path.
 
@@ -158,9 +161,9 @@ surface the domain error message before the generic `EnsureSuccessStatusCode` fa
 
 - **Issuer-less auth by default.** No Identity module ships in this seed, so `Web/Program.cs` registers
   a bare auth scheme when `Authentication:JwtBearer:Authority` is unset and `TicketsController` is
-  `[AllowAnonymous]`. To add real RS256/JWKS auth: add the Identity module (GETTING-STARTED.md Phase 8),
-  set the authority, and flip the controller back to `[Authorize]`. Don't add `[Authorize]` without an
-  issuer or the pipeline rejects every request.
+  `[AllowAnonymous]`. To add real RS256/JWKS auth: add the Identity module (common-BUILD-BY-HAND.md
+  Phase 8), set the authority, and flip the controller back to `[Authorize]`. Don't add `[Authorize]`
+  without an issuer or the pipeline rejects every request.
 - **Extraction is host-only.** Turning Tickets into its own service (Phase 8) changes only the
   hosting/AppHost (per-service DB, broker, YARP gateway, JWKS): the
   Domain/Application/Shared/Infrastructure/API code does **not** change. Preserve that property.
