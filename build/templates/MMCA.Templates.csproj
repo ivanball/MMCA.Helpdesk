@@ -11,7 +11,7 @@
   <PropertyGroup>
     <PackageId>MMCA.Templates</PackageId>
     <PackageType>Template</PackageType>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
     <Title>MMCA solution and module templates</Title>
     <Authors>Ivan Ball-llovera</Authors>
     <Description>dotnet new templates for the MMCA.Common framework (.NET 10, DDD, Clean Architecture, CQRS): scaffold a complete modular-monolith solution, add a module across all five layers, or add a single vertical slice. Generates a warning-free, test-passing, migration-ready solution with a REST API host, a Blazor Server + MudBlazor UI host, an Aspire AppHost, and architecture-fitness tests.</Description>
