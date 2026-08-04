@@ -110,9 +110,9 @@
     "frameworkVersion": {
       "type": "parameter",
       "datatype": "text",
-      "defaultValue": "1.135.0",
-      "replaces": "1.135.0",
-      "description": "The MMCA.Common package version to pin. Every MMCA.Common.* entry moves together (ADR-016); there is no phased rollout and no version skew across the set."
+      "defaultValue": "1.141.0",
+      "replaces": "1.141.0",
+      "description": "The MMCA.Common package version to pin. Every MMCA.Common.* entry moves together (ADR-016); there is no phased rollout and no version skew across the set. Both values here are DERIVED: build/templates/stage.ps1 re-stamps them from the seed's own Directory.Packages.props, so a framework bump does not have to remember to touch this file."
     },
 
     "localMmca": {

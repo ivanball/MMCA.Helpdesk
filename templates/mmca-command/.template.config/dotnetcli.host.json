@@ -4,9 +4,11 @@
     "app": { "longName": "app", "shortName": "" },
     "module": { "longName": "module", "shortName": "m" },
     "aggregate": { "longName": "aggregate", "shortName": "a" },
-    "domainMethod": { "longName": "domain-method", "shortName": "" }
+    "domainMethod": { "longName": "domain-method", "shortName": "" },
+    "childCollection": { "longName": "child-collection", "shortName": "" }
   },
   "usageExamples": [
-    "-n ArchiveInvoice --app Contoso.Support --module Billing --aggregate Invoice --domain-method Archive"
+    "-n ArchiveInvoice --app Contoso.Support --module Billing --aggregate Invoice --domain-method Archive",
+    "-n CancelOrder --app Contoso.Support --module Orders --aggregate Order --domain-method Cancel --child-collection Lines"
   ]
 }

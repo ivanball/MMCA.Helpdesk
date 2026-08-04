@@ -3,9 +3,11 @@
   "symbolInfo": {
     "app": { "longName": "app", "shortName": "" },
     "module": { "longName": "module", "shortName": "m" },
-    "aggregate": { "longName": "aggregate", "shortName": "a" }
+    "aggregate": { "longName": "aggregate", "shortName": "a" },
+    "childCollection": { "longName": "child-collection", "shortName": "" }
   },
   "usageExamples": [
-    "-n GetInvoiceByNumber --app Contoso.Support --module Billing --aggregate Invoice"
+    "-n GetInvoiceByNumber --app Contoso.Support --module Billing --aggregate Invoice",
+    "-n GetOrderByNumber --app Contoso.Support --module Orders --aggregate Order --child-collection Lines"
   ]
 }

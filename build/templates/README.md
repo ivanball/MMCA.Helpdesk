@@ -32,9 +32,26 @@ per-database migrations project, and domain, application, and architecture-fitne
 | `-n, --name` | `MMCA.App` | solution and root namespace, for example `Contoso.Support` |
 | `-m, --module` | `Tickets` | the first business module, plural PascalCase |
 | `-a, --aggregate` | `Ticket` | that module's aggregate root, singular PascalCase |
-| `-f, --framework-version` | current | the `MMCA.Common.*` version to pin (all packages move together) |
+| `-f, --framework-version` | the version this pack was built against | the `MMCA.Common.*` version to pin (all packages move together) |
 | `--local-mmca` | off | build against `../MMCA.Common/Source` instead of the published packages |
 | `--no-restore` | off | skip the restore after generation |
+
+## `mmca-command` and `mmca-query` parameters
+
+Run these from an existing module's `UseCases` folder.
+
+| Parameter | Applies to | Default | Meaning |
+|---|---|---|---|
+| `-n, --name` | both | | the use case, PascalCase; names the folder, the namespace, and both types |
+| `--app` | both | required | your solution / root namespace |
+| `-m, --module` | both | required | the module the slice goes into |
+| `-a, --aggregate` | both | required | the aggregate the handler loads |
+| `--domain-method` | `mmca-command` | `Delete` | the guarded method the command calls on the aggregate |
+| `--child-collection` | both | unset | navigation to eager-load, for example `Lines`; unset loads the aggregate root alone |
+
+`--domain-method` is the one thing the scaffold cannot invent. Add that method to your aggregate
+returning `Result` before the slice compiles, or you get
+`'Order' does not contain a definition for 'Cancel'`.
 
 Full reference: <https://ivanball.github.io/docs/guides/common-TEMPLATES.html>.
 Getting started (six steps to a running app):

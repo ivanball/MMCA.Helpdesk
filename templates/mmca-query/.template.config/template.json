@@ -56,6 +56,18 @@
       "valueTransform": "toUseCaseNamespace",
       "replaces": "UseCases.GetById",
       "description": "The use-case namespace segment, derived from the slice name so the folder, the namespace, and the type names agree."
+    },
+    "childCollection": {
+      "type": "parameter",
+      "datatype": "text",
+      "defaultValue": "",
+      "replaces": "Comments",
+      "description": "Navigation property to eager-load with the aggregate, for example Lines. Leave it unset when the read needs only the aggregate root: the handler passes an empty include list rather than naming a collection your aggregate does not have."
+    },
+    "hasChildCollection": {
+      "type": "computed",
+      "value": "(childCollection != \"\")",
+      "description": "Whether to eager-load anything at all. The slice is staged from a read that maps children into its DTO, so without this the generated handler would name that collection unconditionally and fail to compile on any aggregate shaped differently."
     }
   },
 
