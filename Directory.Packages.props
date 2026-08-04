@@ -4,8 +4,8 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Asp.Versioning.Mvc" Version="10.0.0" />
-    <PackageVersion Include="Asp.Versioning.Mvc.ApiExplorer" Version="10.0.0" />
+    <PackageVersion Include="Asp.Versioning.Mvc" Version="10.0.1" />
+    <PackageVersion Include="Asp.Versioning.Mvc.ApiExplorer" Version="10.0.1" />
     <PackageVersion Include="AspNetCore.HealthChecks.Rabbitmq" Version="9.0.0" />
     <PackageVersion Include="AspNetCore.HealthChecks.Redis" Version="9.0.0" />
     <PackageVersion Include="AspNetCore.HealthChecks.SqlServer" Version="9.0.0" />
@@ -52,12 +52,12 @@
     <PackageVersion Include="MiniProfiler.EntityFrameworkCore" Version="4.5.4" />
     <PackageVersion Include="MudBlazor" Version="9.7.0" />
     <!-- bUnit v2 (BunitContext / Render API) — xUnit v3 / Microsoft Testing Platform compatible. -->
-    <PackageVersion Include="bunit" Version="2.8.6" />
+    <PackageVersion Include="bunit" Version="2.9.0" />
     <PackageVersion Include="NetArchTest.eNhancedEdition" Version="1.4.5" />
     <PackageVersion Include="NSwag.AspNetCore" Version="14.7.1" />
     <PackageVersion Include="Polly" Version="8.7.0" />
     <PackageVersion Include="Riok.Mapperly" Version="4.3.1" />
-    <PackageVersion Include="Scalar.AspNetCore" Version="2.16.16" />
+    <PackageVersion Include="Scalar.AspNetCore" Version="2.16.17" />
     <PackageVersion Include="Scrutor" Version="7.0.0" />
     <PackageVersion Include="StackExchange.Redis" Version="2.13.17" />
     <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
@@ -71,7 +71,7 @@
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.2.3" />
     <PackageVersion Include="Swashbuckle.AspNetCore.ReDoc" Version="10.2.3" />
     <PackageVersion Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.2.3" />
-    <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.21.0" />
+    <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.22.0" />
     <PackageVersion Include="System.Linq.Dynamic.Core" Version="1.7.3" />
     <PackageVersion Include="System.Threading.RateLimiting" Version="10.0.10" />
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
@@ -103,25 +103,25 @@
     <!-- gRPC -->
     <PackageVersion Include="Google.Protobuf" Version="3.35.1" />
     <PackageVersion Include="Grpc.AspNetCore" Version="2.80.0" />
-    <PackageVersion Include="Grpc.AspNetCore.Server.Reflection" Version="2.80.0" />
-    <PackageVersion Include="Grpc.Net.ClientFactory" Version="2.80.0" />
+    <PackageVersion Include="Grpc.AspNetCore.Server.Reflection" Version="2.83.0" />
+    <PackageVersion Include="Grpc.Net.ClientFactory" Version="2.83.0" />
     <PackageVersion Include="Grpc.Tools" Version="2.82.0" />
-    <PackageVersion Include="MMCA.Common.Grpc" Version="1.138.0" />
+    <PackageVersion Include="MMCA.Common.Grpc" Version="1.140.0" />
     <!-- MMCA Common Packages -->
-    <PackageVersion Include="MMCA.Common.Shared" Version="1.138.0" />
-    <PackageVersion Include="MMCA.Common.Domain" Version="1.138.0" />
-    <PackageVersion Include="MMCA.Common.Application" Version="1.138.0" />
-    <PackageVersion Include="MMCA.Common.Infrastructure" Version="1.138.0" />
-    <PackageVersion Include="MMCA.Common.API" Version="1.138.0" />
-    <PackageVersion Include="MMCA.Common.Aspire" Version="1.138.0" />
-    <PackageVersion Include="MMCA.Common.Aspire.Hosting" Version="1.138.0" />
+    <PackageVersion Include="MMCA.Common.Shared" Version="1.140.0" />
+    <PackageVersion Include="MMCA.Common.Domain" Version="1.140.0" />
+    <PackageVersion Include="MMCA.Common.Application" Version="1.140.0" />
+    <PackageVersion Include="MMCA.Common.Infrastructure" Version="1.140.0" />
+    <PackageVersion Include="MMCA.Common.API" Version="1.140.0" />
+    <PackageVersion Include="MMCA.Common.Aspire" Version="1.140.0" />
+    <PackageVersion Include="MMCA.Common.Aspire.Hosting" Version="1.140.0" />
     <PackageVersion Include="Yarp.ReverseProxy" Version="2.3.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery.Yarp" Version="10.8.0" />
-    <PackageVersion Include="MMCA.Common.Testing" Version="1.138.0" />
-    <PackageVersion Include="MMCA.Common.Testing.E2E" Version="1.138.0" />
-    <PackageVersion Include="MMCA.Common.Testing.UI" Version="1.138.0" />
-    <PackageVersion Include="MMCA.Common.Testing.Architecture" Version="1.138.0" />
-    <PackageVersion Include="MMCA.Common.UI" Version="1.138.0" />
-    <PackageVersion Include="MMCA.Common.UI.Web" Version="1.138.0" />
+    <PackageVersion Include="MMCA.Common.Testing" Version="1.140.0" />
+    <PackageVersion Include="MMCA.Common.Testing.E2E" Version="1.140.0" />
+    <PackageVersion Include="MMCA.Common.Testing.UI" Version="1.140.0" />
+    <PackageVersion Include="MMCA.Common.Testing.Architecture" Version="1.140.0" />
+    <PackageVersion Include="MMCA.Common.UI" Version="1.140.0" />
+    <PackageVersion Include="MMCA.Common.UI.Web" Version="1.140.0" />
   </ItemGroup>
 </Project>
