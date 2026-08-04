@@ -69,6 +69,18 @@
       "valueTransform": "toMethodCall",
       "replaces": ".Delete()",
       "description": "The full call expression. The token has to carry the dot and the parentheses, and so does the replacement: binding the bare parameter to '.Delete()' substitutes just the method name and leaves 'aggregateDelete', which does not compile."
+    },
+    "childCollection": {
+      "type": "parameter",
+      "datatype": "text",
+      "defaultValue": "",
+      "replaces": "Comments",
+      "description": "Navigation property to eager-load with the aggregate, for example Lines. Leave it unset when the command only touches the aggregate root: the handler's whole 'includes:' argument is dropped rather than left naming a collection your aggregate does not have."
+    },
+    "hasChildCollection": {
+      "type": "computed",
+      "value": "(childCollection != \"\")",
+      "description": "Whether to keep the eager-load at all. The slice is staged from a delete use case that cascades to a child collection, so without this the generated handler would name that collection unconditionally and fail to compile on any aggregate shaped differently."
     }
   },
 

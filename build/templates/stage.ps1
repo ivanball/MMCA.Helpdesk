@@ -154,6 +154,73 @@ foreach ($expected in @('README.md', '.gitignore', 'local.props', '.github/workf
     }
 }
 
+# ---- derived: pin the template's framework version to the seed's own ----------------------------
+# The template does not carry its own MMCA.Common version. Directory.Packages.props is copied from
+# the seed, so what a generated app pins is whatever the seed pins, and --framework-version works by
+# replacing that literal. That makes the version in template.json a DERIVED value, and one that had
+# silently died: it still read 1.135.0 after the seed moved on, so the replace token matched nothing,
+# --framework-version was accepted and ignored, and every generated app got the seed's pin whatever
+# the adopter asked for. Deriving it here is what keeps the flag alive across future bumps: a
+# `Bump MMCA.Common to vX.Y.Z` PR touches only Directory.Packages.props, as it should.
+$packagesProps = Join-Path $appStaging 'Directory.Packages.props'
+if (-not (Test-Path $packagesProps)) {
+    throw "No Directory.Packages.props in staging. Generated apps would have no package versions at all."
+}
+
+$propsText = Get-Content $packagesProps -Raw
+$pinPattern = '<PackageVersion\s+Include="([^"]+)"\s+Version="([^"]+)"\s*/>'
+$allPins = [regex]::Matches($propsText, $pinPattern)
+
+$mmcaPins = @($allPins | Where-Object { $_.Groups[1].Value -like 'MMCA.Common*' })
+if (-not $mmcaPins) {
+    throw "No MMCA.Common.* PackageVersion entries in $packagesProps. The framework pins moved; update stage.ps1."
+}
+
+# ADR-016: every MMCA.Common.* package moves together, no phased rollout and no skew across the set.
+# A split here would make "the version" ambiguous and ship a template that pins two of them.
+# @() throughout: Set-StrictMode -Version Latest is on, and a one-element pipeline is a scalar.
+$distinctVersions = @($mmcaPins | ForEach-Object { $_.Groups[2].Value } | Sort-Object -Unique)
+if ($distinctVersions.Count -ne 1) {
+    throw "The seed's MMCA.Common.* pins are not in lockstep (ADR-016): $($distinctVersions -join ', '). Bring them to one version before staging."
+}
+
+$frameworkVersion = $distinctVersions[0]
+
+# --framework-version substitutes a bare version literal, so any OTHER package sitting on that same
+# version would be rewritten with it. Harmless today and silently wrong the day it is not.
+$collisions = @($allPins |
+    Where-Object { $_.Groups[1].Value -notlike 'MMCA.Common*' -and $_.Groups[2].Value -eq $frameworkVersion } |
+    ForEach-Object { $_.Groups[1].Value })
+
+if ($collisions) {
+    throw @"
+Non-MMCA packages also pin $frameworkVersion, and --framework-version replaces that literal wherever
+it appears, so generating with a different version would silently retarget them too:
+  $($collisions -join "`n  ")
+Make the replace token in .template.config/template.json more specific before staging.
+"@
+}
+
+$templateJsonPath = Join-Path $appStaging '.template.config/template.json'
+$hostJsonPath = Join-Path $appStaging '.template.config/dotnetcli.host.json'
+$templateJson = Get-Content $templateJsonPath -Raw
+
+$declared = [regex]::Match($templateJson, '(?s)"frameworkVersion"\s*:\s*\{.*?"defaultValue"\s*:\s*"([^"]+)"')
+if (-not $declared.Success) {
+    throw "No frameworkVersion.defaultValue in $templateJsonPath. The symbol was renamed or removed; update stage.ps1."
+}
+
+$declaredVersion = $declared.Groups[1].Value
+if ($declaredVersion -ne $frameworkVersion) {
+    foreach ($config in @($templateJsonPath, $hostJsonPath)) {
+        $text = Get-Content $config -Raw
+        Set-Content -Path $config -Value $text.Replace($declaredVersion, $frameworkVersion) -NoNewline
+    }
+    Write-Host "frameworkVersion re-stamped: $declaredVersion -> $frameworkVersion (from Directory.Packages.props)"
+} else {
+    Write-Host "frameworkVersion: $frameworkVersion (matches Directory.Packages.props)"
+}
+
 # ---- derived .editorconfig delta ---------------------------------------------------------------
 # Scaffolding renames every namespace, which moves where the app's OWN usings sort relative to
 # MMCA.Common.* and third-party ones. "using Contoso.Support.Billing.Shared;" belongs above
@@ -264,6 +331,45 @@ foreach ($slice in $slices) {
     }
 
     Write-Host "$($slice.Name) staged: $($slice.Files.Count) files -> $target"
+}
+
+# ---- derived: make each slice's eager-load optional ----------------------------------------------
+# Both slices are staged from use cases whose aggregate owns a Comments collection: the command from
+# Delete (loaded tracked so the soft-delete cascades), the query from GetById (loaded to map children
+# into the DTO). --aggregate renames the type but nothing renames the navigation, so an adopter whose
+# aggregate has no Comments was handed a slice that could not compile: 'Order' does not contain a
+# definition for 'Comments'. A dotnet-new conditional lets --child-collection name their own
+# navigation instead.
+#
+# The false branch passes an EMPTY list rather than omitting the argument. IEntityReader.GetByIdAsync
+# declares includes as a required parameter, so dropping the line trades one compile error for
+# another (CS7036).
+#
+# Injected into the STAGED copies only, never into the seed's own handlers. Those are real code in a
+# module whose tests run, and //#if lines in them would also reach mmca-app and mmca-module, where
+# the symbol is not defined: the condition would evaluate false and the eager-load would silently
+# degrade to an empty list in generated apps whose aggregate DOES own the collection.
+foreach ($slice in $slices) {
+    $handler = Join-Path $OutputPath "$($slice.Name)/$($slice.Files | Where-Object { $_ -like '*Handler.cs' })"
+    if (-not (Test-Path $handler)) {
+        throw "Expected a handler at $handler. The $($slice.Name) slice file list moved; update stage.ps1."
+    }
+
+    $handlerSource = Get-Content $handler -Raw
+    $includeLine = '(?m)^([ \t]*)(includes: \[nameof\(Ticket\.Comments\)\],)(\r?\n)'
+    $includeMatches = ([regex]::Matches($handlerSource, $includeLine)).Count
+
+    if ($includeMatches -ne 1) {
+        throw "Expected exactly one 'includes: [nameof(Ticket.Comments)]' line in the staged $($slice.Name) handler, found $includeMatches. The seed's $($slice.Source) handler changed shape; update the pattern in stage.ps1 rather than shipping a slice that names a collection the adopter's aggregate may not have."
+    }
+
+    # Directives at column 0, reusing the line's own terminator so the staged file does not acquire
+    # mixed line endings. The engine strips whole directive lines in both branches, so the emitted C#
+    # keeps the argument's own indentation and no comment survives into generated code.
+    $conditional = '//#if (hasChildCollection)$3$1$2$3//#else$3$1includes: [],$3//#endif$3'
+    Set-Content -Path $handler -Value ([regex]::Replace($handlerSource, $includeLine, $conditional)) -NoNewline
+
+    Write-Host "$($slice.Name): eager-load made conditional on --child-collection"
 }
 
 # ---- mmca-module: the five layer projects, both test projects, the migrations project ----------

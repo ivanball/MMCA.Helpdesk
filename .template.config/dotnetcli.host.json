@@ -25,7 +25,7 @@
   "usageExamples": [
     "-n Contoso.Support",
     "-n Contoso.Support --module Orders --aggregate Order",
-    "-n Fabrikam.Desk --module Reservations --aggregate Reservation --framework-version 1.135.0",
+    "-n Fabrikam.Desk --module Reservations --aggregate Reservation --framework-version 1.141.0",
     "-n Contoso.Support --local-mmca"
   ]
 }

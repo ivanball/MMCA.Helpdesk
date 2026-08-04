@@ -81,6 +81,55 @@ $cases = @(
     @{ Name = 'Zeta.Warehouse';  Module = 'Reservations'; Aggregate = 'Reservation' }
 )
 
+$mmcaPinPattern = '<PackageVersion\s+Include="(MMCA\.Common[^"]*)"\s+Version="([^"]+)"'
+
+function Get-MmcaPins {
+    param([string] $PropsPath)
+
+    if (-not (Test-Path $PropsPath)) { throw "No Directory.Packages.props at $PropsPath" }
+    $pins = @(Select-String -Path $PropsPath -Pattern $mmcaPinPattern)
+    if (-not $pins) { throw "No MMCA.Common.* PackageVersion entries in $PropsPath" }
+    # Emitted one per pin so callers can pipe into Sort-Object / Where-Object. Every call site wraps
+    # the result in @(): Set-StrictMode -Version Latest is on, and a one-element pipeline comes back
+    # as a scalar whose .Count would then throw.
+    $pins | ForEach-Object { $_.Matches[0].Groups[2].Value }
+}
+
+# What the seed itself pins. A generated app must land on exactly this by default: the template
+# carries no version of its own, it inherits Directory.Packages.props from the tree it is staged from.
+$seedVersions = @(Get-MmcaPins (Join-Path $repoRoot 'Directory.Packages.props') | Sort-Object -Unique)
+if ($seedVersions.Count -ne 1) {
+    throw "The seed's MMCA.Common.* pins are not in lockstep (ADR-016): $($seedVersions -join ', ')"
+}
+$seedVersion = $seedVersions[0]
+Write-Host "Seed pins MMCA.Common.* at $seedVersion"
+
+# --framework-version works by replacing that literal, so the token in template.json has to track the
+# seed's pin. When it drifts it does not fail: it matches nothing, and the flag is accepted and
+# silently ignored. Proving it here is cheap (no restore, no build) and it is the only check that
+# would have caught the token sitting a hundred releases behind the tree it was replacing in.
+Invoke-Step 'Explicit --framework-version is honored' {
+    $probe = '9.9.9-smoke'
+    $probeApp = 'Acme.Pin'
+
+    Push-Location $WorkPath
+    try {
+        dotnet new mmca-app -n $probeApp --module Widgets --aggregate Widget --framework-version $probe --no-restore
+        if ($LASTEXITCODE -ne 0) { throw "mmca-app --framework-version failed with exit code $LASTEXITCODE" }
+    } finally {
+        Pop-Location
+    }
+
+    $probeRoot = Join-Path $WorkPath $probeApp
+    $stuck = @(Get-MmcaPins (Join-Path $probeRoot 'Directory.Packages.props') | Where-Object { $_ -ne $probe })
+    if ($stuck) {
+        throw "--framework-version $probe was accepted but $($stuck.Count) MMCA.Common.* pin(s) still read $($stuck[0]). The replace token in .template.config/template.json no longer matches the seed's version literal."
+    }
+
+    Write-Host "  every MMCA.Common.* pin moved to $probe"
+    Remove-Item -Recurse -Force $probeRoot
+}
+
 foreach ($case in $cases) {
     $appName = $case.Name
 
@@ -116,6 +165,15 @@ Residual seed tokens survived the rename in $($offenders.Count) file(s):
         Write-Host "  no residual 'helpdesk' or 'ticket' tokens"
     }
 
+    Invoke-Step "Framework pin $appName" {
+        $pins = @(Get-MmcaPins (Join-Path $appRoot 'Directory.Packages.props'))
+        $wrong = @($pins | Where-Object { $_ -ne $seedVersion } | Sort-Object -Unique)
+        if ($wrong) {
+            throw "Generated app pins MMCA.Common.* at $($wrong -join ', '), expected the seed's $seedVersion."
+        }
+        Write-Host "  $($pins.Count) MMCA.Common.* packages pinned at $seedVersion"
+    }
+
     Invoke-Step "Build $appName (package mode)" {
         dotnet build $slnx -c Release
     }
@@ -139,20 +197,74 @@ Residual seed tokens survived the rename in $($offenders.Count) file(s):
             # --domain-method Delete: the command slice calls a guarded method on the aggregate, and
             # the scaffold cannot invent one. Pointing it at a method the generated aggregate
             # already has is what makes this step a compile check rather than a rename check.
+            #
+            # No --child-collection, deliberately: this is the shape an adopter gets by default, and
+            # it is the shape that used to ship a handler naming the seed's Comments collection.
             dotnet new mmca-command -n "Archive$($case.Aggregate)" --app $appName --module $case.Module --aggregate $case.Aggregate --domain-method Delete
             if ($LASTEXITCODE -ne 0) { throw "mmca-command failed with exit code $LASTEXITCODE" }
 
+            # The other branch of the same conditional: an aggregate that does own a collection.
+            dotnet new mmca-command -n "Restore$($case.Aggregate)" --app $appName --module $case.Module --aggregate $case.Aggregate --domain-method Delete --child-collection Comments
+            if ($LASTEXITCODE -ne 0) { throw "mmca-command --child-collection failed with exit code $LASTEXITCODE" }
+
+            # Same two branches on the read side. The query slice is staged from a GetById that maps
+            # children into its DTO, so it carried the identical navigation leak.
             dotnet new mmca-query -n "Get$($case.Aggregate)ByNumber" --app $appName --module $case.Module --aggregate $case.Aggregate
             if ($LASTEXITCODE -ne 0) { throw "mmca-query failed with exit code $LASTEXITCODE" }
+
+            dotnet new mmca-query -n "Find$($case.Aggregate)ByCode" --app $appName --module $case.Module --aggregate $case.Aggregate --child-collection Comments
+            if ($LASTEXITCODE -ne 0) { throw "mmca-query --child-collection failed with exit code $LASTEXITCODE" }
         } finally {
             Pop-Location
         }
     }
 
+    # Both branches of both slices, asserted on the generated text rather than only on the build.
+    # Without --child-collection the eager-load must be EMPTY, not renamed: a build check alone would
+    # pass on this app, whose aggregate does own Comments, and go on failing for every adopter whose
+    # aggregate does not.
+    Invoke-Step "Eager-load conditional $appName" {
+        $bare = @(
+            Join-Path $useCases "Archive$($case.Aggregate)/Archive$($case.Aggregate)Handler.cs"
+            Join-Path $useCases "Get$($case.Aggregate)ByNumber/Get$($case.Aggregate)ByNumberHandler.cs"
+        )
+        $withChild = @(
+            Join-Path $useCases "Restore$($case.Aggregate)/Restore$($case.Aggregate)Handler.cs"
+            Join-Path $useCases "Find$($case.Aggregate)ByCode/Find$($case.Aggregate)ByCodeHandler.cs"
+        )
+
+        foreach ($handler in ($bare + $withChild)) {
+            if (-not (Test-Path $handler)) { throw "No generated handler at $handler" }
+            if ((Get-Content $handler -Raw) -match '//#if|//#else|//#endif') {
+                throw "Conditional directives survived into $handler. The templating engine did not process them, so the file ships commented-out scaffolding."
+            }
+        }
+
+        foreach ($handler in $bare) {
+            $text = Get-Content $handler -Raw
+            if ($text -match 'includes: \[nameof') {
+                throw "Generated without --child-collection but $handler still names a navigation. It must fall back to an empty include list."
+            }
+            # Not merely absent: GetByIdAsync declares includes as a REQUIRED parameter, so omitting
+            # the argument trades the missing-navigation error for CS7036.
+            if ($text -notmatch 'includes: \[\],') {
+                throw "Generated without --child-collection but $handler passes no includes argument at all. GetByIdAsync requires one."
+            }
+        }
+
+        foreach ($handler in $withChild) {
+            if ((Get-Content $handler -Raw) -notmatch 'includes: \[nameof\([A-Za-z]+\.Comments\)\]') {
+                throw "Generated with --child-collection Comments but $handler has no matching eager-load."
+            }
+        }
+
+        Write-Host "  empty include list without --child-collection, named navigation with it (command and query)"
+    }
+
     Invoke-Step "Token sweep $appName slices" {
-        $sliceFiles = Get-ChildItem -Path $useCases -Recurse -File |
-            Where-Object { $_.DirectoryName -match 'Archive|ByNumber' }
-        if ($sliceFiles.Count -ne 4) { throw "Expected 4 slice files, found $($sliceFiles.Count)" }
+        $sliceFiles = @(Get-ChildItem -Path $useCases -Recurse -File |
+            Where-Object { $_.DirectoryName -match 'Archive|Restore|ByNumber|ByCode' })
+        if ($sliceFiles.Count -ne 8) { throw "Expected 8 slice files, found $($sliceFiles.Count)" }
 
         $offenders = $sliceFiles | ForEach-Object {
             $hit = Select-String -Path $_.FullName -Pattern 'helpdesk|ticket' -CaseSensitive:$false -List
@@ -161,7 +273,7 @@ Residual seed tokens survived the rename in $($offenders.Count) file(s):
         if ($offenders) {
             throw "Residual seed tokens in generated slices:`n  $($offenders -join "`n  ")"
         }
-        Write-Host "  4 slice files, no residual tokens"
+        Write-Host "  $($sliceFiles.Count) slice files, no residual tokens"
     }
 
     Invoke-Step "Rebuild $appName with slices" { dotnet build $slnx -c Release }
