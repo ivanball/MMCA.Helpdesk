@@ -112,10 +112,11 @@ A whole module across all five layers, plus its test and migrations projects:
 dotnet new mmca-module -n Billing --app MMCA.Helpdesk --aggregate Invoice
 ```
 
-`mmca-module` prints the five wire-ups it cannot perform for you (the solution entries, the host and
-architecture-test project references, the identifier-alias link, the architecture-map lines, and the
-host's `AddErrorResources` call). Until they are done the module is invisible to the host and to the
-fitness rules.
+`mmca-module` prints the six wire-ups it cannot perform for you (the solution entries, the host and
+architecture-test project references, the identifier-alias link, the architecture-map lines, the
+host's `AddErrorResources` call, and the module's own database: an AppHost database resource plus a
+`DataSources` entry per module, with the top-level migrations-assembly pin removed). Until they are
+done the module is invisible to the host and to the fitness rules.
 
 A single vertical slice, run from the module's `UseCases` folder:
 

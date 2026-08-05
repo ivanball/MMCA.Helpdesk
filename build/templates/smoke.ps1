@@ -360,7 +360,61 @@ Residual seed tokens survived the rename in $($offenders.Count) file(s):
             "services.AddErrorResources<$($case.Module)ErrorResources>();" `
             "`nservices.AddErrorResources<${newModule}ErrorResources>();"
 
-        Write-Host "  all five wire-ups applied"
+        # 6. database: its own Aspire database resource plus per-module DataSources routing. Each
+        # module database carries its own dbo.OutboxMessages/InboxMessages tables, so two modules
+        # migrated into one database collide on them.
+        $shortLower = $short.ToLowerInvariant()
+        $newModuleLower = $newModule.ToLowerInvariant()
+        Edit-File "Source/Hosting/$appName.AppHost/Program.cs" `
+            "var $($shortLower)Db = sql.AddDatabase(`"$shortLower`", `"$short`");" `
+            "`nvar $($newModuleLower)Db = sql.AddDatabase(`"$shortLower-$newModuleLower`", `"${short}_$newModule`");"
+        Edit-File "Source/Hosting/$appName.AppHost/Program.cs" `
+            ".WithSQLServerDataSource($($shortLower)Db, `"$($case.Module)`")" `
+            "`n    .WithSQLServerDataSource($($newModuleLower)Db, `"$newModule`")"
+
+        # The top-level SQLServerMigrationsAssembly pin must GO: under Aspire the last
+        # WithSQLServerDataSource call wins the top-level connection string, so one module always
+        # collapses onto the Default source, and a top-level pin naming the other module's assembly
+        # fails startup with "conflicting SQLServerMigrationsAssembly values". Mutated as JSON: the
+        # instructions describe edits by meaning, not by byte offsets, so the smoke should too.
+        $appSettingsPath = Join-Path $appRoot "Source/Hosts/$appName.Web/appsettings.json"
+        $settings = Get-Content $appSettingsPath -Raw | ConvertFrom-Json
+
+        if (-not $settings.ConnectionStrings.PSObject.Properties['SQLServerMigrationsAssembly']) {
+            throw "Generated appsettings.json carries no top-level SQLServerMigrationsAssembly pin. The seed's appsettings shape moved; update smoke.ps1 and the mmca-module manualInstructions together."
+        }
+        $settings.ConnectionStrings.PSObject.Properties.Remove('SQLServerMigrationsAssembly')
+
+        $settings.Modules | Add-Member -NotePropertyName $newModule -NotePropertyValue ([pscustomobject]@{ Enabled = $true })
+
+        function New-DataSourceEntry {
+            param([string] $Module)
+            [pscustomobject]@{
+                SQLServerConnectionString = "Server=localhost;Database=${short}_$Module;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True"
+                SQLServerMigrationsAssembly = "$appName.Migrations.SqlServer.$Module"
+            }
+        }
+        $settings | Add-Member -NotePropertyName 'DataSources' -NotePropertyValue ([pscustomobject]@{
+            ($case.Module) = New-DataSourceEntry $case.Module
+            ($newModule) = New-DataSourceEntry $newModule
+        })
+        $settings | ConvertTo-Json -Depth 10 | Set-Content -Path $appSettingsPath
+
+        Write-Host "  all six wire-ups applied"
+    }
+
+    # The migrations project must arrive with Migrations/.editorconfig even though it ships no
+    # migrations: `dotnet ef migrations add` never creates one, and without it the adopter's first
+    # generated migration fails the build on analyzer errors inside code they did not write.
+    Invoke-Step "Migrations .editorconfig shipped with $newModule" {
+        $migrationsEditorConfig = Join-Path $appRoot "Source/Hosting/$appName.Migrations.SqlServer.$newModule/Migrations/.editorconfig"
+        if (-not (Test-Path $migrationsEditorConfig)) {
+            throw "mmca-module shipped no Migrations/.editorconfig at $migrationsEditorConfig."
+        }
+        if ((Get-Content $migrationsEditorConfig -Raw) -notmatch 'generated_code = true') {
+            throw "The shipped Migrations/.editorconfig does not mark migration output as generated code."
+        }
+        Write-Host "  Migrations/.editorconfig present and marks output as generated code"
     }
 
     Invoke-Step "Rebuild $appName with two modules" { dotnet build $slnx -c Release }
