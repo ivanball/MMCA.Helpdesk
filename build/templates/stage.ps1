@@ -387,9 +387,17 @@ Copy-Tree -Source $repoRoot -Destination $moduleStaging -Include @(
 
 # The seed's migrations describe the Ticket schema. A new module starts with none: the adopter runs
 # `dotnet ef migrations add InitialCreate` against their own entities. Shipping the seed's would
-# produce a first migration for tables the adopter never declared.
+# produce a first migration for tables the adopter never declared. The folder's .editorconfig is the
+# one file that DOES ship: it marks migration output as generated code so the five analyzers skip
+# it, and `dotnet ef` never recreates it, so dropping it would fail the adopter's first build after
+# `migrations add` with style errors inside code they did not write.
 $stagedMigrations = Join-Path $moduleStaging 'Source/Hosting/MMCA.Helpdesk.Migrations.SqlServer.Tickets/Migrations'
-if (Test-Path $stagedMigrations) { Remove-Item -Recurse -Force $stagedMigrations }
+if (-not (Test-Path (Join-Path $stagedMigrations '.editorconfig'))) {
+    throw "No .editorconfig under the seed's Migrations folder reached staging. Generated migrations would build under the full analyzer baseline; restore it before staging."
+}
+Get-ChildItem -Path $stagedMigrations -File -Force |
+    Where-Object { $_.Name -ne '.editorconfig' } |
+    Remove-Item -Force
 
 $moduleConfig = Join-Path $sliceRoot 'mmca-module/.template.config'
 if (-not (Test-Path $moduleConfig)) { throw "No .template.config for mmca-module at $moduleConfig" }
