@@ -67,11 +67,12 @@ Tests/
 ## Two one-time fixups the scaffold deliberately left to you
 
 **1. Re-sort the using directives.** Renaming every namespace moved where your own usings sort
-against `MMCA.Common.*` and the third-party ones, so `SA1210` starts as a suggestion (see the
-scaffold delta at the bottom of `.editorconfig`). Sort them with:
+against `MMCA.Common.*` and the third-party ones, so `SA1210` starts as a suggestion, and `SA1211`
+with it: the identifier-alias file's two aliases sort differently depending on the aggregate and
+child names you asked for (see the scaffold delta at the bottom of `.editorconfig`). Sort them with:
 
 ```bash
-dotnet format analyzers MMCA.Helpdesk.slnx --diagnostics SA1210 --severity error
+dotnet format analyzers MMCA.Helpdesk.slnx --diagnostics SA1210 SA1211 --severity info
 ```
 
 Every `mmca-command` / `mmca-query` slice arrives with the same skew, so either re-run that after
@@ -112,11 +113,34 @@ A whole module across all five layers, plus its test and migrations projects:
 dotnet new mmca-module -n Billing --app MMCA.Helpdesk --aggregate Invoice
 ```
 
+### Shaping the sample module
+
+Both `mmca-app` and `mmca-module` generate an aggregate with two optional axes, and three options
+decide what you get. They are shape decisions, not toggles: the code for an axis you turn off is
+never generated, so there is nothing to delete afterwards.
+
+| Option | Effect |
+|---|---|
+| `--flat` | No child collection at all: no child entity, DTO, requests, mapper, EF configuration, Add/Edit/Remove slices, controller endpoints, identifier alias, or tests. Use it when the aggregate owns no growable children. |
+| `--no-status` | No status axis: no status enum, no `ChangeStatus` slice, request, or endpoint, no `Status` property, no status invariant or tests. Use it when the aggregate has no lifecycle state. |
+| `--child <Name>` | Renames the child concept. `--aggregate Order --child Item` gives you an `OrderItem` entity, `AddItem` / `EditItem` / `RemoveItem` slices, and `/items` routes. Ignored under `--flat`. |
+
+```bash
+dotnet new mmca-app -n Contoso.Support --module Orders --aggregate Order --child Line
+dotnet new mmca-module -n Shipping --app MMCA.Helpdesk --aggregate Shipment --flat --no-status
+```
+
+Two things worth knowing. The plural forms are derived by a simple English pluralizer (`Line` ->
+`Lines`, `Entry` -> `Entries`, `Box` -> `Boxes`), so an irregular noun needs one rename by hand. And
+passing either flag to `mmca-app` drops the sample migrations, because they describe the full shape:
+run `dotnet ef migrations add InitialCreate` against the shape you actually asked for.
+
 `mmca-module` prints the six wire-ups it cannot perform for you (the solution entries, the host and
 architecture-test project references, the identifier-alias link, the architecture-map lines, the
 host's `AddErrorResources` call, and the module's own database: an AppHost database resource plus a
-`DataSources` entry per module, with the top-level migrations-assembly pin removed). Until they are
-done the module is invisible to the host and to the fitness rules.
+`DataSources` entry per module and an explicit `Outbox` source, with the top-level
+migrations-assembly pin removed). Until they are done the module is invisible to the host and to the
+fitness rules.
 
 A single vertical slice, run from the module's `UseCases` folder:
 

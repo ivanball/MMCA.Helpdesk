@@ -4,36 +4,47 @@ using MMCA.Common.Domain.Enums;
 using MMCA.Common.Domain.Extensions;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Helpdesk.Tickets.Domain.Tickets.DomainEvents;
+// template:begin status
 using MMCA.Helpdesk.Tickets.Shared.Tickets;
 
+// template:end status
 namespace MMCA.Helpdesk.Tickets.Domain.Tickets;
 
 /// <summary>
 /// Support-ticket aggregate root. Created through the <see cref="Create"/> factory (returns a
 /// <see cref="Result{T}"/>), mutated through guarded methods that raise <see cref="TicketChanged"/>
-/// domain events. Comments are growable children managed via <see cref="AddComment"/>.
+/// domain events.
+/// template:begin child
+/// Comments are growable children managed via <see cref="AddComment"/>.
+/// template:end child
 /// </summary>
 [IdValueGenerated]
 public sealed class Ticket : AuditableAggregateRootEntity<TicketIdentifierType>
 {
     public string Title { get; private set; }
     public string Description { get; private set; }
+    // template:begin status
     public TicketStatus Status { get; private set; }
+    // template:end status
 
     // The user id of the requester (resolved from the Identity module once one is added).
     public int RequesterUserId { get; private set; }
 
+    // template:begin child
     private readonly List<TicketComment> _comments = [];
 
     [Navigation(IsCollection = true)]
     public IReadOnlyCollection<TicketComment> Comments => _comments.AsReadOnly();
 
+    // template:end child
     private Ticket(string title, string description, int requesterUserId)
     {
         Title = title;
         Description = description;
         RequesterUserId = requesterUserId;
+        // template:begin status
         Status = TicketStatus.Open;
+        // template:end status
     }
 
     public static Result<Ticket> Create(
@@ -64,17 +75,20 @@ public sealed class Ticket : AuditableAggregateRootEntity<TicketIdentifierType>
         return Result.Success(ticket);
     }
 
+    // template:begin child
     public Result<TicketComment> AddComment(
         TicketCommentIdentifierType? id,
         string body,
         int authorUserId)
     {
+        // template:begin status
         var validation = TicketInvariants.EnsureStatusAllowsComments(Status, nameof(AddComment));
         if (validation.IsFailure)
         {
             return Result.Failure<TicketComment>(validation.Errors);
         }
 
+        // template:end status
         var commentResult = TicketComment.Create(id, body, authorUserId);
         if (commentResult.IsFailure)
         {
@@ -88,6 +102,7 @@ public sealed class Ticket : AuditableAggregateRootEntity<TicketIdentifierType>
         return Result.Success(comment);
     }
 
+    // template:end child
     public Result UpdateDetails(string title, string description)
     {
         var validation = Result.Combine(
@@ -105,14 +120,17 @@ public sealed class Ticket : AuditableAggregateRootEntity<TicketIdentifierType>
         return Result.Success();
     }
 
+    // template:begin child
     public Result EditComment(TicketCommentIdentifierType commentId, string body)
     {
+        // template:begin status
         var statusValidation = TicketInvariants.EnsureStatusAllowsComments(Status, nameof(EditComment));
         if (statusValidation.IsFailure)
         {
             return statusValidation;
         }
 
+        // template:end status
         var commentResult = GetChildOrNotFound(_comments, commentId, nameof(EditComment));
         if (commentResult.IsFailure)
         {
@@ -132,12 +150,14 @@ public sealed class Ticket : AuditableAggregateRootEntity<TicketIdentifierType>
 
     public Result RemoveComment(TicketCommentIdentifierType commentId)
     {
+        // template:begin status
         var statusValidation = TicketInvariants.EnsureStatusAllowsComments(Status, nameof(RemoveComment));
         if (statusValidation.IsFailure)
         {
             return statusValidation;
         }
 
+        // template:end status
         var commentResult = GetChildOrNotFound(_comments, commentId, nameof(RemoveComment));
         if (commentResult.IsFailure)
         {
@@ -155,6 +175,8 @@ public sealed class Ticket : AuditableAggregateRootEntity<TicketIdentifierType>
         return Result.Success();
     }
 
+    // template:end child
+    // template:begin status
     public Result ChangeStatus(TicketStatus newStatus)
     {
         if (Status == newStatus)
@@ -168,6 +190,7 @@ public sealed class Ticket : AuditableAggregateRootEntity<TicketIdentifierType>
         return Result.Success();
     }
 
+    // template:end status
     public override Result Delete()
     {
         var result = base.Delete();
@@ -176,11 +199,13 @@ public sealed class Ticket : AuditableAggregateRootEntity<TicketIdentifierType>
             return result;
         }
 
+        // template:begin child
         foreach (var comment in _comments.Where(c => !c.IsDeleted))
         {
             comment.Delete();
         }
 
+        // template:end child
         AddDomainEvent(new TicketChanged(DomainEntityState.Deleted, Id));
 
         return result;

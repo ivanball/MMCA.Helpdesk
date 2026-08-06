@@ -14,7 +14,11 @@ public record class TicketDTO : IBaseDTO<TicketIdentifierType>, IConcurrencyAwar
     public byte[]? RowVersion { get; init; }
     public required string Title { get; init; }
     public required string Description { get; init; }
+    // template:begin status
     public required TicketStatus Status { get; init; }
+    // template:end status
     public required int RequesterUserId { get; init; }
+    // template:begin child
     public IReadOnlyCollection<TicketCommentDTO> Comments { get; init; } = [];
+    // template:end child
 }

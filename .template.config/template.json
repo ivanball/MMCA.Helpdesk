@@ -5,7 +5,7 @@
   "identity": "MMCA.Templates.App",
   "name": "MMCA modular monolith (DDD + CQRS + Aspire)",
   "shortName": "mmca-app",
-  "description": "A complete modular-monolith solution on the MMCA.Common framework: one business module across all five layers, a REST API host, a Blazor Server + MudBlazor UI host, an Aspire AppHost, a per-database migrations project, and domain + application + architecture-fitness test projects. Build the monolith now, extract a module into its own service later.",
+  "description": "A complete modular-monolith solution on the MMCA.Common framework: one business module across all five layers, a REST API host, a Blazor Server + MudBlazor UI host, an Aspire AppHost, a per-database migrations project, and domain + application + architecture-fitness test projects. Shape the sample module with --flat (no child collection), --no-status (no status axis), and --child (rename the child entity). Build the monolith now, extract a module into its own service later.",
   "tags": {
     "language": "C#",
     "type": "solution"
@@ -34,7 +34,31 @@
       "steps": [ "toLastSegment", "upperCase" ]
     },
     "lowerCase": { "identifier": "lowerCase" },
-    "upperCase": { "identifier": "upperCase" }
+    "upperCase": { "identifier": "upperCase" },
+
+    "pluralConsonantY": {
+      "identifier": "replace",
+      "pattern": "([^aeiouAEIOU])[yY]$",
+      "replacement": "$1ie"
+    },
+    "pluralSibilant": {
+      "identifier": "replace",
+      "pattern": "([sxzSXZ]|[cC][hH]|[sS][hH])$",
+      "replacement": "$1e"
+    },
+    "pluralS": {
+      "identifier": "replace",
+      "pattern": "$",
+      "replacement": "s"
+    },
+    "toPlural": {
+      "identifier": "chain",
+      "steps": [ "pluralConsonantY", "pluralSibilant", "pluralS" ]
+    },
+    "toPluralLower": {
+      "identifier": "chain",
+      "steps": [ "toPlural", "lowerCase" ]
+    }
   },
 
   "symbols": {
@@ -107,11 +131,54 @@
       "description": "Lower-case aggregate name: local variables, route segments, and resource-string prose."
     },
 
+    "child": {
+      "type": "parameter",
+      "datatype": "text",
+      "defaultValue": "Comment",
+      "replaces": "Comment",
+      "fileRename": "Comment",
+      "description": "Name of the aggregate's child entity, singular PascalCase. The generated type is <aggregate><child>, so --aggregate Order --child Item produces OrderItem with AddItem / EditItem / RemoveItem slices and /items routes. IGNORED when --flat is passed, which drops the child collection entirely."
+    },
+    "childLower": {
+      "type": "derived",
+      "valueSource": "child",
+      "valueTransform": "lowerCase",
+      "replaces": "comment",
+      "description": "Lower-case child name: local variables, parameter names, and prose."
+    },
+    "childPlural": {
+      "type": "derived",
+      "valueSource": "child",
+      "valueTransform": "toPlural",
+      "replaces": "Comments",
+      "description": "Plural child name: the navigation collection, the DbSet, and the use-case folder names. Derived by an English pluralizer (Item -> Items, Entry -> Entries, Box -> Boxes); rename by hand if your noun is irregular."
+    },
+    "childPluralLower": {
+      "type": "derived",
+      "valueSource": "child",
+      "valueTransform": "toPluralLower",
+      "replaces": "comments",
+      "description": "Lower-case plural child name: the REST route segment and prose."
+    },
+
+    "flat": {
+      "type": "parameter",
+      "datatype": "bool",
+      "defaultValue": "false",
+      "description": "Generate the module WITHOUT a child collection: no child entity, DTO, requests, mapper, EF configuration, Add/Edit/Remove slices, controller endpoints, identifier alias, or tests. Use it when your aggregate owns no growable children. Makes --child irrelevant."
+    },
+    "noStatus": {
+      "type": "parameter",
+      "datatype": "bool",
+      "defaultValue": "false",
+      "description": "Generate the module WITHOUT a status axis: no status enum, no ChangeStatus slice, request, or endpoint, no Status property, and no status invariant or tests. Use it when your aggregate has no lifecycle state."
+    },
+
     "frameworkVersion": {
       "type": "parameter",
       "datatype": "text",
-      "defaultValue": "1.141.0",
-      "replaces": "1.141.0",
+      "defaultValue": "1.142.0",
+      "replaces": "1.142.0",
       "description": "The MMCA.Common package version to pin. Every MMCA.Common.* entry moves together (ADR-016); there is no phased rollout and no version skew across the set. Both values here are DERIVED: build/templates/stage.ps1 re-stamps them from the seed's own Directory.Packages.props, so a framework bump does not have to remember to touch this file."
     },
 
@@ -136,6 +203,41 @@
         {
           "condition": "(!localMmca)",
           "exclude": [ "local.props" ]
+        },
+        {
+          "comment": "The analyzer baseline is copied verbatim. It carries no scaffold token, and its rule descriptions contain the words this template renames (comment, ticket), which substring replacement would otherwise mangle. build/templates/stage.ps1 rewrites its seed-specific header and appends the scaffold delta, and guards that both happened.",
+          "copyOnly": [ "**/.editorconfig" ]
+        },
+        {
+          "comment": "--flat: the whole child (comment) axis, file by file. Partial-file removals are marker regions in the seed that stage.ps1 turns into conditional directives.",
+          "condition": "(flat)",
+          "exclude": [
+            "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Domain/Tickets/TicketComment.cs",
+            "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Shared/Tickets/TicketCommentDTO.cs",
+            "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Shared/Tickets/AddCommentRequest.cs",
+            "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Shared/Tickets/EditCommentRequest.cs",
+            "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/Tickets/DTOs/TicketCommentDTOMapper.cs",
+            "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/Tickets/UseCases/AddComment/**",
+            "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/Tickets/UseCases/EditComment/**",
+            "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/Tickets/UseCases/RemoveComment/**",
+            "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Infrastructure/Persistence/EntityConfiguration/TicketCommentConfiguration.cs"
+          ]
+        },
+        {
+          "comment": "--no-status: the whole status axis, file by file.",
+          "condition": "(noStatus)",
+          "exclude": [
+            "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Shared/Tickets/TicketStatus.cs",
+            "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Shared/Tickets/ChangeTicketStatusRequest.cs",
+            "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/Tickets/UseCases/ChangeStatus/**"
+          ]
+        },
+        {
+          "comment": "The seed's migrations describe the FULL sample schema (child table, status column). Either flag makes them wrong on arrival, so they are dropped and the adopter runs 'dotnet ef migrations add InitialCreate' against the shape they asked for. Migrations/.editorconfig still ships: dotnet ef never recreates it.",
+          "condition": "(flat || noStatus)",
+          "exclude": [
+            "Source/Hosting/MMCA.Helpdesk.Migrations.SqlServer.Tickets/Migrations/*.cs"
+          ]
         }
       ],
       "exclude": [

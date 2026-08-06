@@ -32,9 +32,31 @@ per-database migrations project, and domain, application, and architecture-fitne
 | `-n, --name` | `MMCA.App` | solution and root namespace, for example `Contoso.Support` |
 | `-m, --module` | `Tickets` | the first business module, plural PascalCase |
 | `-a, --aggregate` | `Ticket` | that module's aggregate root, singular PascalCase |
+| `-c, --child` | `Comment` | the aggregate's child entity, singular PascalCase; the type is `<aggregate><child>`, so `--aggregate Order --child Item` gives `OrderItem`, `AddItem` / `EditItem` / `RemoveItem` slices, and `/items` routes |
+| `--flat` | off | generate no child collection at all: no child entity, DTO, requests, mapper, EF configuration, Add/Edit/Remove slices, endpoints, alias, or tests (makes `--child` irrelevant) |
+| `--no-status` | off | generate no status axis: no status enum, no `ChangeStatus` slice, request, or endpoint, no `Status` property, no status invariant or tests |
 | `-f, --framework-version` | the version this pack was built against | the `MMCA.Common.*` version to pin (all packages move together) |
 | `--local-mmca` | off | build against `../MMCA.Common/Source` instead of the published packages |
 | `--no-restore` | off | skip the restore after generation |
+
+`--flat` and `--no-status` are shape decisions, not toggles: the code for an axis you turn off is
+never generated, so there is nothing to delete afterwards. Passing either also drops the sample
+migrations, because they describe the full shape; run `dotnet ef migrations add InitialCreate`
+against the shape you asked for. Plural forms are derived by a simple English pluralizer (`Item` ->
+`Items`, `Entry` -> `Entries`, `Box` -> `Boxes`), so an irregular noun needs one rename by hand.
+
+## `mmca-module` parameters
+
+Run this from your solution root. It prints the seven wire-ups it cannot perform for you.
+
+| Parameter | Default | Meaning |
+|---|---|---|
+| `-n, --name` | `Sample` | the module, plural PascalCase; names the folders, projects, and namespaces |
+| `--app` | required | your solution / root namespace |
+| `-a, --aggregate` | required | the module's aggregate root, singular PascalCase |
+| `-c, --child` | `Comment` | the aggregate's child entity, as above |
+| `--flat` | off | as above |
+| `--no-status` | off | as above |
 
 ## `mmca-command` and `mmca-query` parameters
 

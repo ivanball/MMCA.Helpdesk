@@ -42,10 +42,23 @@ rather than to a generated app and laying `build/templates/overlay/` on top. Con
   gate: run `pwsh build/templates/smoke.ps1` before touching anything under `build/templates/`,
   `templates/`, or `.template.config/`.
 - **Two things the scaffold deliberately does not hand over**, both because a rename invalidates
-  them and no fixed value is right for every generated name: using-directive order (SA1210 is
-  relaxed in the staged `.editorconfig` only) and the `IntegrationEventContractTests` subclass (an
+  them and no fixed value is right for every generated name: using-directive and alias order (SA1210
+  and SA1211 are relaxed in the staged `.editorconfig` only) and the `IntegrationEventContractTests` subclass (an
   inherited wire-contract freeze guarantees nothing; adopters freeze their own). Both are documented
   in the generated README.
+- **The optional axes live in the seed as ordinary comments.** `--flat` (no child collection),
+  `--no-status` (no status axis), and `--child <Name>` (rename the child concept) are shaped two
+  ways: whole files come out through `sources.modifiers` conditions in each `template.json`, and
+  partial-file regions are marked in the seed with `// template:begin child` / `// template:end child`
+  (`<!-- ... -->` in XML and resx, `@* ... *@` in razor, `/// ...` inside an XML doc block). Axis
+  labels are `child` -> `!flat`, `status` -> `!noStatus`, `childStatus` -> `!(flat || noStatus)`.
+  `stage.ps1` converts them to dotnet-new directives in the STAGED copies and throws on an
+  unbalanced or unknown-label marker. **Never put a raw `//#if` in the seed**, and keep a region's
+  trailing blank line INSIDE it (a marker followed by a blank line is SA1512).
+- **`Comment` is a rename token, so the word is a hazard.** `--child` replaces the substring
+  `comment` everywhere, which is why the seed says "code notes" and "children" in prose, the
+  `.editorconfig` is `copyOnly`, and `stage.ps1` escapes the ResX schema's `name="comment"`
+  attribute. Staging greps the staged trees for `commented` / `commenting` and throws.
 - `MMCA.Templates` is deliberately **not** named `MMCA.Common.Templates`: that prefix carries the
   ADR-016 lockstep-versioning contract and ships from the MMCA.Common repo. This one ships from here
   on its own cadence and pins the framework version as a template parameter.

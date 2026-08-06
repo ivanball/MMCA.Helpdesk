@@ -58,9 +58,11 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <!-- template:begin childStatus -->
   <data name="Ticket.Closed" xml:space="preserve">
     <value>Comments cannot be added to a closed ticket.</value>
   </data>
+  <!-- template:end childStatus -->
   <data name="Ticket.Description.Empty" xml:space="preserve">
     <value>Ticket description cannot be empty.</value>
   </data>
@@ -73,10 +75,12 @@
   <data name="Ticket.Title.TooLong" xml:space="preserve">
     <value>Ticket title cannot exceed 200 characters.</value>
   </data>
+  <!-- template:begin child -->
   <data name="Ticket.Comment.Body.Empty" xml:space="preserve">
     <value>Comment body cannot be empty.</value>
   </data>
   <data name="Ticket.Comment.Body.TooLong" xml:space="preserve">
     <value>Comment body cannot exceed 4000 characters.</value>
   </data>
+  <!-- template:end child -->
 </root>

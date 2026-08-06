@@ -25,14 +25,18 @@ else
         <MudTextField @bind-Value="_title" Label="@L["Field.Title"].Value" Variant="Variant.Outlined" Class="mb-3" />
         <MudTextField @bind-Value="_description" Label="@L["Field.Description"].Value" Variant="Variant.Outlined" Lines="3" Class="mb-3" />
         <MudText Typo="Typo.body2" Class="mb-3">
+            @* template:begin status *@
             @* Enum display localizes via Status.* keys; the wire/enum value itself stays untranslated. *@
-            @L["Detail.Status"] <b>@L[$"Status.{_ticket.Status}"]</b> &nbsp;&middot;&nbsp; @L["Detail.Requester"] <b>@_ticket.RequesterUserId</b>
+            @L["Detail.Status"] <b>@L[$"Status.{_ticket.Status}"]</b> &nbsp;&middot;&nbsp;
+            @* template:end status *@
+            @L["Detail.Requester"] <b>@_ticket.RequesterUserId</b>
         </MudText>
         <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveDetailsAsync" Disabled="_busy">
             @L["Button.SaveDetails"]
         </MudButton>
     </MudPaper>
 
+    @* template:begin status *@
     <MudPaper Class="pa-4 mb-6" Elevation="1">
         <MudText Typo="Typo.subtitle1" GutterBottom="true">@L["Section.Status"]</MudText>
         <MudGrid>
@@ -51,7 +55,9 @@ else
             </MudItem>
         </MudGrid>
     </MudPaper>
+    @* template:end status *@
 
+    @* template:begin child *@
     <MudPaper Class="pa-4 mb-6" Elevation="1">
         <MudText Typo="Typo.subtitle1" GutterBottom="true">@L["Section.AddComment"]</MudText>
         <MudGrid>
@@ -103,6 +109,7 @@ else
             </MudPaper>
         }
     }
+    @* template:end child *@
 }
 
 @code {
@@ -111,10 +118,14 @@ else
     private TicketDTO? _ticket;
     private string _title = string.Empty;
     private string _description = string.Empty;
+    @* template:begin status *@
     private TicketStatus _status;
+    @* template:end status *@
+    @* template:begin child *@
     private string _newComment = string.Empty;
     private string _editCommentBody = string.Empty;
     private int? _editingCommentId;
+    @* template:end child *@
     private bool _busy;
 
     protected override async Task OnParametersSetAsync() => await LoadAsync();
@@ -129,7 +140,9 @@ else
             {
                 _title = _ticket.Title;
                 _description = _ticket.Description;
+                @* template:begin status *@
                 _status = _ticket.Status;
+                @* template:end status *@
             }
         }
         catch (Exception ex)
@@ -167,6 +180,7 @@ else
         }
     }
 
+    @* template:begin status *@
     private async Task ChangeStatusAsync()
     {
         _busy = true;
@@ -186,6 +200,8 @@ else
         }
     }
 
+    @* template:end status *@
+    @* template:begin child *@
     private async Task AddCommentAsync()
     {
         if (string.IsNullOrWhiteSpace(_newComment))
@@ -266,6 +282,7 @@ else
         }
     }
 
+    @* template:end child *@
     private async Task DeleteAsync()
     {
         var confirmed = await DialogService.ShowMessageBoxAsync(

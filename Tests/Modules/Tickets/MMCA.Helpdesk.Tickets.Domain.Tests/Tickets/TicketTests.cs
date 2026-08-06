@@ -1,9 +1,15 @@
 using AwesomeAssertions;
+// template:begin child
 using MMCA.Common.Domain.Enums;
+// template:end child
 using MMCA.Helpdesk.Tickets.Domain.Tickets;
+// template:begin child
 using MMCA.Helpdesk.Tickets.Domain.Tickets.DomainEvents;
+// template:end child
+// template:begin status
 using MMCA.Helpdesk.Tickets.Shared.Tickets;
 
+// template:end status
 namespace MMCA.Helpdesk.Tickets.Domain.Tests.Tickets;
 
 public class TicketTests
@@ -15,7 +21,9 @@ public class TicketTests
 
         result.IsSuccess.Should().BeTrue();
         result.Value!.Title.Should().Be("Cannot log in");
+        // template:begin status
         result.Value.Status.Should().Be(TicketStatus.Open);
+        // template:end status
         result.Value.RequesterUserId.Should().Be(42);
     }
 
@@ -39,6 +47,7 @@ public class TicketTests
         result.Errors.Should().Contain(e => e.Code == "Ticket.Title.Empty");
     }
 
+    // template:begin child
     [Fact]
     public void AddComment_OnOpenTicket_AddsCommentAndRaisesEvent()
     {
@@ -52,6 +61,8 @@ public class TicketTests
             .Should().Contain(e => e.State == DomainEntityState.Updated);
     }
 
+    // template:end child
+    // template:begin childStatus
     [Fact]
     public void AddComment_OnClosedTicket_ReturnsFailure()
     {
@@ -64,6 +75,8 @@ public class TicketTests
         result.Errors.Should().Contain(e => e.Code == "Ticket.Closed");
     }
 
+    // template:end childStatus
+    // template:begin status
     [Fact]
     public void ChangeStatus_UpdatesStatus()
     {
@@ -75,6 +88,8 @@ public class TicketTests
         ticket.Status.Should().Be(TicketStatus.Resolved);
     }
 
+    // template:end status
+    // template:begin child
     [Fact]
     public void Delete_SoftDeletesTicketAndCascadesToComments()
     {
@@ -88,6 +103,7 @@ public class TicketTests
         ticket.Comments.Should().OnlyContain(c => c.IsDeleted);
     }
 
+    // template:end child
     [Fact]
     public void UpdateDetails_WithValidData_UpdatesTitleAndDescription()
     {
@@ -111,6 +127,7 @@ public class TicketTests
         result.Errors.Should().Contain(e => e.Code == "Ticket.Title.Empty");
     }
 
+    // template:begin child
     [Fact]
     public void EditComment_UpdatesBody()
     {
@@ -133,6 +150,8 @@ public class TicketTests
         result.IsFailure.Should().BeTrue();
     }
 
+    // template:end child
+    // template:begin childStatus
     [Fact]
     public void EditComment_OnClosedTicket_ReturnsFailure()
     {
@@ -159,6 +178,8 @@ public class TicketTests
         result.Errors.Should().Contain(e => e.Code == "Ticket.Closed");
     }
 
+    // template:end childStatus
+    // template:begin child
     [Fact]
     public void RemoveComment_SoftDeletesComment()
     {
@@ -171,6 +192,7 @@ public class TicketTests
         comment.IsDeleted.Should().BeTrue();
     }
 
+    // template:end child
     private static Ticket CreateOpenTicket() =>
         Ticket.Create(id: null, "Title", "Description", requesterUserId: 1).Value!;
 }

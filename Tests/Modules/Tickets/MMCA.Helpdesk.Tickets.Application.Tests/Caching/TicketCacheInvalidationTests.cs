@@ -4,13 +4,21 @@ using MMCA.Common.Application.UseCases;
 using MMCA.Common.Application.UseCases.Decorators;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Helpdesk.Tickets.Application.Tickets;
+// template:begin child
 using MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.AddComment;
+// template:end child
+// template:begin status
 using MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.ChangeStatus;
+// template:end status
 using MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.Create;
 using MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.Delete;
+// template:begin child
 using MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.EditComment;
+// template:end child
 using MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.GetById;
+// template:begin child
 using MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.RemoveComment;
+// template:end child
 using MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.Update;
 using MMCA.Helpdesk.Tickets.Shared.Tickets;
 
@@ -54,14 +62,14 @@ public class TicketCacheInvalidationTests
         var cache = new DictionaryCache();
         var queryHandler = new CountingQueryHandler(TicketResult());
         var read = new CachingQueryDecorator<GetTicketByIdQuery, Result<TicketDTO>>(queryHandler, cache);
-        var write = new CachingCommandDecorator<ChangeTicketStatusCommand, Result<TicketDTO>>(
-            new StubCommandHandler(TicketResult(TicketStatus.Closed)), cache);
+        var write = new CachingCommandDecorator<UpdateTicketCommand, Result<TicketDTO>>(
+            new StubCommandHandler(TicketResult()), cache);
 
         await read.HandleAsync(new GetTicketByIdQuery(TicketId));
         await read.HandleAsync(new GetTicketByIdQuery(TicketId));
         queryHandler.Invocations.Should().Be(1, "the cache is warm before the write");
 
-        var written = await write.HandleAsync(new ChangeTicketStatusCommand(TicketId, TicketStatus.Closed));
+        var written = await write.HandleAsync(new UpdateTicketCommand(TicketId, "Still cannot log in", "Returns a 500."));
 
         written.IsSuccess.Should().BeTrue();
         cache.Keys.Should().BeEmpty("a successful command evicts everything under its CachePrefix");
@@ -78,12 +86,12 @@ public class TicketCacheInvalidationTests
         var cache = new DictionaryCache();
         var queryHandler = new CountingQueryHandler(TicketResult());
         var read = new CachingQueryDecorator<GetTicketByIdQuery, Result<TicketDTO>>(queryHandler, cache);
-        var write = new CachingCommandDecorator<ChangeTicketStatusCommand, Result<TicketDTO>>(
+        var write = new CachingCommandDecorator<UpdateTicketCommand, Result<TicketDTO>>(
             new StubCommandHandler(Result.Failure<TicketDTO>(Error.NotFound)), cache);
 
         await read.HandleAsync(new GetTicketByIdQuery(TicketId));
 
-        var written = await write.HandleAsync(new ChangeTicketStatusCommand(TicketId, TicketStatus.Closed));
+        var written = await write.HandleAsync(new UpdateTicketCommand(TicketId, "Still cannot log in", "Returns a 500."));
 
         written.IsFailure.Should().BeTrue();
         cache.RemoveByPrefixCalls.Should().Be(0, "a command that persisted nothing must not evict valid entries");
@@ -114,19 +122,25 @@ public class TicketCacheInvalidationTests
         new TicketCreateRequest { Title = "Cannot log in", Description = "Returns a 500.", RequesterUserId = 42 },
         new UpdateTicketCommand(TicketId, "Cannot log in", "Returns a 500."),
         new DeleteTicketCommand(TicketId),
+        // template:begin status
         new ChangeTicketStatusCommand(TicketId, TicketStatus.Closed),
+        // template:end status
+        // template:begin child
         new AddCommentCommand(TicketId, "Looking into it.", AuthorUserId: 7),
         new EditCommentCommand(TicketId, CommentId: 1, "Still looking into it."),
         new RemoveCommentCommand(TicketId, CommentId: 1),
+        // template:end child
     ];
 
-    private static Result<TicketDTO> TicketResult(TicketStatus status = TicketStatus.Open) =>
+    private static Result<TicketDTO> TicketResult() =>
         Result.Success(new TicketDTO
         {
             Id = TicketId,
             Title = "Cannot log in",
             Description = "The login page returns a 500.",
-            Status = status,
+            // template:begin status
+            Status = TicketStatus.Open,
+            // template:end status
             RequesterUserId = 42,
         });
 
@@ -147,10 +161,10 @@ public class TicketCacheInvalidationTests
 
     /// <summary>Stands in for the persistence-backed command handler, returning a fixed outcome.</summary>
     private sealed class StubCommandHandler(Result<TicketDTO> result)
-        : ICommandHandler<ChangeTicketStatusCommand, Result<TicketDTO>>
+        : ICommandHandler<UpdateTicketCommand, Result<TicketDTO>>
     {
         public Task<Result<TicketDTO>> HandleAsync(
-            ChangeTicketStatusCommand command,
+            UpdateTicketCommand command,
             CancellationToken cancellationToken = default) => Task.FromResult(result);
     }
 

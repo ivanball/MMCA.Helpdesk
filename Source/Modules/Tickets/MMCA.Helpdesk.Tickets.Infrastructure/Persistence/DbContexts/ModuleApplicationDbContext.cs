@@ -19,5 +19,7 @@ public abstract class ModuleApplicationDbContext(
     : ApplicationDbContext(options, serviceProvider, assemblyProvider, physicalDataSource)
 {
     internal DbSet<Ticket> Tickets { get; set; }
+    // template:begin child
     internal DbSet<TicketComment> TicketComments { get; set; }
+    // template:end child
 }

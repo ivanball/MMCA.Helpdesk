@@ -6,7 +6,7 @@ using MMCA.Helpdesk.Tickets.Domain.Tickets;
 namespace MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.Delete;
 
 /// <summary>
-/// Soft-deletes a ticket through the aggregate root (loaded tracked with its comments so the cascade
+/// Soft-deletes a ticket through the aggregate root (loaded tracked with its children so the cascade
 /// soft-deletes them too). The EF global query filter then excludes it from subsequent reads.
 /// </summary>
 public sealed class DeleteTicketHandler(IUnitOfWork unitOfWork)
