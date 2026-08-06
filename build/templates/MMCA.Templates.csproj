@@ -35,8 +35,12 @@
          being enforced in every generated app), and .gitattributes. -->
     <NoDefaultExcludes>true</NoDefaultExcludes>
 
-    <!-- NU5128: no lib/ or ref/ folder, which is correct for a content-only template pack. -->
-    <NoWarn>$(NoWarn);NU5128</NoWarn>
+    <!-- NU5128: no lib/ or ref/ folder, which is correct for a content-only template pack.
+         NU5110/NU5111: NuGet sees ANY .ps1 in a package as a legacy packages.config install script
+         and advises moving it to tools/ and renaming it install.ps1. That advice is wrong here:
+         content/mmca-app/build/add-module.ps1 is template CONTENT, laid into the generated app for
+         the adopter to run later, and must never execute at install time. -->
+    <NoWarn>$(NoWarn);NU5128;NU5110;NU5111</NoWarn>
 
     <StagingRoot>$(MSBuildThisFileDirectory)..\..\artifacts\template-staging\</StagingRoot>
   </PropertyGroup>

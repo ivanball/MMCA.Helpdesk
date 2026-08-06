@@ -33,21 +33,78 @@ per-database migrations project, and domain, application, and architecture-fitne
 | `-m, --module` | `Tickets` | the first business module, plural PascalCase |
 | `-a, --aggregate` | `Ticket` | that module's aggregate root, singular PascalCase |
 | `-c, --child` | `Comment` | the aggregate's child entity, singular PascalCase; the type is `<aggregate><child>`, so `--aggregate Order --child Item` gives `OrderItem`, `AddItem` / `EditItem` / `RemoveItem` slices, and `/items` routes |
+| `--title` | `Title` | the aggregate's main text property; error codes, the max-length constant, the DTO and request properties, the EF column, the validator rule, the UI field and column resources, and the domain tests all follow |
+| `--event-verb` | `Opened` | verb of the creation integration event, past tense; `--aggregate Order --event-verb Placed` gives `OrderPlacedIntegrationEvent` and its `OrderPlacedHandler` consumer |
 | `--flat` | off | generate no child collection at all: no child entity, DTO, requests, mapper, EF configuration, Add/Edit/Remove slices, endpoints, alias, or tests (makes `--child` irrelevant) |
 | `--no-status` | off | generate no status axis: no status enum, no `ChangeStatus` slice, request, or endpoint, no `Status` property, no status invariant or tests |
+| `--no-description` | off | generate no long-text property: no `Description` property or invariant, no max-length constant, no DTO, request, or command field, no validator rule, no EF max-length configuration, no error-resource entries, no UI field, no tests |
+| `--no-owner` | off | generate no owning-user property: no `RequesterUserId` property, no create-request field or validator rule, no member on the creation integration event, no EF index, no UI field or column, no tests |
 | `-f, --framework-version` | the version this pack was built against | the `MMCA.Common.*` version to pin (all packages move together) |
 | `--local-mmca` | off | build against `../MMCA.Common/Source` instead of the published packages |
 | `--no-restore` | off | skip the restore after generation |
 
-`--flat` and `--no-status` are shape decisions, not toggles: the code for an axis you turn off is
-never generated, so there is nothing to delete afterwards. Passing either also drops the sample
-migrations, because they describe the full shape; run `dotnet ef migrations add InitialCreate`
-against the shape you asked for. Plural forms are derived by a simple English pluralizer (`Item` ->
-`Items`, `Entry` -> `Entries`, `Box` -> `Boxes`), so an irregular noun needs one rename by hand.
+`--flat`, `--no-status`, `--no-description` and `--no-owner` are shape decisions, not toggles: the
+code for an axis you turn off is never generated, so there is nothing to delete afterwards. Passing
+any of the four also drops the sample migrations, because they describe the full shape; run
+`dotnet ef migrations add InitialCreate` against the shape you asked for. Plural forms are derived by
+a simple English pluralizer (`Item` -> `Items`, `Entry` -> `Entries`, `Box` -> `Boxes`), so an
+irregular noun needs one rename by hand.
+
+Two shapes worth naming, because they are what most adopters reach for first:
+
+```bash
+dotnet new mmca-app -n Contoso.Catalog --module Products --aggregate Product \
+  --flat --no-status --no-owner --title Name
+dotnet new mmca-app -n Zeta.Orders --module Orders --aggregate Order --child Item \
+  --no-owner --no-description --title CustomerName --event-verb Placed
+```
+
+`--title` and `--event-verb` are plain renames rather than shape decisions, and both are substring
+replacements: a multi-word `--title CustomerName` reaches the two shipped error messages as well as
+the identifiers, so `"Ticket title cannot be empty."` arrives as `"Order customerName cannot be
+empty."` Identifiers have to compile; those two strings are a one-line edit in the module's error
+resources after generating.
+
+## Adding a module to a generated solution
+
+`mmca-app` ships `build/add-module.ps1` inside every solution it generates, and that is the
+supported way to add the second module. It runs `mmca-module` for you and then performs all seven
+wire-ups the template can only print, plus the first EF migration:
+
+```bash
+pwsh build/add-module.ps1 -Name Orders -Aggregate Order -Child Item -EventVerb Placed
+```
+
+| Parameter | Maps to | Meaning |
+|---|---|---|
+| `-Name` | `-n` | the module, plural PascalCase |
+| `-Aggregate` | `--aggregate` | the module's aggregate root, singular PascalCase |
+| `-Child` | `--child` | rename the child entity |
+| `-Title` | `--title` | rename the aggregate's main text property |
+| `-EventVerb` | `--event-verb` | verb of the creation integration event |
+| `-Flat` | `--flat` | no child collection |
+| `-NoStatus` | `--no-status` | no status axis |
+| `-NoOwner` | `--no-owner` | no owning-user property |
+| `-NoDescription` | `--no-description` | no long-text property |
+| `-SkipMigration` | | print the `dotnet ef migrations add` command instead of running it |
+
+It must be run from the solution root, and it discovers everything else there: the solution file
+(which is also the app's root namespace), the module already present, and the web host, AppHost and
+architecture-test projects, all by glob. Nothing about the app that generated it is baked in, which
+is why the file is declared `copyOnly` in `mmca-app`'s `template.json`: it ships verbatim, with no
+token replacement, so the flag names it passes through survive whatever `--title` / `--event-verb` /
+`--child` values the solution was generated with. `build/templates/stage.ps1` guards both halves of
+that (the declaration, and that the script names none of the seed's own types or paths).
+
+Every edit is anchored, a missing anchor aborts the run with the manual edit printed instead, a name
+already under `Source/Modules` is refused before anything is generated, and each already-applied
+step is skipped rather than duplicated. `build/templates/smoke.ps1` adds its second module through
+this script, so the wire-ups are covered by the same code path adopters run.
 
 ## `mmca-module` parameters
 
-Run this from your solution root. It prints the seven wire-ups it cannot perform for you.
+Run this from your solution root. It prints the seven wire-ups it cannot perform for you (a solution
+generated by `mmca-app` should use `build/add-module.ps1` above instead, which performs them).
 
 | Parameter | Default | Meaning |
 |---|---|---|
@@ -55,8 +112,12 @@ Run this from your solution root. It prints the seven wire-ups it cannot perform
 | `--app` | required | your solution / root namespace |
 | `-a, --aggregate` | required | the module's aggregate root, singular PascalCase |
 | `-c, --child` | `Comment` | the aggregate's child entity, as above |
+| `--title` | `Title` | the aggregate's main text property, as above |
+| `--event-verb` | `Opened` | verb of the creation integration event, as above |
 | `--flat` | off | as above |
 | `--no-status` | off | as above |
+| `--no-description` | off | as above |
+| `--no-owner` | off | as above |
 
 ## `mmca-command` and `mmca-query` parameters
 

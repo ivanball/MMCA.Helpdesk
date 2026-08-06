@@ -63,12 +63,14 @@
     <value>Comments cannot be added to a closed ticket.</value>
   </data>
   <!-- template:end childStatus -->
+  <!-- template:begin description -->
   <data name="Ticket.Description.Empty" xml:space="preserve">
     <value>Ticket description cannot be empty.</value>
   </data>
   <data name="Ticket.Description.TooLong" xml:space="preserve">
     <value>Ticket description cannot exceed 4000 characters.</value>
   </data>
+  <!-- template:end description -->
   <data name="Ticket.Title.Empty" xml:space="preserve">
     <value>Ticket title cannot be empty.</value>
   </data>

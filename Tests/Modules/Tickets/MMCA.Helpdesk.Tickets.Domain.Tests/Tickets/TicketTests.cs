@@ -24,7 +24,9 @@ public class TicketTests
         // template:begin status
         result.Value.Status.Should().Be(TicketStatus.Open);
         // template:end status
+        // template:begin owner
         result.Value.RequesterUserId.Should().Be(42);
+        // template:end owner
     }
 
     [Fact]
@@ -105,7 +107,7 @@ public class TicketTests
 
     // template:end child
     [Fact]
-    public void UpdateDetails_WithValidData_UpdatesTitleAndDescription()
+    public void UpdateDetails_WithValidData_UpdatesTheEditableFields()
     {
         var ticket = CreateOpenTicket();
 
@@ -113,7 +115,9 @@ public class TicketTests
 
         result.IsSuccess.Should().BeTrue();
         ticket.Title.Should().Be("New title");
+        // template:begin description
         ticket.Description.Should().Be("New description");
+        // template:end description
     }
 
     [Fact]

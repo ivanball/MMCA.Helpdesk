@@ -78,6 +78,11 @@ dotnet format analyzers MMCA.Helpdesk.slnx --diagnostics SA1210 SA1211 --severit
 Every `mmca-command` / `mmca-query` slice arrives with the same skew, so either re-run that after
 scaffolding, or leave the delta in place until you have stopped scaffolding and then delete it.
 
+The same delta relaxes `IDE0021` for a different reason: the aggregate's private constructor assigns
+one property per optional axis, so turning several of them off can leave it with a single statement,
+which the baseline would otherwise require you to write as an expression body. Fold it by hand, or
+add your own second property, and delete that line too.
+
 **2. Freeze your integration-event wire contract.** Integration events cross service boundaries over
 the broker, so a renamed, removed, or retyped property breaks consumers in another service. The
 framework can fail the build on a silent reshape, but only against a contract **you** froze: one
@@ -107,7 +112,36 @@ dotnet test --project Tests/Architecture/MMCA.Helpdesk.Architecture.Tests/MMCA.H
 
 ## Adding to it
 
-A whole module across all five layers, plus its test and migrations projects:
+### A whole module: one command
+
+```bash
+pwsh build/add-module.ps1 -Name Billing -Aggregate Invoice
+```
+
+That scaffolds the module across all five layers, adds its test and migrations projects, and then
+performs every wire-up `dotnet new` cannot reach: the solution entries, the host and
+architecture-test project references, the identifier-alias link, the architecture-map lines, the
+host's error-resource registration, the module's own Aspire database and its data-source routing,
+the `appsettings.json` normalization that a second module needs, and the module's first EF
+migration.
+
+Run it from the solution root. It refuses to run anywhere else, and everything else about this
+solution (its name, the module already here, its hosts and its test projects) it discovers at run
+time, so nothing in it is wired to the names you scaffolded with. It accepts the same shape options
+as the template it drives and passes them through, so **run it with `-?` for every option**.
+
+Each edit is anchored on something the scaffold generated, and a missing anchor stops the run
+printing the edit to make by hand instead: a half-wired solution is never the quiet outcome. A name
+that is already under `Source/Modules` is refused before anything is generated, and any step that
+was already done is skipped with a note, so a run that died part way can be fixed and rerun.
+
+Two things it deliberately leaves to you: the Blazor UI pages (the scaffold's UI host still shows
+only the first module), and re-freezing the integration-event wire contract above if you took it.
+
+### The template on its own
+
+Usable directly in a solution this scaffold did not generate. It prints the seven wire-ups it
+cannot perform:
 
 ```bash
 dotnet new mmca-module -n Billing --app MMCA.Helpdesk --aggregate Invoice
@@ -115,7 +149,7 @@ dotnet new mmca-module -n Billing --app MMCA.Helpdesk --aggregate Invoice
 
 ### Shaping the sample module
 
-Both `mmca-app` and `mmca-module` generate an aggregate with two optional axes, and three options
+Both `mmca-app` and `mmca-module` generate an aggregate with four optional axes, and five options
 decide what you get. They are shape decisions, not toggles: the code for an axis you turn off is
 never generated, so there is nothing to delete afterwards.
 
@@ -123,17 +157,21 @@ never generated, so there is nothing to delete afterwards.
 |---|---|
 | `--flat` | No child collection at all: no child entity, DTO, requests, mapper, EF configuration, Add/Edit/Remove slices, controller endpoints, identifier alias, or tests. Use it when the aggregate owns no growable children. |
 | `--no-status` | No status axis: no status enum, no `ChangeStatus` slice, request, or endpoint, no `Status` property, no status invariant or tests. Use it when the aggregate has no lifecycle state. |
+| `--no-description` | No long-text property: no `Description` property or invariant, no max-length constant, no DTO, request, or command field, no validator rule, no EF max-length configuration, no error-resource entries, no UI field, no tests. Use it when the aggregate's main text property is all the text it needs. |
+| `--no-owner` | No owning-user property: no `RequesterUserId` property, no create-request field or validator rule, no member on the creation integration event, no EF index, no UI field or column, no tests. Use it when the aggregate is not owned by a single user, or until you add an Identity module to resolve one. |
 | `--child <Name>` | Renames the child concept. `--aggregate Order --child Item` gives you an `OrderItem` entity, `AddItem` / `EditItem` / `RemoveItem` slices, and `/items` routes. Ignored under `--flat`. |
 
 ```bash
 dotnet new mmca-app -n Contoso.Support --module Orders --aggregate Order --child Line
+dotnet new mmca-app -n Contoso.Catalog --module Products --aggregate Product --flat --no-status --no-owner
 dotnet new mmca-module -n Shipping --app MMCA.Helpdesk --aggregate Shipment --flat --no-status
 ```
 
 Two things worth knowing. The plural forms are derived by a simple English pluralizer (`Line` ->
 `Lines`, `Entry` -> `Entries`, `Box` -> `Boxes`), so an irregular noun needs one rename by hand. And
-passing either flag to `mmca-app` drops the sample migrations, because they describe the full shape:
-run `dotnet ef migrations add InitialCreate` against the shape you actually asked for.
+passing any of the four shape flags to `mmca-app` drops the sample migrations, because they describe
+the full shape: run `dotnet ef migrations add InitialCreate` against the shape you actually asked
+for.
 
 `mmca-module` prints the six wire-ups it cannot perform for you (the solution entries, the host and
 architecture-test project references, the identifier-alias link, the architecture-map lines, the

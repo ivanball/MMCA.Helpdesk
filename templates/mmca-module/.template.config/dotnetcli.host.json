@@ -4,12 +4,18 @@
     "app": { "longName": "app", "shortName": "" },
     "aggregate": { "longName": "aggregate", "shortName": "a" },
     "child": { "longName": "child", "shortName": "c" },
+    "title": { "longName": "title", "shortName": "" },
+    "eventVerb": { "longName": "event-verb", "shortName": "" },
     "flat": { "longName": "flat", "shortName": "" },
-    "noStatus": { "longName": "no-status", "shortName": "" }
+    "noStatus": { "longName": "no-status", "shortName": "" },
+    "noDescription": { "longName": "no-description", "shortName": "" },
+    "noOwner": { "longName": "no-owner", "shortName": "" }
   },
   "usageExamples": [
     "-n Billing --app Contoso.Support --aggregate Invoice",
     "-n Shipping --app Contoso.Support --aggregate Shipment --child Line",
-    "-n Shipping --app Contoso.Support --aggregate Shipment --flat --no-status"
+    "-n Shipping --app Contoso.Support --aggregate Shipment --title Reference --event-verb Dispatched",
+    "-n Shipping --app Contoso.Support --aggregate Shipment --flat --no-status",
+    "-n Products --app Contoso.Support --aggregate Product --flat --no-status --no-owner"
   ]
 }

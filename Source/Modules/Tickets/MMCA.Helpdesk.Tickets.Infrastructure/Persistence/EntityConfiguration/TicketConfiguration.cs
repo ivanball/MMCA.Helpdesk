@@ -1,4 +1,8 @@
+// template:begin owner
+// Only HasFilter on the requester index reaches into this namespace (it is a relational extension
+// method); every other call below is an instance method on a builder from Metadata.Builders.
 using Microsoft.EntityFrameworkCore;
+// template:end owner
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration;
 using MMCA.Helpdesk.Tickets.Domain.Tickets;
@@ -19,10 +23,12 @@ internal sealed class TicketConfiguration : EntityTypeConfigurationSQLServer<Tic
             .HasMaxLength(TicketInvariants.TitleMaxLength)
             .IsRequired();
 
+        // template:begin description
         builder.Property(p => p.Description)
             .HasMaxLength(TicketInvariants.DescriptionMaxLength)
             .IsRequired();
 
+        // template:end description
         // template:begin status
         builder.Property(p => p.Status)
             .HasConversion<string>()
@@ -30,12 +36,14 @@ internal sealed class TicketConfiguration : EntityTypeConfigurationSQLServer<Tic
             .IsRequired();
 
         // template:end status
+        // template:begin owner
         builder.Property(p => p.RequesterUserId)
             .IsRequired();
 
         builder.HasIndex(p => p.RequesterUserId)
             .HasFilter("[IsDeleted] = 0");
 
+        // template:end owner
         // template:begin child
         builder.HasMany(p => p.Comments)
             .WithOne(c => c.Ticket)

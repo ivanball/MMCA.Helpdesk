@@ -77,15 +77,78 @@ Invoke-Step 'Install' {
 # Deliberately share no substring with the seed's own names: a rename that half-applies shows up as
 # a leftover Helpdesk or Ticket, which the token sweep below then fails on.
 #
-# The two cases are the two SHAPES, not two names. Contoso.Support takes both axis flags away, so it
-# proves the conditional regions and the file exclusions produce a solution that still compiles and
-# still tests; Zeta.Warehouse stays default, so it proves the same seed still produces the full
-# sample. Running both is the only way a marker region that removes one line too many (or too few)
-# fails here rather than in an adopter's first build.
+# The two cases are the two SHAPES, not two names, and there are deliberately only two: each one is a
+# full restore + Release build + test run, so the wall-clock cost of a third would buy less than
+# widening these. Contoso.Support is the "catalog product" shape, every axis the template can take
+# away taken away (no children, no lifecycle state, no owning user) plus the vocabulary rename that
+# has no flag of its own to hide behind (--title). Zeta.Warehouse stays fully default, which is what
+# makes the absence sweeps below non-vacuous: every presence branch and every default token has to
+# survive there. Running both is the only way a marker region that removes one line too many (or too
+# few) fails here rather than in an adopter's first build.
+#
+# --no-description and --event-verb are exercised on the MODULE added further down rather than here:
+# they are the same two mechanisms (a whole-axis removal and a free-text rename), mmca-module
+# declares the identical symbols, and proving them there costs one template instantiation instead of
+# a third app case.
 $cases = @(
-    @{ Name = 'Contoso.Support'; Module = 'Billing'; Aggregate = 'Invoice'; Flat = $true; NoStatus = $true },
-    @{ Name = 'Zeta.Warehouse'; Module = 'Reservations'; Aggregate = 'Reservation'; Flat = $false; NoStatus = $false }
+    @{
+        Name = 'Contoso.Support'; Module = 'Billing'; Aggregate = 'Invoice'
+        Flat = $true; NoStatus = $true; NoOwner = $true; NoDescription = $false
+        Title = 'Name'; EventVerb = ''
+    },
+    @{
+        Name = 'Zeta.Warehouse'; Module = 'Reservations'; Aggregate = 'Reservation'
+        Flat = $false; NoStatus = $false; NoOwner = $false; NoDescription = $false
+        Title = ''; EventVerb = ''
+    }
 )
+
+# Files exempt from the SHAPE and RENAME sweeps below, by leaf name. All four are copyOnly in
+# .template.config/template.json, so no symbol replacement runs over them and each one legitimately
+# carries a word the flags rename: the .editorconfig's analyzer descriptions use "comment" as an
+# English word, PageHeading.razor holds the browser-tab element whose tag name ends in the --title
+# word, SectionHeading.razor holds the MudBlazor typography member spelled "sub" plus that same word,
+# and add-module.ps1 passes --title / --event-verb / --child through to dotnet new by name. Every one
+# of them is still swept for the SEED's own tokens (helpdesk / ticket) above, and stage.ps1 guards
+# their contents on their own terms; only the shape and vocabulary tokens are exempt here.
+$copyOnlyLeaves = @('.editorconfig', 'PageHeading.razor', 'SectionHeading.razor', 'add-module.ps1')
+
+# Both the SHAPE sweeps (a flag that removes an axis) and the RENAME sweeps (a flag that renames a
+# vocabulary word) reduce to the same question: is the token gone from the generated tree. Three
+# exemptions beyond the copyOnly leaves above, all deliberate. The generated README documents the
+# flags themselves, so it names every axis by design; the UI page .resx files keep their full key set
+# on purpose, because an orphan localization key costs nothing and conditionalizing six resource
+# files to save it would not; and both are already swept for the SEED's own tokens elsewhere.
+#
+# Patterns stay deliberately narrow and case-sensitive. A blanket "Status" would fire on
+# StatusCodes.Status200OK in every controller, which is ASP.NET's and not the aggregate's; the same
+# discipline is why the owner axis is swept as "Requester" and not as "User", and why the two
+# vocabulary words are swept in both their Pascal and camel spellings rather than case-insensitively
+# (the template replaces "Title" and "title" as two separate symbols, and a rename that applies one
+# but not the other is exactly the half-applied failure these sweeps exist to catch).
+function Find-TokenResidue {
+    param([string[]] $Roots, [string[]] $Patterns, [string] $Base)
+
+    $regex = ($Patterns | ForEach-Object { [regex]::Escape($_) }) -join '|'
+
+    foreach ($root in $Roots) {
+        if (-not (Test-Path $root)) {
+            throw "Token sweep was pointed at $root, which does not exist, so it would have passed having read nothing."
+        }
+
+        Get-ChildItem -Path $root -Recurse -File -Force |
+            Where-Object {
+                $_.FullName -notmatch '[\\/](bin|obj)[\\/]' -and
+                $copyOnlyLeaves -notcontains $_.Name -and
+                $_.Extension -ne '.resx' -and
+                $_.Extension -ne '.md'
+            } |
+            ForEach-Object {
+                $hit = Select-String -Path $_.FullName -Pattern $regex -CaseSensitive -List
+                if ($hit) { "$($_.FullName.Substring($Base.Length)) line $($hit.LineNumber): $($hit.Line.Trim())" }
+            }
+    }
+}
 
 $mmcaPinPattern = '<PackageVersion\s+Include="(MMCA\.Common[^"]*)"\s+Version="([^"]+)"'
 
@@ -142,6 +205,10 @@ foreach ($case in $cases) {
     $shapeFlags = @()
     if ($case.Flat) { $shapeFlags += '--flat' }
     if ($case.NoStatus) { $shapeFlags += '--no-status' }
+    if ($case.NoOwner) { $shapeFlags += '--no-owner' }
+    if ($case.NoDescription) { $shapeFlags += '--no-description' }
+    if ($case.Title) { $shapeFlags += @('--title', $case.Title) }
+    if ($case.EventVerb) { $shapeFlags += @('--event-verb', $case.EventVerb) }
     $shape = if ($shapeFlags) { $shapeFlags -join ' ' } else { 'default shape' }
 
     # Generate straight into WorkPath: preferNameDirectory already creates the <AppName> folder, so
@@ -176,43 +243,61 @@ Residual seed tokens survived the rename in $($offenders.Count) file(s):
         Write-Host "  no residual 'helpdesk' or 'ticket' tokens"
     }
 
-    # The shape flags remove code rather than disable it, so the proof is that the tokens are gone,
-    # not that the app happens to build. Three exclusions, all deliberate: .editorconfig is copyOnly
-    # (its analyzer descriptions use "comment" as an English word), the UI page .resx files keep
-    # their full key set on purpose, because an orphan localization key costs nothing and
-    # conditionalizing six resource files to save it would not, and the README documents the flags
-    # themselves, so it names both axes by design. All three are swept for the seed's own tokens
-    # above; only the shape tokens are exempt here.
-    #
-    # Deliberately narrow patterns. A blanket "Status" would fire on StatusCodes.Status200OK in every
-    # controller, which is ASP.NET's, not the aggregate's.
-    if ($case.Flat -or $case.NoStatus) {
+    # The shape flags remove code rather than disable it, and the vocabulary flags rename it rather
+    # than alias it, so in both cases the proof is that the token is GONE, not that the app happens
+    # to build: a marker region that removed one line too few, and a rename that only half applied,
+    # both compile more often than not.
+    if ($shapeFlags) {
         Invoke-Step "Shape sweep $appName ($shape)" {
             $shapePatterns = @()
             if ($case.Flat) { $shapePatterns += 'Comment' }
             if ($case.NoStatus) { $shapePatterns += "$($case.Aggregate)Status", 'ChangeStatus' }
-            $shapeRegex = ($shapePatterns | ForEach-Object { [regex]::Escape($_) }) -join '|'
+            if ($case.NoOwner) { $shapePatterns += 'Requester', 'requester' }
+            if ($case.NoDescription) { $shapePatterns += 'Description', 'description' }
+            if ($case.Title) { $shapePatterns += 'Title', 'title' }
+            if ($case.EventVerb) { $shapePatterns += 'Opened', 'opened' }
 
-            $offenders = Get-ChildItem -Path $appRoot -Recurse -File -Force |
-                Where-Object {
-                    $_.FullName -notmatch '[\\/](bin|obj)[\\/]' -and
-                    $_.Name -ne '.editorconfig' -and
-                    $_.Extension -ne '.resx' -and
-                    $_.Extension -ne '.md'
-                } |
-                ForEach-Object {
-                    $hit = Select-String -Path $_.FullName -Pattern $shapeRegex -CaseSensitive -List
-                    if ($hit) { "$($_.FullName.Substring($appRoot.Length)) line $($hit.LineNumber): $($hit.Line.Trim())" }
-                }
+            $offenders = @(Find-TokenResidue -Roots @($appRoot) -Patterns $shapePatterns -Base $appRoot)
 
             if ($offenders) {
                 throw @"
-Generated with $shape but $($offenders.Count) file(s) still carry the removed axis:
+Generated with $shape but $($offenders.Count) file(s) still carry a removed axis or an un-renamed word:
   $($offenders -join "`n  ")
 "@
             }
             Write-Host "  no '$($shapePatterns -join "' / '")' tokens survive $shape"
         }
+    }
+
+    # The mirror of the sweep above, and the whole reason it is not vacuous. An absence check passes
+    # just as happily when an axis was DELETED as when it was correctly conditionalized, and it
+    # passes at its very happiest when the axis never reached the template at all: a symbol dropped
+    # from template.json, a marker region that swallowed the property it was meant to guard, or a
+    # sources.modifiers path typo that excludes a file unconditionally would all read as "clean".
+    # So every token this case did NOT ask to lose is asserted PRESENT, in the same tree and under
+    # the same file filter, which is what makes the default case carry its weight.
+    Invoke-Step "Retained-token presence $appName" {
+        $expected = @()
+        if (-not $case.Flat) { $expected += 'Comment' }
+        if (-not $case.NoStatus) { $expected += "$($case.Aggregate)Status" }
+        if (-not $case.NoOwner) { $expected += 'RequesterUserId' }
+        if (-not $case.NoDescription) { $expected += 'Description' }
+        if (-not $case.Title) { $expected += 'Title' }
+        if (-not $case.EventVerb) { $expected += 'Opened' }
+
+        $missing = @($expected | Where-Object {
+            -not @(Find-TokenResidue -Roots @($appRoot) -Patterns @($_) -Base $appRoot)
+        })
+
+        if ($missing) {
+            throw @"
+$($missing.Count) token(s) that $appName never asked to drop are absent from its generated tree:
+  $($missing -join "`n  ")
+A rename that half-applies and an axis that was deleted rather than made conditional both look
+identical to the shape sweep above. This is the check that tells them apart.
+"@
+        }
+        Write-Host "  $($expected.Count) retained token(s) still present: $($expected -join ', ')"
     }
 
     Invoke-Step "Framework pin $appName" {
@@ -306,24 +391,57 @@ Generated with $shape but $($offenders.Count) file(s) still carry the removed ax
 
     Invoke-Step "Rebuild $appName with slices" { dotnet build $slnx -c Release }
 
-    # ---- mmca-module, including the wire-ups it can only print ---------------------------------
-    # Applying them here is the point: the manualInstructions are the template's most fragile
-    # deliverable, and a step missing from that list (project references were, at first) shows up
-    # as a compile error nowhere else.
+    # ---- mmca-module, added the way an adopter adds one ----------------------------------------
+    # Through the generated app's OWN build/add-module.ps1, not through dotnet new plus a wire-up
+    # this script hand-rolls. That is the point of the step: mmca-module's manualInstructions are
+    # the template's most fragile deliverable, and the script is what performs them, so exercising
+    # the script IS the coverage. A step missing from it (project references were, at first) shows
+    # up as a compile error nowhere else.
     $newModule = 'Shipping'
     $newAggregate = 'Shipment'
     $newChild = 'Item'
+    # The two axes no app case above carries, put on the module so they cost one template
+    # instantiation instead of a third full restore-build-test app. --no-description is the second
+    # whole-axis removal (the first, --no-owner, is on the app case) and --event-verb is the second
+    # free-text rename (the first, --title, is likewise). --no-owner and --title ride along too,
+    # deliberately: mmca-app and mmca-module declare those symbols SEPARATELY, in two template.json
+    # files, so proving them in one says nothing about the other.
+    $newTitle = 'Subject'
+    $newEventVerb = 'Dispatched'
     $short = $appName.Split('.')[-1]
+    $shortLower = $short.ToLowerInvariant()
+    $newModuleLower = $newModule.ToLowerInvariant()
+
+    $addModule = Join-Path $appRoot 'build/add-module.ps1'
+    if (-not (Test-Path $addModule)) {
+        throw "The generated app ships no build/add-module.ps1. The overlay file did not reach the package; check build/templates/stage.ps1 and the Content glob in MMCA.Templates.csproj."
+    }
+
+    # dotnet-ef is a global tool, not part of the SDK, so it is present on a dev box and usually
+    # absent on a CI runner. The script degrades to printing the command when it is missing; the
+    # assertion below follows the same branch rather than pretending the migration must exist.
+    dotnet ef --version 2>&1 | Out-Null
+    $hasDotnetEf = $LASTEXITCODE -eq 0
+    $global:LASTEXITCODE = 0
+    Write-Host "dotnet-ef $(if ($hasDotnetEf) { 'present: the first migration will be created' } else { 'absent: the migration step will print its command instead' })"
 
     # --child Item, deliberately, and into an app generated --flat: one solution then holds a module
     # with no children beside a module whose child is named something the seed never used. The child
     # rename is a three-way substitution (type, plural navigation, lower-case route), and the only
     # thing that catches a half-applied one is asserting on the generated names.
-    Invoke-Step "Generate module $newModule into $appName (child $newChild)" {
+    Invoke-Step "Add module $newModule to $appName via build/add-module.ps1 (child $newChild, no owner, no description, title $newTitle, event verb $newEventVerb)" {
         Push-Location $appRoot
         try {
-            dotnet new mmca-module -n $newModule --app $appName --aggregate $newAggregate --child $newChild
-            if ($LASTEXITCODE -ne 0) { throw "mmca-module failed with exit code $LASTEXITCODE" }
+            # In a child pwsh so the run proves what an adopter actually types, exit code included:
+            # dot-sourcing it would share this script's own preferences and hide a failure mode.
+            # Every shape and vocabulary switch the script declares is passed here except -Flat and
+            # -NoStatus, which this module deliberately keeps (its aggregate is the one in the run
+            # that owns a collection, and the TRUE branch of the eager-load conditional below needs
+            # it), and -SkipMigration, whose absence is what makes the migration step real.
+            pwsh -NoProfile -File $addModule `
+                -Name $newModule -Aggregate $newAggregate -Child $newChild `
+                -NoOwner -NoDescription -Title $newTitle -EventVerb $newEventVerb
+            if ($LASTEXITCODE -ne 0) { throw "build/add-module.ps1 failed with exit code $LASTEXITCODE" }
         } finally {
             Pop-Location
         }
@@ -362,118 +480,198 @@ Generated with $shape but $($offenders.Count) file(s) still carry the removed ax
         Write-Host "  $newAggregate$newChild, Add/Edit/Remove$newChild slices, /items routes"
     }
 
-    Invoke-Step "Wire up module $newModule" {
-        # 1. solution
-        Push-Location $appRoot
-        try {
-            $projects = @(
-                Get-ChildItem "Source/Modules/$newModule" -Recurse -Filter '*.csproj'
-                Get-ChildItem "Tests/Modules/$newModule" -Recurse -Filter '*.csproj'
-                Get-ChildItem "Source/Hosting/$appName.Migrations.SqlServer.$newModule" -Filter '*.csproj'
-            ) | ForEach-Object { $_.FullName }
-            if ($projects.Count -ne 8) { throw "Expected 8 generated projects, found $($projects.Count)" }
-            dotnet sln $slnx add @projects | Out-Null
-        } finally {
-            Pop-Location
+    # mmca-module's own copy of the shape and rename sweeps. It declares --no-owner, --no-description,
+    # --title and --event-verb in its OWN template.json, with its own marker regions converted by its
+    # own staging pass, so nothing the app cases above prove carries over. Scoped to the three trees
+    # the template writes rather than to the whole solution, because the first module still has every
+    # axis this one dropped.
+    Invoke-Step "Shape sweep module $newModule (no owner, no description, title $newTitle, event verb $newEventVerb)" {
+        $moduleTrees = @(
+            Join-Path $appRoot "Source/Modules/$newModule"
+            Join-Path $appRoot "Tests/Modules/$newModule"
+            Join-Path $appRoot "Source/Hosting/$appName.Migrations.SqlServer.$newModule"
+        )
+        $modulePatterns = @('Requester', 'requester', 'Description', 'description', 'Title', 'title', 'Opened', 'opened')
+
+        $offenders = @(Find-TokenResidue -Roots $moduleTrees -Patterns $modulePatterns -Base $appRoot)
+        if ($offenders) {
+            throw @"
+$newModule was generated with --no-owner --no-description --title $newTitle --event-verb $newEventVerb
+but $($offenders.Count) file(s) still carry a removed axis or an un-renamed word:
+  $($offenders -join "`n  ")
+"@
         }
 
-        function Edit-File {
-            param([string] $Path, [string] $Anchor, [string] $Addition)
-
-            $full = Join-Path $appRoot $Path
-            $text = Get-Content $full -Raw
-            if ($text -notmatch [regex]::Escape($Anchor)) {
-                throw "Wire-up anchor not found in ${Path}: $Anchor"
+        # And the other half, for the same reason the app cases assert their retained tokens: a rename
+        # that produced NOTHING sweeps just as clean as one that produced the right thing. Asserted on
+        # the two names that only exist if both free-text symbols landed, one of which is a fileRename.
+        $renamed = @(
+            Join-Path $appRoot "Source/Modules/$newModule/$appName.$newModule.Shared/$newModule/IntegrationEvents/$newAggregate${newEventVerb}IntegrationEvent.cs"
+            Join-Path $appRoot "Source/Modules/$newModule/$appName.$newModule.Application/$newModule/IntegrationEventHandlers/$newAggregate${newEventVerb}Handler.cs"
+        )
+        foreach ($file in $renamed) {
+            if (-not (Test-Path $file)) {
+                throw "--event-verb $newEventVerb produced no $(Split-Path $file -Leaf). The symbol's fileRename no longer matches the seed's file names."
             }
-            Set-Content -Path $full -Value $text.Replace($Anchor, $Anchor + $Addition) -NoNewline
         }
 
-        # 2. project references: the host and the architecture tests
-        Edit-File "Source/Hosts/$appName.Web/$appName.Web.csproj" `
-            "<ProjectReference Include=`"..\..\Modules\$($case.Module)\$appName.$($case.Module).API\$appName.$($case.Module).API.csproj`" />" `
-            "`n    <ProjectReference Include=`"..\..\Hosting\$appName.Migrations.SqlServer.$newModule\$appName.Migrations.SqlServer.$newModule.csproj`" />`n    <ProjectReference Include=`"..\..\Modules\$newModule\$appName.$newModule.API\$appName.$newModule.API.csproj`" />"
-
-        $layerRefs = @('Domain', 'Application', 'Infrastructure', 'Shared', 'API') | ForEach-Object {
-            "`n    <ProjectReference Include=`"..\..\..\Source\Modules\$newModule\$appName.$newModule.$_\$appName.$newModule.$_.csproj`" />"
+        $aggregate = Join-Path $appRoot "Source/Modules/$newModule/$appName.$newModule.Domain/$newModule/$newAggregate.cs"
+        if ((Get-Content $aggregate -Raw) -notmatch "public string $newTitle\b") {
+            throw "--title $newTitle did not reach the aggregate's main text property in $aggregate."
         }
-        Edit-File "Tests/Architecture/$appName.Architecture.Tests/$appName.Architecture.Tests.csproj" `
-            "<ProjectReference Include=`"..\..\..\Source\Modules\$($case.Module)\$appName.$($case.Module).API\$appName.$($case.Module).API.csproj`" />" `
-            ($layerRefs -join '')
 
-        # 3. identifier alias
-        Edit-File 'Directory.Build.props' `
-            "Condition=`"'`$(MSBuildProjectName)' != '$appName.$($case.Module).Shared'`" />" `
-            "`n    <Compile Include=`"`$(MSBuildThisFileDirectory)Source\Modules\$newModule\$appName.$newModule.Shared\$appName.$newModule.GlobalUsings.IdentifierType.cs`"`n             Link=`"GlobalUsings\$appName.$newModule.GlobalUsings.IdentifierType.cs`"`n             Condition=`"'`$(MSBuildProjectName)' != '$appName.$newModule.Shared'`" />"
+        Write-Host "  no owner / description / Title / Opened tokens, and $newAggregate$newEventVerb* + $newTitle landed"
+    }
 
-        # 4. architecture map
-        $mapLines = @(
-            "`n`n        // $newModule module"
-            "`n        Module(`"$newModule`", Layer.Domain, typeof($appName.$newModule.Domain.$newModule.$newAggregate).Assembly),"
-            "`n        Module(`"$newModule`", Layer.Application, typeof($appName.$newModule.Application.ClassReference).Assembly),"
-            "`n        Module(`"$newModule`", Layer.Infrastructure, typeof($appName.$newModule.Infrastructure.AssemblyReference).Assembly),"
-            "`n        Module(`"$newModule`", Layer.Shared, typeof($appName.$newModule.Shared.$newModule.${newAggregate}DTO).Assembly),"
-            "`n        Module(`"$newModule`", Layer.Api, typeof($appName.$newModule.API.Controllers.${newModule}Controller).Assembly),"
-        ) -join ''
-        Edit-File "Tests/Architecture/$appName.Architecture.Tests/${short}ArchitectureMap.cs" `
-            "Module(`"$($case.Module)`", Layer.Api, typeof($appName.$($case.Module).API.Controllers.$($case.Module)Controller).Assembly)," `
-            $mapLines
+    # Every edit the script claims to make, asserted on the FILES rather than on its own output. A
+    # wire-up that silently did nothing still lets the solution build (the module is simply invisible
+    # to the host and to the fitness rules), which is exactly the failure the printed instructions
+    # existed to prevent and exactly what a build-only check would miss.
+    Invoke-Step "Wire-up state after add-module.ps1" {
+        function Assert-Match {
+            param([string] $Relative, [string] $Pattern, [string] $What, [int] $Expected = 1)
 
-        # 5. host error resources
-        Edit-File "Source/Hosts/$appName.Web/Program.cs" `
-            "using $appName.$($case.Module).API.Resources;" `
-            "`nusing $appName.$newModule.API.Resources;"
-        Edit-File "Source/Hosts/$appName.Web/Program.cs" `
-            "services.AddErrorResources<$($case.Module)ErrorResources>();" `
-            "`nservices.AddErrorResources<${newModule}ErrorResources>();"
+            $full = Join-Path $appRoot $Relative
+            if (-not (Test-Path $full)) { throw "$What : no $Relative in the generated app." }
+            $hits = ([regex]::Matches((Get-Content $full -Raw), $Pattern)).Count
+            if ($hits -ne $Expected) {
+                throw "$What : expected $Expected match(es) of /$Pattern/ in $Relative, found $hits."
+            }
+        }
 
-        # 6. database: its own Aspire database resource plus per-module DataSources routing. Each
-        # module database carries its own dbo.OutboxMessages/InboxMessages tables, so two modules
-        # migrated into one database collide on them.
-        $shortLower = $short.ToLowerInvariant()
-        $newModuleLower = $newModule.ToLowerInvariant()
-        Edit-File "Source/Hosting/$appName.AppHost/Program.cs" `
-            "var $($shortLower)Db = sql.AddDatabase(`"$shortLower`", `"$short`");" `
-            "`nvar $($newModuleLower)Db = sql.AddDatabase(`"$shortLower-$newModuleLower`", `"${short}_$newModule`");"
-        Edit-File "Source/Hosting/$appName.AppHost/Program.cs" `
-            ".WithSQLServerDataSource($($shortLower)Db, `"$($case.Module)`")" `
-            "`n    .WithSQLServerDataSource($($newModuleLower)Db, `"$newModule`")"
+        # 1. solution: the eight new projects, no more and no fewer.
+        Assert-Match "$appName.slnx" ('<Project Path="[^"]*' + $newModule + '[^"]*"') 'solution entries' 8
 
-        # The top-level SQLServerMigrationsAssembly pin must GO: under Aspire the last
-        # WithSQLServerDataSource call wins the top-level connection string, so one module always
-        # collapses onto the Default source, and a top-level pin naming the other module's assembly
-        # fails startup with "conflicting SQLServerMigrationsAssembly values". Mutated as JSON: the
-        # instructions describe edits by meaning, not by byte offsets, so the smoke should too.
+        # 2. web host: the module API (controllers and error resources) and its migrations assembly.
+        $webCsproj = "Source/Hosts/$appName.Web/$appName.Web.csproj"
+        Assert-Match $webCsproj ([regex]::Escape("$appName.$newModule.API.csproj")) 'web host API reference'
+        Assert-Match $webCsproj ([regex]::Escape("$appName.Migrations.SqlServer.$newModule.csproj")) 'web host migrations reference'
+
+        # 3. architecture tests: all five layers, because the map names a type from each.
+        $archCsproj = "Tests/Architecture/$appName.Architecture.Tests/$appName.Architecture.Tests.csproj"
+        foreach ($layer in @('Domain', 'Application', 'Infrastructure', 'Shared', 'API')) {
+            Assert-Match $archCsproj ([regex]::Escape("$appName.$newModule.$layer.csproj")) "architecture-test $layer reference"
+        }
+
+        # 4. identifier alias, linked into every project but its own.
+        $alias = "$appName.$newModule.GlobalUsings.IdentifierType.cs"
+        Assert-Match 'Directory.Build.props' ([regex]::Escape($alias)) 'alias Compile + Link' 2
+        Assert-Match 'Directory.Build.props' ([regex]::Escape("!= '$appName.$newModule.Shared'")) 'alias self-exclusion condition'
+
+        # 5. architecture map: five lines, one per layer. A module missing from the map is not a
+        # failing test, it is a silently unchecked one.
+        $map = "Tests/Architecture/$appName.Architecture.Tests/${short}ArchitectureMap.cs"
+        Assert-Match $map ([regex]::Escape("Module(`"$newModule`",")) 'architecture map lines' 5
+        Assert-Match $map ([regex]::Escape("typeof($appName.$newModule.API.Controllers.${newModule}Controller)")) 'architecture map API type'
+
+        # 6. host error resources: the one registration ModuleLoader does not do for you.
+        $program = "Source/Hosts/$appName.Web/Program.cs"
+        Assert-Match $program ([regex]::Escape("using $appName.$newModule.API.Resources;")) 'error-resources using'
+        Assert-Match $program ([regex]::Escape("services.AddErrorResources<${newModule}ErrorResources>();")) 'AddErrorResources call'
+
+        # 7. AppHost: the module's own database plus its data-source routing. One database per module
+        # because each carries its own outbox and inbox tables.
+        $appHost = "Source/Hosting/$appName.AppHost/Program.cs"
+        Assert-Match $appHost ([regex]::Escape("var ${newModuleLower}Db = sql.AddDatabase(`"$shortLower-$newModuleLower`", `"${short}_$newModule`");")) 'AppHost database resource'
+        Assert-Match $appHost ([regex]::Escape(".WithSQLServerDataSource(${newModuleLower}Db, `"$newModule`")")) 'AppHost data-source routing'
+
+        Write-Host "  solution, both csproj files, the alias link, the map, Program.cs and the AppHost"
+    }
+
+    # appsettings.json gets its own step because the script does not merely ADD to it: this is the
+    # first-run normalization, where a single-module scaffold (no DataSources section at all, a
+    # migrations-assembly pin at top level) becomes a multi-module one. Parsing the result is half
+    # the assertion: the edits are anchored text, so valid JSON coming out is not free.
+    Invoke-Step "appsettings.json normalized for two modules" {
         $appSettingsPath = Join-Path $appRoot "Source/Hosts/$appName.Web/appsettings.json"
         $settings = Get-Content $appSettingsPath -Raw | ConvertFrom-Json
 
-        if (-not $settings.ConnectionStrings.PSObject.Properties['SQLServerMigrationsAssembly']) {
-            throw "Generated appsettings.json carries no top-level SQLServerMigrationsAssembly pin. The seed's appsettings shape moved; update smoke.ps1 and the mmca-module manualInstructions together."
+        if (-not $settings.Modules.PSObject.Properties[$newModule]) {
+            throw "Modules has no $newModule entry."
         }
-        $settings.ConnectionStrings.PSObject.Properties.Remove('SQLServerMigrationsAssembly')
+        if (-not $settings.Modules.$newModule.Enabled) {
+            throw "Modules.$newModule is present but not enabled."
+        }
 
-        $settings.Modules | Add-Member -NotePropertyName $newModule -NotePropertyValue ([pscustomobject]@{ Enabled = $true })
+        # The top-level connection string STAYS (it is the Default fallback used by startup
+        # validation and the health checks); its assembly pin must not, because under Aspire the last
+        # WithSQLServerDataSource call wins the top-level connection string, so one module always
+        # collapses onto Default and a pin naming the other module's assembly fails startup.
+        if (-not $settings.ConnectionStrings.PSObject.Properties['SQLServerConnectionString']) {
+            throw "The top-level SQLServerConnectionString was removed. Only its assembly pin should have been."
+        }
+        if ($settings.ConnectionStrings.PSObject.Properties['SQLServerMigrationsAssembly']) {
+            throw "The top-level SQLServerMigrationsAssembly pin survived. Startup would fail with a conflicting-value error once both modules route their own data source."
+        }
 
-        function New-DataSourceEntry {
-            param([string] $Module)
-            [pscustomobject]@{
-                SQLServerConnectionString = "Server=localhost;Database=${short}_$Module;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True"
-                SQLServerMigrationsAssembly = "$appName.Migrations.SqlServer.$Module"
+        if (-not $settings.PSObject.Properties['DataSources']) {
+            throw "No DataSources section. A single-module scaffold has none, and creating it for EVERY module is the normalization this step exists to prove."
+        }
+        foreach ($module in @($case.Module, $newModule)) {
+            $entry = $settings.DataSources.PSObject.Properties[$module]
+            if (-not $entry) { throw "DataSources has no $module entry." }
+            if ($entry.Value.SQLServerMigrationsAssembly -ne "$appName.Migrations.SqlServer.$module") {
+                throw "DataSources.$module pins '$($entry.Value.SQLServerMigrationsAssembly)', expected $appName.Migrations.SqlServer.$module."
+            }
+            if ($entry.Value.SQLServerConnectionString -notmatch [regex]::Escape("Database=${short}_$module")) {
+                throw "DataSources.$module does not target the ${short}_$module database: $($entry.Value.SQLServerConnectionString)"
             }
         }
-        $settings | Add-Member -NotePropertyName 'DataSources' -NotePropertyValue ([pscustomobject]@{
-            ($case.Module) = New-DataSourceEntry $case.Module
-            ($newModule) = New-DataSourceEntry $newModule
-        })
 
-        # IEventBus writes handler-published integration events to ONE configured outbox source per
-        # host. It defaults to Default, and Default is whichever module's WithSQLServerDataSource call
-        # ran last, so leaving it implicit means the outbox moves the day those calls are reordered.
-        $settings | Add-Member -NotePropertyName 'Outbox' -NotePropertyValue ([pscustomobject]@{
-            DatabaseName = $case.Module
-        })
-        $settings | ConvertTo-Json -Depth 10 | Set-Content -Path $appSettingsPath
+        # IEventBus writes handler-published integration events to ONE outbox source per host, and it
+        # defaults to whichever module's data source ran last. Naming it is what stops the outbox
+        # moving to another module's database the day those calls are reordered.
+        if (-not $settings.PSObject.Properties['Outbox']) { throw "No top-level Outbox section." }
+        if ($settings.Outbox.DatabaseName -ne $case.Module) {
+            throw "Outbox is pinned to '$($settings.Outbox.DatabaseName)', expected the first module $($case.Module)."
+        }
 
-        Write-Host "  all six wire-ups applied"
+        Write-Host "  $newModule enabled, 2 DataSources entries, outbox pinned to $($case.Module), top-level assembly pin gone"
+    }
+
+    Invoke-Step "First migration for $newModule" {
+        $migrations = Join-Path $appRoot "Source/Hosting/$appName.Migrations.SqlServer.$newModule/Migrations"
+        $created = @(Get-ChildItem -Path $migrations -File -Filter '*.cs' -ErrorAction SilentlyContinue)
+
+        if ($hasDotnetEf) {
+            if ($created.Count -eq 0) {
+                throw "dotnet-ef is installed but add-module.ps1 created no migration under $migrations."
+            }
+            if (-not ($created.Name -match 'InitialCreate')) {
+                throw "Migrations exist under $migrations but none is named InitialCreate: $($created.Name -join ', ')"
+            }
+            Write-Host "  $($created.Count) file(s), InitialCreate present"
+        } else {
+            if ($created.Count -ne 0) {
+                throw "dotnet-ef is absent yet $($created.Count) migration file(s) appeared under $migrations."
+            }
+            Write-Host "  skipped: dotnet-ef is not installed, and the script printed the command instead"
+        }
+    }
+
+    # Rerunning with a name that is already here must fail at the preflight, before it generates or
+    # patches anything. Half-applying a second copy of eight projects and six edits is the one
+    # outcome worse than refusing.
+    Invoke-Step "Rerunning add-module.ps1 for $newModule fails fast" {
+        Push-Location $appRoot
+        try {
+            $before = (Get-Content (Join-Path $appRoot "Source/Hosts/$appName.Web/Program.cs") -Raw)
+            $rerun = (pwsh -NoProfile -File $addModule -Name $newModule -Aggregate $newAggregate 2>&1 | Out-String)
+            if ($LASTEXITCODE -eq 0) {
+                throw "add-module.ps1 reran for an existing module and reported success."
+            }
+            if ($rerun -notmatch 'already exists') {
+                throw "add-module.ps1 failed on the rerun, but not with the preflight's already-exists message:`n$rerun"
+            }
+            $after = (Get-Content (Join-Path $appRoot "Source/Hosts/$appName.Web/Program.cs") -Raw)
+            if ($after -ne $before) {
+                throw "The refused rerun still modified Program.cs. Preflight must run before any edit."
+            }
+        } finally {
+            $global:LASTEXITCODE = 0
+            Pop-Location
+        }
+        Write-Host "  refused at preflight, nothing written"
     }
 
     # The migrations project must arrive with Migrations/.editorconfig even though it ships no

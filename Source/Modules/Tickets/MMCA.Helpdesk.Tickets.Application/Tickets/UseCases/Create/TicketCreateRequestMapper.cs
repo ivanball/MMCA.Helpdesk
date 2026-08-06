@@ -14,10 +14,9 @@ public sealed class TicketCreateRequestMapper
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        return Task.FromResult(Ticket.Create(
-            id: null,
-            title: request.Title,
-            description: request.Description,
-            requesterUserId: request.RequesterUserId));
+        // Kept on ONE line deliberately: some of these arguments are optional axes of the scaffold,
+        // and a comma-separated argument list cannot lose a middle or last element to a whole-line
+        // conditional. The reference repo's staging script rewrites this line per generated shape.
+        return Task.FromResult(Ticket.Create(id: null, title: request.Title, description: request.Description, requesterUserId: request.RequesterUserId));
     }
 }

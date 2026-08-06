@@ -127,10 +127,19 @@ function Copy-Tree {
 #
 # Whole FILES are not handled here. Those are listed in each template.json's sources.modifiers, where
 # an excluded file needs no content surgery at all.
+#
+# Combination labels exist for the regions that only make sense while SEVERAL axes are present, and
+# they come in both polarities: 'childStatus' and 'statusOwner' need BOTH of their axes, while
+# 'statusOrOwner' needs EITHER (it wraps a UI block that would otherwise render empty once both of
+# the values inside it are gone).
 $markerConditions = @{
-    'child'       = '!flat'
-    'status'      = '!noStatus'
-    'childStatus' = '!(flat || noStatus)'
+    'child'         = '!flat'
+    'status'        = '!noStatus'
+    'childStatus'   = '!(flat || noStatus)'
+    'description'   = '!noDescription'
+    'owner'         = '!noOwner'
+    'statusOwner'   = '!(noStatus || noOwner)'
+    'statusOrOwner' = '!(noStatus && noOwner)'
 }
 
 # dotnet new picks the conditional syntax from the file extension, and it is not one syntax. C files
@@ -260,6 +269,345 @@ function Convert-EagerLoad {
     return $hits
 }
 
+# ---- per-shape rewrites of a single line ---------------------------------------------------------
+# --no-description and --no-owner drop a property that also sits inside comma-separated LISTS: the
+# domain factory and the private constructor, two positional records, a handful of call sites, a
+# LoggerMessage template, the typed API client's signatures and its anonymous request bodies. C#
+# forbids a trailing comma in an invocation, a parameter list and a positional record (it allows one
+# in an object initializer and in a collection expression), so a whole-line marker region cannot drop
+# a MIDDLE or LAST element of one: it would leave a dangling comma or eat the closing parenthesis.
+#
+# Wherever reshaping the seed was possible it was preferred, and it is what covers most of the two
+# axes: object initializers grew a trailing comma on every member so plain markers work, and the two
+# UI pages compose their required-field check one accumulator line at a time. What is left is the
+# lists themselves. Those the SEED keeps on one line, deliberately, and this rewrites that line into
+# one conditional block per combination of the axes it carries.
+#
+# The variants are DERIVED, never hand-written: each axis contributes a regex naming its own segment
+# of the line (its separator included), and removing that segment IS the variant. Nothing here knows
+# what a line means, which is why the same helper covers signatures, records, calls, log templates
+# and anonymous objects. A segment that fails to match throws rather than silently emitting a branch
+# identical to the full line, which would ship the dropped axis into a shape that asked for it gone.
+#
+# Emitted as INDEPENDENT #if blocks rather than one #if/#elseif/#else chain: .razor's conditional
+# form is a pseudo-comment pair (@*#if ... ##endif*@) and independent blocks need only the two tokens
+# that the marker conversion above already proves the engine honors in every staged file type.
+function Convert-OptionalAxisLine {
+    param(
+        [string] $Path,
+        [string] $Anchor,
+        [string] $DropDescription,
+        [string] $DropOwner,
+        [int] $ExpectedHits,
+        [string] $TemplateName
+    )
+
+    $ext = [IO.Path]::GetExtension($Path).ToLowerInvariant()
+    if (-not $markerStyles.ContainsKey($ext)) {
+        throw "${TemplateName}: $Path needs a per-shape line rewrite but '$ext' has no conditional syntax mapped in stage.ps1."
+    }
+    $style = $markerStyles[$ext]
+
+    # Order matters only in that both segments must still match after the other one is removed, which
+    # is why each pattern carries its own separator rather than relying on what is left around it.
+    $axes = @()
+    if ($DropDescription) { $axes += @{ Symbol = 'noDescription'; Pattern = $DropDescription } }
+    if ($DropOwner) { $axes += @{ Symbol = 'noOwner'; Pattern = $DropOwner } }
+    if ($axes.Count -eq 0) {
+        throw "${TemplateName}: $Path declares a per-shape rewrite with no axis segment. Give it a description or an owner segment, or drop the entry."
+    }
+
+    $text = Get-Content $Path -Raw
+    $newline = if ($text.Contains("`r`n")) { "`r`n" } else { "`n" }
+    $lines = $text -split "`r?`n"
+
+    $out = [System.Collections.Generic.List[string]]::new()
+    $hits = 0
+    $emitted = 0
+
+    foreach ($line in $lines) {
+        if ($line -notmatch $Anchor) {
+            $out.Add($line)
+            continue
+        }
+
+        $hits++
+        $indent = [regex]::Match($line, '^[ \t]*').Value
+
+        for ($combination = 0; $combination -lt (1 -shl $axes.Count); $combination++) {
+            $variant = $line
+            $terms = @()
+
+            for ($a = 0; $a -lt $axes.Count; $a++) {
+                if (($combination -band (1 -shl $a)) -ne 0) {
+                    $shrunk = [regex]::Replace($variant, $axes[$a].Pattern, '')
+                    if ($shrunk -eq $variant) {
+                        throw @"
+${TemplateName}: in $Path the per-shape segment /$($axes[$a].Pattern)/ does not match the anchored line
+  $($line.Trim())
+so the '$($axes[$a].Symbol)' branch would be identical to the full line and would ship the dropped
+axis into a shape that asked for it gone. Fix the segment pattern in stage.ps1, or the seed's line.
+"@
+                    }
+                    $variant = $shrunk
+                    $terms += $axes[$a].Symbol
+                } else {
+                    $terms += "!$($axes[$a].Symbol)"
+                }
+            }
+
+            $out.Add($indent + ($style.If -f ($terms -join ' && ')))
+            $out.Add($variant)
+            $out.Add($indent + $style.EndIf)
+            $emitted++
+        }
+    }
+
+    if ($hits -ne $ExpectedHits) {
+        throw "${TemplateName}: expected $ExpectedHits line(s) matching /$Anchor/ in $Path, found $hits. The seed's line moved or was reflowed; update the anchor in stage.ps1 rather than shipping a template that still names the dropped axis."
+    }
+
+    Set-Content -Path $Path -Value ($out -join $newline) -NoNewline
+
+    return $emitted
+}
+
+# Scope is which templates stage the file: mmca-module carries only Source/Modules/Tickets,
+# Tests/Modules/Tickets and the migrations project, so the UI host's entries are mmca-app only. A
+# declared file that is missing from a scope throws, which is what turns a moved file into a loud
+# staging failure rather than a template that quietly keeps the axis it was told to drop.
+$optionalAxisLines = @(
+    @{
+        Scope = 'both'
+        Path = 'Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Domain/Tickets/Ticket.cs'
+        Anchor = 'private Ticket\(string title, string description, int requesterUserId\)'
+        Description = 'string description, '
+        Owner = ', int requesterUserId'
+        Hits = 1
+    },
+    @{
+        Scope = 'both'
+        Path = 'Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Domain/Tickets/Ticket.cs'
+        Anchor = 'public static Result<Ticket> Create\(TicketIdentifierType\? id, string title, string description, int requesterUserId\)'
+        Description = 'string description, '
+        Owner = ', int requesterUserId'
+        Hits = 1
+    },
+    @{
+        Scope = 'both'
+        Path = 'Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Domain/Tickets/Ticket.cs'
+        Anchor = 'Result\.Combine\(TicketInvariants\.EnsureTitleIsValid\(title, nameof\(\w+\)\), TicketInvariants\.EnsureDescriptionIsValid\(description, nameof\(\w+\)\)\);'
+        Description = ', TicketInvariants\.EnsureDescriptionIsValid\(description, nameof\(\w+\)\)'
+        Owner = ''
+        Hits = 2
+    },
+    @{
+        Scope = 'both'
+        Path = 'Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Domain/Tickets/Ticket.cs'
+        Anchor = 'var ticket = new Ticket\(title, description, requesterUserId\)'
+        Description = 'description, '
+        Owner = ', requesterUserId'
+        Hits = 1
+    },
+    @{
+        Scope = 'both'
+        Path = 'Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Domain/Tickets/Ticket.cs'
+        Anchor = 'public Result UpdateDetails\(string title, string description\)'
+        Description = ', string description'
+        Owner = ''
+        Hits = 1
+    },
+    @{
+        Scope = 'both'
+        Path = 'Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/Tickets/UseCases/Create/TicketCreateRequestMapper.cs'
+        Anchor = 'Ticket\.Create\(id: null, title: request\.Title, description: request\.Description, requesterUserId: request\.RequesterUserId\)'
+        Description = 'description: request\.Description, '
+        Owner = ', requesterUserId: request\.RequesterUserId'
+        Hits = 1
+    },
+    @{
+        Scope = 'both'
+        Path = 'Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/Tickets/UseCases/Create/CreateTicketHandler.cs'
+        Anchor = 'new TicketOpenedIntegrationEvent\(entity\.Id, entity\.RequesterUserId\),'
+        Description = ''
+        Owner = ', entity\.RequesterUserId'
+        Hits = 1
+    },
+    @{
+        Scope = 'both'
+        Path = 'Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Shared/Tickets/IntegrationEvents/TicketOpenedIntegrationEvent.cs'
+        Anchor = 'public sealed record class TicketOpenedIntegrationEvent\(TicketIdentifierType TicketId, int RequesterUserId\)'
+        Description = ''
+        Owner = ', int RequesterUserId'
+        Hits = 1
+    },
+    @{
+        Scope = 'both'
+        Path = 'Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/Tickets/IntegrationEventHandlers/TicketOpenedHandler.cs'
+        Anchor = 'LogTicketOpened\(logger, integrationEvent\.TicketId, integrationEvent\.RequesterUserId, integrationEvent\.SchemaVersion\);'
+        Description = ''
+        Owner = ', integrationEvent\.RequesterUserId'
+        Hits = 1
+    },
+    @{
+        # The LoggerMessage template and the partial method below it have to move together: the source
+        # generator matches placeholders to parameter names, so dropping one without the other fails
+        # the generated app's build rather than merely logging a stale field.
+        Scope = 'both'
+        Path = 'Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/Tickets/IntegrationEventHandlers/TicketOpenedHandler.cs'
+        Anchor = 'Message = "Integration event: ticket \{TicketId\} opened by user \{RequesterUserId\} \(schema v\{SchemaVersion\}\)\."\)\]'
+        Description = ''
+        Owner = ' by user \{RequesterUserId\}'
+        Hits = 1
+    },
+    @{
+        Scope = 'both'
+        Path = 'Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/Tickets/IntegrationEventHandlers/TicketOpenedHandler.cs'
+        Anchor = 'private static partial void LogTicketOpened\(ILogger logger, int ticketId, int requesterUserId, int schemaVersion\);'
+        Description = ''
+        Owner = ', int requesterUserId'
+        Hits = 1
+    },
+    @{
+        Scope = 'both'
+        Path = 'Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/Tickets/UseCases/Update/UpdateTicketCommand.cs'
+        Anchor = 'public sealed record UpdateTicketCommand\(TicketIdentifierType TicketId, string Title, string Description\)'
+        Description = ', string Description'
+        Owner = ''
+        Hits = 1
+    },
+    @{
+        Scope = 'both'
+        Path = 'Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/Tickets/UseCases/Update/UpdateTicketHandler.cs'
+        Anchor = 'ticket\.UpdateDetails\(command\.Title, command\.Description\);'
+        Description = ', command\.Description'
+        Owner = ''
+        Hits = 1
+    },
+    @{
+        Scope = 'both'
+        Path = 'Source/Modules/Tickets/MMCA.Helpdesk.Tickets.API/Controllers/TicketsController.cs'
+        Anchor = 'new UpdateTicketCommand\(id, request\.Title, request\.Description\) \{ RowVersion = request\.RowVersion \},'
+        Description = ', request\.Description'
+        Owner = ''
+        Hits = 1
+    },
+    @{
+        Scope = 'both'
+        Path = 'Tests/Modules/Tickets/MMCA.Helpdesk.Tickets.Domain.Tests/Tickets/TicketTests.cs'
+        Anchor = 'Ticket\.Create\(id: null, "Cannot log in", "The login page returns a 500\.", requesterUserId: 42\);'
+        Description = ', "The login page returns a 500\."'
+        Owner = ', requesterUserId: 42'
+        Hits = 1
+    },
+    @{
+        Scope = 'both'
+        Path = 'Tests/Modules/Tickets/MMCA.Helpdesk.Tickets.Domain.Tests/Tickets/TicketTests.cs'
+        Anchor = 'Ticket\.Create\(id: null, "[^"]*", "Description", requesterUserId: 1\)'
+        Description = ', "Description"'
+        Owner = ', requesterUserId: 1'
+        Hits = 3
+    },
+    @{
+        Scope = 'both'
+        Path = 'Tests/Modules/Tickets/MMCA.Helpdesk.Tickets.Domain.Tests/Tickets/TicketTests.cs'
+        Anchor = 'ticket\.UpdateDetails\("[^"]*", "New description"\);'
+        Description = ', "New description"'
+        Owner = ''
+        Hits = 2
+    },
+    @{
+        Scope = 'both'
+        Path = 'Tests/Modules/Tickets/MMCA.Helpdesk.Tickets.Application.Tests/Caching/TicketCacheInvalidationTests.cs'
+        Anchor = 'new UpdateTicketCommand\(TicketId, "[^"]*", "Returns a 500\."\)'
+        Description = ', "Returns a 500\."'
+        Owner = ''
+        Hits = 3
+    },
+    @{
+        Scope = 'app'
+        Path = 'Source/Hosts/UI/MMCA.Helpdesk.UI.Web/Services/HelpdeskApiClient.cs'
+        Anchor = 'public async Task<TicketDTO\?> CreateTicketAsync\(string title, string description, int requesterUserId, CancellationToken cancellationToken = default\)'
+        Description = 'string description, '
+        Owner = 'int requesterUserId, '
+        Hits = 1
+    },
+    @{
+        Scope = 'app'
+        Path = 'Source/Hosts/UI/MMCA.Helpdesk.UI.Web/Services/HelpdeskApiClient.cs'
+        Anchor = '\.PostAsJsonAsync\("/Tickets", new \{ Title = title, Description = description, RequesterUserId = requesterUserId \}, cancellationToken\)'
+        Description = ', Description = description'
+        Owner = ', RequesterUserId = requesterUserId'
+        Hits = 1
+    },
+    @{
+        Scope = 'app'
+        Path = 'Source/Hosts/UI/MMCA.Helpdesk.UI.Web/Services/HelpdeskApiClient.cs'
+        Anchor = 'public async Task UpdateTicketAsync\(int id, string title, string description, CancellationToken cancellationToken = default\)'
+        Description = 'string description, '
+        Owner = ''
+        Hits = 1
+    },
+    @{
+        Scope = 'app'
+        Path = 'Source/Hosts/UI/MMCA.Helpdesk.UI.Web/Services/HelpdeskApiClient.cs'
+        # Anchored on the whole PUT call, not on the anonymous object alone: the POST rewritten above
+        # leaves a branch whose body IS "new { Title = title, Description = description }", so the
+        # shorter pattern would match a line this pass had just emitted.
+        Anchor = '\.PutAsJsonAsync\(string\.Create\(CultureInfo\.InvariantCulture, \$"/Tickets/\{id\}"\), new \{ Title = title, Description = description \}, cancellationToken\)'
+        Description = ', Description = description'
+        Owner = ''
+        Hits = 1
+    },
+    @{
+        Scope = 'app'
+        Path = 'Source/Hosts/UI/MMCA.Helpdesk.UI.Web/Components/Pages/Tickets.razor'
+        Anchor = 'await Api\.CreateTicketAsync\(_title, _description, requesterUserId: 1\);'
+        Description = ', _description'
+        Owner = ', requesterUserId: 1'
+        Hits = 1
+    },
+    @{
+        Scope = 'app'
+        Path = 'Source/Hosts/UI/MMCA.Helpdesk.UI.Web/Components/Pages/TicketDetail.razor'
+        Anchor = 'await Api\.UpdateTicketAsync\(Id, _title, _description\);'
+        Description = ', _description'
+        Owner = ''
+        Hits = 1
+    }
+)
+
+function Convert-OptionalAxisLines {
+    param(
+        [string] $Root,
+        [string] $TemplateName
+    )
+
+    $rewritten = 0
+    $blocks = 0
+
+    foreach ($edit in $optionalAxisLines) {
+        if ($edit.Scope -eq 'app' -and $TemplateName -ne 'mmca-app') { continue }
+
+        $full = Join-Path $Root $edit.Path
+        if (-not (Test-Path $full)) {
+            throw "${TemplateName}: stage.ps1 declares a per-shape line rewrite for $($edit.Path), which is not in staging. Either the file moved (update `$optionalAxisLines) or its Scope is wrong."
+        }
+
+        $blocks += Convert-OptionalAxisLine `
+            -Path $full `
+            -Anchor $edit.Anchor `
+            -DropDescription $edit.Description `
+            -DropOwner $edit.Owner `
+            -ExpectedHits $edit.Hits `
+            -TemplateName $TemplateName
+
+        $rewritten += $edit.Hits
+    }
+
+    Write-Host "${TemplateName}: $rewritten line(s) rewritten into $blocks --no-description / --no-owner conditional block(s)"
+}
+
 # Every .resx carries the standard ResX schema block, and inside it sits
 #
 #     <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
@@ -328,7 +676,7 @@ Get-ChildItem -Path $appOverlay -Recurse -File -Force | ForEach-Object {
 }
 
 # Every overlay file must land, or a generated app quietly loses a capability rather than failing.
-foreach ($expected in @('README.md', '.gitignore', 'local.props', '.github/workflows/ci.yml')) {
+foreach ($expected in @('README.md', '.gitignore', 'local.props', '.github/workflows/ci.yml', 'build/add-module.ps1')) {
     if (-not (Test-Path (Join-Path $appStaging $expected))) {
         throw "Overlay file '$expected' did not reach staging. Check build/templates/overlay/mmca-app/ and whether a .gitignore is hiding it from the repo."
     }
@@ -414,6 +762,13 @@ if ($declaredVersion -ne $frameworkVersion) {
 # order satisfies both, and that file is linked into EVERY project, so one wrong name fails the whole
 # solution rather than one file.
 #
+# IDE0021 is the same shape of problem on the shape flags rather than the renames. The aggregate's
+# private constructor assigns one property per axis, so --no-status --no-description --no-owner
+# together leave it with a single statement, and the baseline requires an expression body for that.
+# No checked-in form is right for every shape: a block body is correct for every combination but
+# that one, and an expression body compiles for no other. The seed keeps the block and its full
+# strictness; only generated apps see this relaxed, and the note below says how to put it back.
+#
 # This is appended to the STAGED copy, never to the seed's own .editorconfig: that file stays the
 # single source of the shared analyzer baseline that compare-analyzer-config.ps1 enforces across the
 # four repos. Two rules are relaxed, the other 212 severities are untouched, and the generated app
@@ -442,11 +797,17 @@ $delta = @'
 # that command after scaffolding, or leave this block in place until you have stopped scaffolding
 # and then delete it to get the full baseline back.
 #
-# Only these two rules are relaxed. Every other analyzer stays at error severity.
+# IDE0021 is here for the shape flags rather than the renames: the aggregate's private constructor
+# assigns one property per optional axis, so turning several of them off can leave it with a single
+# statement, which the baseline would then require you to write as an expression body. Fold it to
+# an expression body by hand (or add your own second property) and you can delete this line.
+#
+# Only these three rules are relaxed. Every other analyzer stays at error severity.
 # ---------------------------------------------------------------------------------------------
 [*.cs]
 dotnet_diagnostic.SA1210.severity = suggestion
 dotnet_diagnostic.SA1211.severity = suggestion
+dotnet_diagnostic.IDE0021.severity = suggestion
 '@
 
 # Idempotent: staging may be re-run over an existing tree.
@@ -520,8 +881,9 @@ if ($matchCount -ne 1) {
 
 Set-Content -Path $archTests -Value ([regex]::Replace($archSource, $contractClass, '')) -NoNewline
 
-# ---- derived: the --flat / --no-status marker regions and the eager-load fallback ---------------
+# ---- derived: the shape marker regions, the per-shape lines, and the eager-load fallback --------
 Convert-TemplateMarkers -Root $appStaging -TemplateName 'mmca-app'
+Convert-OptionalAxisLines -Root $appStaging -TemplateName 'mmca-app'
 Protect-ResxSchemaToken -Root $appStaging -TemplateName 'mmca-app'
 
 $appEagerLoads = 0
@@ -647,6 +1009,7 @@ if (-not (Test-Path $moduleConfig)) { throw "No .template.config for mmca-module
 Copy-Item -Path $moduleConfig -Destination (Join-Path $moduleStaging '.template.config') -Recurse -Force
 
 Convert-TemplateMarkers -Root $moduleStaging -TemplateName 'mmca-module'
+Convert-OptionalAxisLines -Root $moduleStaging -TemplateName 'mmca-module'
 Protect-ResxSchemaToken -Root $moduleStaging -TemplateName 'mmca-module'
 
 $moduleEagerLoads = 0
@@ -708,15 +1071,23 @@ Template markers survived staging in $($survivingMarkers.Count) file(s) and woul
 "@
 }
 
-# 2. --child replaces "comment" by substring, so every occurrence in the staged trees that is NOT the
-#    child concept gets mangled for anyone who passes it. The seed is worded to keep them out ("code
-#    notes", "children", "disabled"), the .editorconfig is copyOnly, and the ResX schema attribute is
-#    escaped above. These are the English inflections that can only be prose, never the concept.
-$hazardPattern = 'commented|commenting|commenter|commentary'
+# The files declared copyOnly in mmca-app's template.json. No symbol replacement runs over them, so
+# the prose hazards below cannot reach them; what they DO carry is guarded on its own terms further
+# down, because a copyOnly file leaks any seed token it holds straight into the generated app.
+$copyOnlyLeaves = @('.editorconfig', 'PageHeading.razor', 'SectionHeading.razor', 'add-module.ps1')
+
+# 2. Three symbols replace an ordinary English word by substring, so every occurrence in the staged
+#    trees that is NOT the concept gets mangled for anyone who passes the flag: --child on "comment",
+#    --event-verb on "opened", --title on "title". The seed is worded to keep them out ("code notes",
+#    "children", "disabled", "heading", "browser tab"), the copyOnly files above are exempt by
+#    construction, and the ResX schema attribute is escaped above. These are the English inflections
+#    that can only ever be prose, never the concept: an "entitled"/"subtitle"/"retitle" is never the
+#    aggregate's text property, and a "reopen" is never the creation event's verb.
+$hazardPattern = 'commented|commenting|commenter|commentary|entitled|Entitled|subtitle|Subtitle|retitle|Retitle|reopen|Reopen'
 $hazards = @(
     foreach ($root in $stagedRoots) {
         Get-ChildItem -Path $root -Recurse -File -Force |
-            Where-Object { $_.Name -ne '.editorconfig' } |
+            Where-Object { $copyOnlyLeaves -notcontains $_.Name } |
             ForEach-Object {
                 $hit = Select-String -Path $_.FullName -Pattern $hazardPattern -CaseSensitive -List
                 if ($hit) { "$($_.FullName.Substring($OutputPath.Length).TrimStart('\', '/')) line $($hit.LineNumber): $($hit.Line.Trim())" }
@@ -725,9 +1096,10 @@ $hazards = @(
 
 if ($hazards) {
     throw @"
-Prose using "comment" as an English word survived into staging. --child replaces that substring, so
-generating with --child Item rewrites these into nonsense. Reword them in the SEED (code notes,
-disabled, children):
+Prose using "comment", "title" or "opened" as an English word survived into staging. --child,
+--title and --event-verb each replace one of those substrings, so generating with --child Item /
+--title Name / --event-verb Created rewrites these into nonsense. Reword them in the SEED (code
+notes, disabled, children, heading, browser tab, created):
   $($hazards -join "`n  ")
 "@
 }
@@ -752,5 +1124,115 @@ if ($appTemplateJson -notmatch '(?s)"copyOnly"\s*:\s*\[[^\]]*\.editorconfig') {
     throw "mmca-app's template.json no longer declares .editorconfig under a copyOnly modifier. Without it --child rewrites the analyzer rule descriptions in every generated app."
 }
 
-Write-Host "Guards passed: no surviving markers, no 'comment' prose hazards, .editorconfig copyOnly declared."
+# 4. --title replaces "Title" by substring, and the Blazor browser-tab element's tag name ENDS in that
+#    word, so any razor file that writes the tag by hand ships <PageCustomerName> to anyone who passes
+#    --title CustomerName. That is not a warning and not a mangled string: it is a UI host that does
+#    not compile. Razor markup has no per-occurrence escape form (the ResX trick of an XML character
+#    reference has no razor equivalent), so the seed keeps exactly ONE file that writes the tag, the
+#    copyOnly PageHeading wrapper, and every page goes through it. Anything else carrying the string
+#    is the regression this guard exists to name.
+$wrapperRelative = 'Source/Hosts/UI/MMCA.Helpdesk.UI.Web/Components'
+$tagWrapperLeaf = 'PageHeading.razor'
+
+$stagedTagWrapper = Join-Path $appStaging "$wrapperRelative/$tagWrapperLeaf"
+if (-not (Test-Path $stagedTagWrapper)) {
+    throw "$tagWrapperLeaf did not reach mmca-app staging, so the guard below would pass having checked nothing. The UI host's browser-tab wrapper moved; update stage.ps1 and the copyOnly entry in .template.config/template.json together."
+}
+
+$tagBearers = @(
+    foreach ($root in $stagedRoots) {
+        Get-ChildItem -Path $root -Recurse -File -Force |
+            Where-Object { $_.Name -ne $tagWrapperLeaf } |
+            ForEach-Object {
+                $hit = Select-String -Path $_.FullName -Pattern 'PageTitle' -SimpleMatch -CaseSensitive -List
+                if ($hit) { "$($_.FullName.Substring($OutputPath.Length).TrimStart('\', '/')) line $($hit.LineNumber): $($hit.Line.Trim())" }
+            }
+    })
+
+if ($tagBearers) {
+    throw @"
+The browser-tab element is written outside $tagWrapperLeaf in $($tagBearers.Count) staged file(s). Its
+tag name ends in the word --title replaces, so those files stop compiling for anyone who renames the
+aggregate's text property. Route them through the copyOnly wrapper instead:
+  $($tagBearers -join "`n  ")
+"@
+}
+
+# 5. Both wrappers are copyOnly, which is exactly what makes them dangerous in the other direction:
+#    NO rename reaches them, so a seed token written into one ships verbatim into every generated
+#    app. Same failure mode as the .editorconfig leak check above, and the same answer: prove the
+#    files hold nothing but the two spellings they exist to isolate. Those two are scrubbed before
+#    the check, because they are the point (the tag name legitimately ends in the --title word, and
+#    the MudBlazor typography member legitimately begins with "sub" plus that word).
+$wrapperLeaves = @($tagWrapperLeaf, 'SectionHeading.razor')
+$wrapperTokens = 'MMCA\.Helpdesk|Helpdesk|Ticket|ticket|Comment|comment|Title|title|Opened|opened'
+
+foreach ($leaf in $wrapperLeaves) {
+    $wrapper = Join-Path $appStaging "$wrapperRelative/$leaf"
+    if (-not (Test-Path $wrapper)) {
+        throw "The copyOnly wrapper $leaf did not reach mmca-app staging at $wrapperRelative. Either it moved (update stage.ps1 and template.json together) or the UI host lost it, in which case the pages it replaced are writing the raw spellings again."
+    }
+
+    $wrapperLines = @(Get-Content $wrapper)
+    $wrapperLeaks = @(
+        for ($i = 0; $i -lt $wrapperLines.Count; $i++) {
+            $scrubbed = $wrapperLines[$i] -replace 'PageTitle', '' -replace 'subtitle1', ''
+            if ($scrubbed -cmatch $wrapperTokens) { "line $($i + 1): $($wrapperLines[$i].Trim())" }
+        })
+
+    if ($wrapperLeaks) {
+        throw @"
+$leaf is copyOnly, so no rename reaches it, and it still names the seed:
+  $($wrapperLeaks -join "`n  ")
+Reword those lines (the file must read as generic UI plumbing, with no reference to this app, its
+module, its aggregate, or its child entity) or drop the copyOnly modifier from
+.template.config/template.json and accept that --title mangles it.
+"@
+    }
+
+    if ($appTemplateJson -notmatch "(?s)`"copyOnly`"\s*:\s*\[[^\]]*$([regex]::Escape($leaf))") {
+        throw "mmca-app's template.json no longer declares $leaf under a copyOnly modifier. Without it --title rewrites the one spelling that file exists to hold, and the generated UI host does not compile."
+    }
+}
+
+# 6. The wire-up script the overlay ships as build/add-module.ps1 in every generated app. It is
+#    copyOnly for the same reason as the two razor wrappers and with the opposite consequence, which
+#    is why its leak check is INVERTED relative to theirs.
+#
+#    Why copyOnly: it is a script ABOUT the scaffold, so it names the flags it passes through
+#    (--title, --event-verb, --child) and prints prose about what they do. Token replacement would
+#    rewrite those flag names per the adopter's own values and hand every generated app a script
+#    that calls dotnet new with arguments no template declares. Shipping it verbatim is the only
+#    form of it that works.
+#
+#    What that costs: nothing in it is renamed, so it cannot rely on ANY seed name being fixed up.
+#    It discovers the solution file, the app namespace, the existing module and the four host and
+#    test project paths at run time, from the tree it is standing in. A seed name written into it
+#    would therefore not merely leak, it would name a path that does not exist in the app it runs
+#    in. That is what this guard asserts: not "no prose hazards" but "no seed nouns at all".
+$wireUpLeaf = 'add-module.ps1'
+$stagedWireUp = Join-Path $appStaging "build/$wireUpLeaf"
+
+if (-not (Test-Path $stagedWireUp)) {
+    throw "$wireUpLeaf did not reach mmca-app staging at build/. Generated apps would ship no wire-up script, and mmca-module's printed instructions would be the only path to a second module. Check build/templates/overlay/mmca-app/build/."
+}
+
+$wireUpLeaks = @(Select-String -Path $stagedWireUp -Pattern 'MMCA\.Helpdesk|Helpdesk|Ticket' -CaseSensitive |
+    ForEach-Object { "line $($_.LineNumber): $($_.Line.Trim())" })
+
+if ($wireUpLeaks) {
+    throw @"
+$wireUpLeaf names the seed, and it is copyOnly so no rename reaches it. Worse, it runs INSIDE a
+generated app where these names do not exist, so each of these is a path or a type that resolves to
+nothing at run time:
+  $($wireUpLeaks -join "`n  ")
+Discover the real name instead (the solution file's basename, Source/Modules/*, the host globs).
+"@
+}
+
+if ($appTemplateJson -notmatch "(?s)`"copyOnly`"\s*:\s*\[[^\]]*$([regex]::Escape($wireUpLeaf))") {
+    throw "mmca-app's template.json no longer declares $wireUpLeaf under a copyOnly modifier. Without it --title / --event-verb / --child rewrite the very flag names the script passes through to dotnet new, and every generated app ships a wire-up script that cannot run."
+}
+
+Write-Host "Guards passed: no surviving markers, no 'comment' / 'title' / 'opened' prose hazards, copyOnly declared for .editorconfig, both razor wrappers and $wireUpLeaf, and $wireUpLeaf names no seed noun."
 Write-Host "Staging complete."

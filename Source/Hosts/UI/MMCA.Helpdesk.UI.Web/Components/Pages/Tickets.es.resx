@@ -12,7 +12,7 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="Title" xml:space="preserve">
+  <data name="Browser.Tab" xml:space="preserve">
     <value>Tickets de la mesa de ayuda</value>
   </data>
   <data name="Heading" xml:space="preserve">
@@ -24,9 +24,11 @@
   <data name="Field.Title" xml:space="preserve">
     <value>Título</value>
   </data>
+  <!-- template:begin description -->
   <data name="Field.Description" xml:space="preserve">
     <value>Descripción</value>
   </data>
+  <!-- template:end description -->
   <data name="Button.Open" xml:space="preserve">
     <value>Abrir</value>
   </data>
@@ -39,9 +41,11 @@
   <data name="Column.Status" xml:space="preserve">
     <value>Estado</value>
   </data>
+  <!-- template:begin owner -->
   <data name="Column.Requester" xml:space="preserve">
     <value>Solicitante</value>
   </data>
+  <!-- template:end owner -->
   <data name="Column.Actions" xml:space="preserve">
     <value>Acciones</value>
   </data>
@@ -54,7 +58,7 @@
   <data name="Snackbar.LoadFailed" xml:space="preserve">
     <value>No se pudieron cargar los tickets: {0}</value>
   </data>
-  <data name="Dialog.Delete.Title" xml:space="preserve">
+  <data name="Dialog.Delete.Heading" xml:space="preserve">
     <value>Eliminar ticket</value>
   </data>
   <data name="Dialog.Delete.Message" xml:space="preserve">
@@ -72,8 +76,8 @@
   <data name="Snackbar.DeleteFailed" xml:space="preserve">
     <value>No se pudo eliminar: {0}</value>
   </data>
-  <data name="Snackbar.TitleDescriptionRequired" xml:space="preserve">
-    <value>El título y la descripción son obligatorios.</value>
+  <data name="Snackbar.RequiredFields" xml:space="preserve">
+    <value>Complete los campos obligatorios.</value>
   </data>
   <data name="Snackbar.Opened" xml:space="preserve">
     <value>Ticket abierto.</value>
