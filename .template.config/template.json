@@ -5,7 +5,7 @@
   "identity": "MMCA.Templates.App",
   "name": "MMCA modular monolith (DDD + CQRS + Aspire)",
   "shortName": "mmca-app",
-  "description": "A complete modular-monolith solution on the MMCA.Common framework: one business module across all five layers, a REST API host, a Blazor Server + MudBlazor UI host, an Aspire AppHost, a per-database migrations project, and domain + application + architecture-fitness test projects. Shape the sample module with --flat (no child collection), --no-status (no status axis), and --child (rename the child entity). Build the monolith now, extract a module into its own service later.",
+  "description": "A complete modular-monolith solution on the MMCA.Common framework: one business module across all five layers, a REST API host, a Blazor Server + MudBlazor UI host, an Aspire AppHost, a per-database migrations project, and domain + application + architecture-fitness test projects. Shape the sample module with --flat (no child collection), --no-status (no status axis), --no-description (no description property), --no-owner (no requester/owner property), and --child (rename the child entity); name its vocabulary with --title (the aggregate's main text property) and --event-verb (the creation integration event's verb). Build the monolith now, extract a module into its own service later.",
   "tags": {
     "language": "C#",
     "type": "solution"
@@ -35,6 +35,7 @@
     },
     "lowerCase": { "identifier": "lowerCase" },
     "upperCase": { "identifier": "upperCase" },
+    "firstLowerCase": { "identifier": "firstLowerCase" },
 
     "pluralConsonantY": {
       "identifier": "replace",
@@ -131,6 +132,21 @@
       "description": "Lower-case aggregate name: local variables, route segments, and resource-string prose."
     },
 
+    "title": {
+      "type": "parameter",
+      "datatype": "text",
+      "defaultValue": "Title",
+      "replaces": "Title",
+      "description": "Name of the aggregate's main text property, singular PascalCase (for example Name, Subject, CustomerName). Everything that names it moves with it: the domain property and its invariant, the error codes (<aggregate>.<Title>.Empty and .TooLong), the <Title>MaxLength constant, the DTO and request properties, the EF column, the FluentValidation rule, the UI field and column resource entries, the typed API client, and the domain tests. No fileRename: no file in the seed is named after it."
+    },
+    "titleCamel": {
+      "type": "derived",
+      "valueSource": "title",
+      "valueTransform": "firstLowerCase",
+      "replaces": "title",
+      "description": "Camel-case form of the main text property: factory and method parameters, private fields, named arguments, and nameof() targets. firstLowerCase (not lowerCase) is what keeps a multi-word value a valid camel-case identifier: CustomerName -> customerName, not customername. The price is that a plain substring replacement also reaches ENGLISH PROSE, so the two shipped error messages read \"cannot be empty\" against the camel-case spelling for a multi-word value. Deliberate trade-off: identifiers have to compile, and the two strings are a one-line edit in the module's error resources after generating."
+    },
+
     "child": {
       "type": "parameter",
       "datatype": "text",
@@ -161,6 +177,22 @@
       "description": "Lower-case plural child name: the REST route segment and prose."
     },
 
+    "eventVerb": {
+      "type": "parameter",
+      "datatype": "text",
+      "defaultValue": "Opened",
+      "replaces": "Opened",
+      "fileRename": "Opened",
+      "description": "Verb naming the creation integration event, past tense PascalCase (for example Created, Placed, Booked). The generated event is <aggregate><EventVerb>IntegrationEvent and its consumer <aggregate><EventVerb>Handler, so --aggregate Order --event-verb Placed produces OrderPlacedIntegrationEvent and OrderPlacedHandler. The id is database-generated, so this event is published AFTER the commit by the create handler rather than raised as a domain event by the factory."
+    },
+    "eventVerbLower": {
+      "type": "derived",
+      "valueSource": "eventVerb",
+      "valueTransform": "lowerCase",
+      "replaces": "opened",
+      "description": "Lower-case verb: the prose that has to follow the event name rather than sit beside it, in the event's XML doc, the consumer's log message, and the UI success resource entry."
+    },
+
     "flat": {
       "type": "parameter",
       "datatype": "bool",
@@ -172,6 +204,18 @@
       "datatype": "bool",
       "defaultValue": "false",
       "description": "Generate the module WITHOUT a status axis: no status enum, no ChangeStatus slice, request, or endpoint, no Status property, and no status invariant or tests. Use it when your aggregate has no lifecycle state."
+    },
+    "noDescription": {
+      "type": "parameter",
+      "datatype": "bool",
+      "defaultValue": "false",
+      "description": "Generate the module WITHOUT the aggregate's long-text property: no Description property or invariant, no <Description>MaxLength constant, no DTO, request, or command field, no validator rule, no EF max-length configuration, no error-resource entries, no UI field, and no tests for it. Use it when the aggregate's main text property is all the text it needs."
+    },
+    "noOwner": {
+      "type": "parameter",
+      "datatype": "bool",
+      "defaultValue": "false",
+      "description": "Generate the module WITHOUT the aggregate's owning-user property: no RequesterUserId property, no create-request field or validator rule, no member on the creation integration event, no EF index, no UI field or column, and no tests for it. Use it when the aggregate is not owned by a single user, or until you add an Identity module to resolve one."
     },
 
     "frameworkVersion": {
@@ -209,6 +253,17 @@
           "copyOnly": [ "**/.editorconfig" ]
         },
         {
+          "comment": "Two one-element razor wrappers, copied verbatim for the same reason as the .editorconfig and with the opposite ownership: everything else in the UI host is the adopter's to rename, these two exist so the UI host has NO occurrence left of two framework spellings that --title would mangle. PageHeading wraps the browser-tab element, whose tag name ends in the very word --title replaces; SectionHeading wraps the MudBlazor typography member spelled sub + that same word, which is an enum member and cannot be respelled. Razor markup has no per-occurrence escape form (the .resx trick of an XML character reference has no equivalent), so isolating each spelling in a file that is never processed is the whole mechanism. Both files must therefore stay free of every seed token; build/templates/stage.ps1 asserts that, and that this declaration still exists.",
+          "copyOnly": [
+            "**/PageHeading.razor",
+            "**/SectionHeading.razor"
+          ]
+        },
+        {
+          "comment": "The wire-up script, copied verbatim for a third reason. It is a script ABOUT this scaffold: it shells out to dotnet new mmca-module and passes the flags through by name, so replacement would rewrite --title / --event-verb / --child into the adopter's own values and produce a script calling dotnet new with arguments no template declares. Shipping it unprocessed is the only working form. The price is that it can rely on no seed name being fixed up either, which is why it discovers the solution file, the app namespace, the existing module, and the host and test project paths at run time; build/templates/stage.ps1 asserts it names none of them and that this declaration still exists.",
+          "copyOnly": [ "build/add-module.ps1" ]
+        },
+        {
           "comment": "--flat: the whole child (comment) axis, file by file. Partial-file removals are marker regions in the seed that stage.ps1 turns into conditional directives.",
           "condition": "(flat)",
           "exclude": [
@@ -233,8 +288,8 @@
           ]
         },
         {
-          "comment": "The seed's migrations describe the FULL sample schema (child table, status column). Either flag makes them wrong on arrival, so they are dropped and the adopter runs 'dotnet ef migrations add InitialCreate' against the shape they asked for. Migrations/.editorconfig still ships: dotnet ef never recreates it.",
-          "condition": "(flat || noStatus)",
+          "comment": "The seed's migrations describe the FULL sample schema (child table, status column, description column, requester column and its index). Any shape flag makes them wrong on arrival, so they are dropped and the adopter runs 'dotnet ef migrations add InitialCreate' against the shape they asked for. Migrations/.editorconfig still ships: dotnet ef never recreates it.",
+          "condition": "(flat || noStatus || noOwner || noDescription)",
           "exclude": [
             "Source/Hosting/MMCA.Helpdesk.Migrations.SqlServer.Tickets/Migrations/*.cs"
           ]

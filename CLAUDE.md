@@ -47,14 +47,41 @@ rather than to a generated app and laying `build/templates/overlay/` on top. Con
   inherited wire-contract freeze guarantees nothing; adopters freeze their own). Both are documented
   in the generated README.
 - **The optional axes live in the seed as ordinary comments.** `--flat` (no child collection),
-  `--no-status` (no status axis), and `--child <Name>` (rename the child concept) are shaped two
+  `--no-status` (no status axis), `--no-description` (no long-text property), `--no-owner` (no
+  owning-user property), and `--child <Name>` (rename the child concept) are shaped two
   ways: whole files come out through `sources.modifiers` conditions in each `template.json`, and
   partial-file regions are marked in the seed with `// template:begin child` / `// template:end child`
   (`<!-- ... -->` in XML and resx, `@* ... *@` in razor, `/// ...` inside an XML doc block). Axis
-  labels are `child` -> `!flat`, `status` -> `!noStatus`, `childStatus` -> `!(flat || noStatus)`.
+  labels are `child` -> `!flat`, `status` -> `!noStatus`, `description` -> `!noDescription`,
+  `owner` -> `!noOwner`, plus three combination labels: `childStatus` -> `!(flat || noStatus)`,
+  `statusOwner` -> `!(noStatus || noOwner)`, `statusOrOwner` -> `!(noStatus && noOwner)`.
   `stage.ps1` converts them to dotnet-new directives in the STAGED copies and throws on an
   unbalanced or unknown-label marker. **Never put a raw `//#if` in the seed**, and keep a region's
   trailing blank line INSIDE it (a marker followed by a blank line is SA1512).
+- **A comma-separated list cannot lose one element to a whole-line region.** C# forbids a trailing
+  comma in an invocation, a parameter list, and a positional record, so `--no-description` /
+  `--no-owner` cannot drop a middle or last argument with markers. The seed keeps those lists on ONE
+  line (the factory, the private constructor, two positional records, the create call sites, the
+  `LoggerMessage` template, the typed API client's signatures and anonymous bodies), and
+  `stage.ps1`'s `Convert-OptionalAxisLine` rewrites each into one conditional block per combination,
+  DERIVING every variant by removing the axis's own segment. Its table is `$optionalAxisLines`: it
+  throws on a missing file, an unexpected hit count, or a segment that no longer matches. Reshaping
+  the seed is still preferred where it works, which is why the test object initializers carry a
+  trailing comma on every member and the two UI pages accumulate their required-field check one line
+  at a time.
+- **Generated apps ship their own wire-up script**, `build/add-module.ps1`, laid in by
+  `build/templates/overlay/mmca-app/build/`. It runs `dotnet new mmca-module` and then performs all
+  seven wire-ups that template can only print (solution entries, host + architecture-test project
+  references, the identifier-alias link, the map lines, `AddErrorResources`, the AppHost database
+  and data-source routing, the `appsettings.json` normalization) plus the first EF migration. It is
+  **`copyOnly`, and its leak check is INVERTED** relative to the razor wrappers': because it ships
+  verbatim (so the `--title` / `--event-verb` / `--child` flag names it passes through survive), it
+  may use any hazard word in prose, but it must contain **no seed noun at all**: at run time inside
+  a generated app, `MMCA.Helpdesk` / `Helpdesk` / `Ticket` name nothing. It discovers the solution
+  file (which is also the app namespace), the existing modules, and the host / test projects by
+  glob. `stage.ps1` guards the copyOnly declaration, the overlay landing, and the no-seed-noun rule.
+  `smoke.ps1` adds its second module THROUGH this script, so the wire-ups get CI coverage on the
+  same code path adopters run.
 - **`Comment` is a rename token, so the word is a hazard.** `--child` replaces the substring
   `comment` everywhere, which is why the seed says "code notes" and "children" in prose, the
   `.editorconfig` is `copyOnly`, and `stage.ps1` escapes the ResX schema's `name="comment"`

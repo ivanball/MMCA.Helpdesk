@@ -16,7 +16,9 @@ namespace MMCA.Helpdesk.Tickets.Domain.Tickets;
 public static class TicketInvariants
 {
     public const int TitleMaxLength = 200;
+    // template:begin description
     public const int DescriptionMaxLength = 4000;
+    // template:end description
     // template:begin child
     public const int CommentBodyMaxLength = 4000;
 
@@ -26,11 +28,13 @@ public static class TicketInvariants
             CommonInvariants.EnsureStringIsNotEmpty(title, "Ticket.Title.Empty", "Ticket title cannot be empty.", source, nameof(title)),
             CommonInvariants.EnsureStringMaxLength(title, TitleMaxLength, "Ticket.Title.TooLong", $"Ticket title cannot exceed {TitleMaxLength} characters.", source, nameof(title)));
 
+    // template:begin description
     public static Result EnsureDescriptionIsValid(string description, string source)
         => Result.Combine(
             CommonInvariants.EnsureStringIsNotEmpty(description, "Ticket.Description.Empty", "Ticket description cannot be empty.", source, nameof(description)),
             CommonInvariants.EnsureStringMaxLength(description, DescriptionMaxLength, "Ticket.Description.TooLong", $"Ticket description cannot exceed {DescriptionMaxLength} characters.", source, nameof(description)));
 
+    // template:end description
     // template:begin child
     public static Result EnsureCommentBodyIsValid(string body, string source)
         => Result.Combine(

@@ -9,8 +9,8 @@ namespace MMCA.Helpdesk.Tickets.Shared.Tickets.IntegrationEvents;
 /// new event type plus an upcaster, never a silent reshape of this contract.
 /// </summary>
 /// <param name="TicketId">The newly opened ticket's database-generated identifier.</param>
+/// template:begin owner
 /// <param name="RequesterUserId">The user who opened the ticket.</param>
-public sealed record class TicketOpenedIntegrationEvent(
-    TicketIdentifierType TicketId,
-    int RequesterUserId)
+/// template:end owner
+public sealed record class TicketOpenedIntegrationEvent(TicketIdentifierType TicketId, int RequesterUserId)
     : BaseIntegrationEvent;

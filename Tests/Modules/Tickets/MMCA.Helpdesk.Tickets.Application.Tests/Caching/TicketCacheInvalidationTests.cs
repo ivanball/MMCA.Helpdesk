@@ -119,7 +119,16 @@ public class TicketCacheInvalidationTests
 
     private static IEnumerable<ICacheInvalidating> AllTicketCommands() =>
     [
-        new TicketCreateRequest { Title = "Cannot log in", Description = "Returns a 500.", RequesterUserId = 42 },
+        new TicketCreateRequest
+        {
+            Title = "Cannot log in",
+            // template:begin description
+            Description = "Returns a 500.",
+            // template:end description
+            // template:begin owner
+            RequesterUserId = 42,
+            // template:end owner
+        },
         new UpdateTicketCommand(TicketId, "Cannot log in", "Returns a 500."),
         new DeleteTicketCommand(TicketId),
         // template:begin status
@@ -137,11 +146,15 @@ public class TicketCacheInvalidationTests
         {
             Id = TicketId,
             Title = "Cannot log in",
+            // template:begin description
             Description = "The login page returns a 500.",
+            // template:end description
             // template:begin status
             Status = TicketStatus.Open,
             // template:end status
+            // template:begin owner
             RequesterUserId = 42,
+            // template:end owner
         });
 
     /// <summary>Counts how often the real handler is reached, which is what a cache hit prevents.</summary>

@@ -12,7 +12,7 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="Title" xml:space="preserve">
+  <data name="Browser.Tab" xml:space="preserve">
     <value>Ticket {0}</value>
   </data>
   <data name="Button.Back" xml:space="preserve">
@@ -33,15 +33,19 @@
   <data name="Field.Title" xml:space="preserve">
     <value>Title</value>
   </data>
+  <!-- template:begin description -->
   <data name="Field.Description" xml:space="preserve">
     <value>Description</value>
   </data>
+  <!-- template:end description -->
   <data name="Detail.Status" xml:space="preserve">
     <value>Status:</value>
   </data>
+  <!-- template:begin owner -->
   <data name="Detail.Requester" xml:space="preserve">
     <value>Requester:</value>
   </data>
+  <!-- template:end owner -->
   <data name="Button.SaveDetails" xml:space="preserve">
     <value>Save details</value>
   </data>
@@ -78,8 +82,8 @@
   <data name="Button.CancelEdit" xml:space="preserve">
     <value>Cancel</value>
   </data>
-  <data name="Snackbar.TitleDescriptionRequired" xml:space="preserve">
-    <value>Title and description are required.</value>
+  <data name="Snackbar.RequiredFields" xml:space="preserve">
+    <value>Fill in the required fields.</value>
   </data>
   <data name="Snackbar.LoadFailed" xml:space="preserve">
     <value>Failed to load ticket: {0}</value>
@@ -108,7 +112,7 @@
   <data name="Snackbar.RemoveFailed" xml:space="preserve">
     <value>Remove failed: {0}</value>
   </data>
-  <data name="Dialog.Delete.Title" xml:space="preserve">
+  <data name="Dialog.Delete.Heading" xml:space="preserve">
     <value>Delete ticket</value>
   </data>
   <data name="Dialog.Delete.Message" xml:space="preserve">

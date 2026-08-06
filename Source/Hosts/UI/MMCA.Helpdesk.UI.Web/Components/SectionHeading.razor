@@ -1,0 +1,9 @@
+@* Wrapper for a section label. The MudBlazor typography member it names is spelled with a word the
+   scaffold renames, and razor markup has no escape form for a single occurrence, so this file is
+   declared copyOnly in .template.config/template.json: it ships verbatim, and must therefore stay
+   free of every seed token. build/templates/stage.ps1 proves both halves of that. *@
+<MudText Typo="Typo.subtitle1" GutterBottom="true">@ChildContent</MudText>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

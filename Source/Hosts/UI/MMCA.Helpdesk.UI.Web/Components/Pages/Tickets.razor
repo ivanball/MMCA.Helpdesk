@@ -6,19 +6,21 @@
 @inject IDialogService DialogService
 @inject Microsoft.Extensions.Localization.IStringLocalizer<Tickets> L
 
-<PageTitle>@L["Title"]</PageTitle>
+<PageHeading Text="@(L["Browser.Tab"].Value)" />
 
 <MudText Typo="Typo.h4" GutterBottom="true">@L["Heading"]</MudText>
 
 <MudPaper Class="pa-4 mb-6" Elevation="1">
-    <MudText Typo="Typo.subtitle1" GutterBottom="true">@L["Section.Open"]</MudText>
+    <SectionHeading>@L["Section.Open"]</SectionHeading>
     <MudGrid>
         <MudItem xs="12" md="4">
             <MudTextField @bind-Value="_title" Label="@L["Field.Title"].Value" Variant="Variant.Outlined" />
         </MudItem>
+        @* template:begin description *@
         <MudItem xs="12" md="6">
             <MudTextField @bind-Value="_description" Label="@L["Field.Description"].Value" Variant="Variant.Outlined" />
         </MudItem>
+        @* template:end description *@
         <MudItem xs="12" md="2" Class="d-flex align-center">
             <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="CreateAsync" Disabled="_busy" FullWidth="true">
                 @L["Button.Open"]
@@ -34,7 +36,9 @@
         @* template:begin status *@
         <MudTh>@L["Column.Status"]</MudTh>
         @* template:end status *@
+        @* template:begin owner *@
         <MudTh>@L["Column.Requester"]</MudTh>
+        @* template:end owner *@
         <MudTh>@L["Column.Actions"]</MudTh>
     </HeaderContent>
     <RowTemplate>
@@ -44,7 +48,9 @@
         @* Enum display localizes via Status.* keys; the wire/enum value itself stays untranslated. *@
         <MudTd DataLabel="@L["Column.Status"].Value">@L[$"Status.{context.Status}"]</MudTd>
         @* template:end status *@
+        @* template:begin owner *@
         <MudTd DataLabel="@L["Column.Requester"].Value">@context.RequesterUserId</MudTd>
+        @* template:end owner *@
         <MudTd DataLabel="@L["Column.Actions"].Value">
             <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary"
                        OnClick="@(() => Nav.NavigateTo($"/tickets/{context.Id}"))">
@@ -62,7 +68,9 @@
 @code {
     private IReadOnlyList<TicketDTO> _tickets = [];
     private string _title = string.Empty;
+    @* template:begin description *@
     private string _description = string.Empty;
+    @* template:end description *@
     private bool _busy;
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
@@ -87,7 +95,7 @@
     private async Task DeleteAsync(int id)
     {
         var confirmed = await DialogService.ShowMessageBoxAsync(
-            L["Dialog.Delete.Title"],
+            L["Dialog.Delete.Heading"],
             L["Dialog.Delete.Message", id],
             yesText: L["Dialog.Delete.Confirm"],
             cancelText: L["Dialog.Cancel"]);
@@ -115,9 +123,15 @@
 
     private async Task CreateAsync()
     {
-        if (string.IsNullOrWhiteSpace(_title) || string.IsNullOrWhiteSpace(_description))
+        // One accumulator per field rather than one boolean expression: each optional field of the
+        // scaffold then occupies its own line, which is what lets a shape drop it whole.
+        bool missingRequired = string.IsNullOrWhiteSpace(_title);
+        @* template:begin description *@
+        missingRequired = missingRequired || string.IsNullOrWhiteSpace(_description);
+        @* template:end description *@
+        if (missingRequired)
         {
-            Snackbar.Add(L["Snackbar.TitleDescriptionRequired"], Severity.Warning);
+            Snackbar.Add(L["Snackbar.RequiredFields"], Severity.Warning);
             return;
         }
 
@@ -127,7 +141,9 @@
             await Api.CreateTicketAsync(_title, _description, requesterUserId: 1);
             Snackbar.Add(L["Snackbar.Opened"], Severity.Success);
             _title = string.Empty;
+            @* template:begin description *@
             _description = string.Empty;
+            @* template:end description *@
             await LoadAsync();
         }
         catch (Exception ex)

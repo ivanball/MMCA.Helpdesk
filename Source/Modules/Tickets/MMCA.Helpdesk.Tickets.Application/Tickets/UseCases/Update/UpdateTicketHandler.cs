@@ -8,7 +8,7 @@ using MMCA.Helpdesk.Tickets.Shared.Tickets;
 namespace MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.Update;
 
 /// <summary>
-/// Updates a ticket's title and description through the aggregate root, then returns the refreshed DTO.
+/// Updates a ticket's editable details through the aggregate root, then returns the refreshed DTO.
 /// </summary>
 public sealed class UpdateTicketHandler(
     IUnitOfWork unitOfWork,

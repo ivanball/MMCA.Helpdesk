@@ -91,7 +91,7 @@ public sealed class TicketsController(
         return Created(locationUri, dto);
     }
 
-    /// <summary>Updates a ticket's title and description.</summary>
+    /// <summary>Updates a ticket's editable details.</summary>
     [HttpPut("{id}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

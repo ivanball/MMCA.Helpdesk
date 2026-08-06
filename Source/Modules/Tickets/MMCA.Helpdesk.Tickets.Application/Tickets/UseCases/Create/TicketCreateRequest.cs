@@ -13,6 +13,10 @@ public record class TicketCreateRequest : ICreateRequest, ICacheInvalidating
     public string CachePrefix => TicketCacheKeys.Prefix;
 
     public required string Title { get; init; }
+    // template:begin description
     public required string Description { get; init; }
+    // template:end description
+    // template:begin owner
     public required int RequesterUserId { get; init; }
+    // template:end owner
 }

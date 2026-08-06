@@ -5,7 +5,7 @@
 @inject IDialogService DialogService
 @inject Microsoft.Extensions.Localization.IStringLocalizer<TicketDetail> L
 
-<PageTitle>@L["Title", Id]</PageTitle>
+<PageHeading Text="@(L["Browser.Tab", Id].Value)" />
 
 <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="GoBack" Class="mb-4">@L["Button.Back"]</MudButton>
 <MudButton StartIcon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="DeleteAsync" Disabled="_busy" Class="mb-4 ml-2">
@@ -21,16 +21,25 @@ else
     <MudText Typo="Typo.h4" GutterBottom="true">@L["Heading", _ticket.Id]</MudText>
 
     <MudPaper Class="pa-4 mb-6" Elevation="1">
-        <MudText Typo="Typo.subtitle1" GutterBottom="true">@L["Section.Details"]</MudText>
+        <SectionHeading>@L["Section.Details"]</SectionHeading>
         <MudTextField @bind-Value="_title" Label="@L["Field.Title"].Value" Variant="Variant.Outlined" Class="mb-3" />
+        @* template:begin description *@
         <MudTextField @bind-Value="_description" Label="@L["Field.Description"].Value" Variant="Variant.Outlined" Lines="3" Class="mb-3" />
+        @* template:end description *@
+        @* template:begin statusOrOwner *@
         <MudText Typo="Typo.body2" Class="mb-3">
             @* template:begin status *@
             @* Enum display localizes via Status.* keys; the wire/enum value itself stays untranslated. *@
-            @L["Detail.Status"] <b>@L[$"Status.{_ticket.Status}"]</b> &nbsp;&middot;&nbsp;
+            @L["Detail.Status"] <b>@L[$"Status.{_ticket.Status}"]</b>
             @* template:end status *@
+            @* template:begin statusOwner *@
+            &nbsp;&middot;&nbsp;
+            @* template:end statusOwner *@
+            @* template:begin owner *@
             @L["Detail.Requester"] <b>@_ticket.RequesterUserId</b>
+            @* template:end owner *@
         </MudText>
+        @* template:end statusOrOwner *@
         <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveDetailsAsync" Disabled="_busy">
             @L["Button.SaveDetails"]
         </MudButton>
@@ -38,7 +47,7 @@ else
 
     @* template:begin status *@
     <MudPaper Class="pa-4 mb-6" Elevation="1">
-        <MudText Typo="Typo.subtitle1" GutterBottom="true">@L["Section.Status"]</MudText>
+        <SectionHeading>@L["Section.Status"]</SectionHeading>
         <MudGrid>
             <MudItem xs="12" md="6">
                 <MudSelect T="TicketStatus" @bind-Value="_status" Label="@L["Field.Status"].Value" Variant="Variant.Outlined">
@@ -59,7 +68,7 @@ else
 
     @* template:begin child *@
     <MudPaper Class="pa-4 mb-6" Elevation="1">
-        <MudText Typo="Typo.subtitle1" GutterBottom="true">@L["Section.AddComment"]</MudText>
+        <SectionHeading>@L["Section.AddComment"]</SectionHeading>
         <MudGrid>
             <MudItem xs="12" md="10">
                 <MudTextField @bind-Value="_newComment" Label="@L["Field.Comment"].Value" Variant="Variant.Outlined" />
@@ -72,7 +81,7 @@ else
         </MudGrid>
     </MudPaper>
 
-    <MudText Typo="Typo.subtitle1" GutterBottom="true">@L["Section.Comments"]</MudText>
+    <SectionHeading>@L["Section.Comments"]</SectionHeading>
     @if (_ticket.Comments.Count == 0)
     {
         <MudText>@L["Empty.Comments"]</MudText>
@@ -117,7 +126,9 @@ else
 
     private TicketDTO? _ticket;
     private string _title = string.Empty;
+    @* template:begin description *@
     private string _description = string.Empty;
+    @* template:end description *@
     @* template:begin status *@
     private TicketStatus _status;
     @* template:end status *@
@@ -139,7 +150,9 @@ else
             if (_ticket is not null)
             {
                 _title = _ticket.Title;
+                @* template:begin description *@
                 _description = _ticket.Description;
+                @* template:end description *@
                 @* template:begin status *@
                 _status = _ticket.Status;
                 @* template:end status *@
@@ -157,9 +170,15 @@ else
 
     private async Task SaveDetailsAsync()
     {
-        if (string.IsNullOrWhiteSpace(_title) || string.IsNullOrWhiteSpace(_description))
+        // One accumulator per field rather than one boolean expression: each optional field of the
+        // scaffold then occupies its own line, which is what lets a shape drop it whole.
+        bool missingRequired = string.IsNullOrWhiteSpace(_title);
+        @* template:begin description *@
+        missingRequired = missingRequired || string.IsNullOrWhiteSpace(_description);
+        @* template:end description *@
+        if (missingRequired)
         {
-            Snackbar.Add(L["Snackbar.TitleDescriptionRequired"], Severity.Warning);
+            Snackbar.Add(L["Snackbar.RequiredFields"], Severity.Warning);
             return;
         }
 
@@ -286,7 +305,7 @@ else
     private async Task DeleteAsync()
     {
         var confirmed = await DialogService.ShowMessageBoxAsync(
-            L["Dialog.Delete.Title"],
+            L["Dialog.Delete.Heading"],
             L["Dialog.Delete.Message", Id],
             yesText: L["Dialog.Delete.Confirm"],
             cancelText: L["Dialog.Cancel"]);

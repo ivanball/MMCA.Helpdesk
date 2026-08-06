@@ -22,14 +22,18 @@ namespace MMCA.Helpdesk.Tickets.Domain.Tickets;
 public sealed class Ticket : AuditableAggregateRootEntity<TicketIdentifierType>
 {
     public string Title { get; private set; }
+    // template:begin description
     public string Description { get; private set; }
+    // template:end description
     // template:begin status
     public TicketStatus Status { get; private set; }
     // template:end status
 
+    // template:begin owner
     // The user id of the requester (resolved from the Identity module once one is added).
     public int RequesterUserId { get; private set; }
 
+    // template:end owner
     // template:begin child
     private readonly List<TicketComment> _comments = [];
 
@@ -40,22 +44,20 @@ public sealed class Ticket : AuditableAggregateRootEntity<TicketIdentifierType>
     private Ticket(string title, string description, int requesterUserId)
     {
         Title = title;
+        // template:begin description
         Description = description;
+        // template:end description
+        // template:begin owner
         RequesterUserId = requesterUserId;
+        // template:end owner
         // template:begin status
         Status = TicketStatus.Open;
         // template:end status
     }
 
-    public static Result<Ticket> Create(
-        TicketIdentifierType? id,
-        string title,
-        string description,
-        int requesterUserId)
+    public static Result<Ticket> Create(TicketIdentifierType? id, string title, string description, int requesterUserId)
     {
-        var validation = Result.Combine(
-            TicketInvariants.EnsureTitleIsValid(title, nameof(Create)),
-            TicketInvariants.EnsureDescriptionIsValid(description, nameof(Create)));
+        var validation = Result.Combine(TicketInvariants.EnsureTitleIsValid(title, nameof(Create)), TicketInvariants.EnsureDescriptionIsValid(description, nameof(Create)));
         if (validation.IsFailure)
         {
             return Result.Failure<Ticket>(validation.Errors);
@@ -105,16 +107,16 @@ public sealed class Ticket : AuditableAggregateRootEntity<TicketIdentifierType>
     // template:end child
     public Result UpdateDetails(string title, string description)
     {
-        var validation = Result.Combine(
-            TicketInvariants.EnsureTitleIsValid(title, nameof(UpdateDetails)),
-            TicketInvariants.EnsureDescriptionIsValid(description, nameof(UpdateDetails)));
+        var validation = Result.Combine(TicketInvariants.EnsureTitleIsValid(title, nameof(UpdateDetails)), TicketInvariants.EnsureDescriptionIsValid(description, nameof(UpdateDetails)));
         if (validation.IsFailure)
         {
             return validation;
         }
 
         Title = title;
+        // template:begin description
         Description = description;
+        // template:end description
         AddDomainEvent(new TicketChanged(DomainEntityState.Updated, Id));
 
         return Result.Success();
