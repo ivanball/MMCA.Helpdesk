@@ -2,9 +2,14 @@
   "$schema": "http://json.schemastore.org/dotnetcli.host",
   "symbolInfo": {
     "app": { "longName": "app", "shortName": "" },
-    "aggregate": { "longName": "aggregate", "shortName": "a" }
+    "aggregate": { "longName": "aggregate", "shortName": "a" },
+    "child": { "longName": "child", "shortName": "c" },
+    "flat": { "longName": "flat", "shortName": "" },
+    "noStatus": { "longName": "no-status", "shortName": "" }
   },
   "usageExamples": [
-    "-n Billing --app Contoso.Support --aggregate Invoice"
+    "-n Billing --app Contoso.Support --aggregate Invoice",
+    "-n Shipping --app Contoso.Support --aggregate Shipment --child Line",
+    "-n Shipping --app Contoso.Support --aggregate Shipment --flat --no-status"
   ]
 }

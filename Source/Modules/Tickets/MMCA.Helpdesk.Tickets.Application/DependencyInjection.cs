@@ -21,9 +21,9 @@ public static class DependencyInjection
         {
             _ = applicationSettings; // Reserved for future decorator configuration.
 
-            // The Ticket aggregate has children but eager loading goes through repository includes,
-            // so a null populator suffices here (swap for a custom INavigationPopulator<Ticket> if the
-            // query service needs to batch-load comments).
+            // Eager loading goes through repository includes, so a null populator suffices here
+            // (swap for a custom INavigationPopulator<Ticket> if the query service ever needs to
+            // batch-load child collections).
             services.TryAddScoped<INavigationPopulator<Ticket>, NullNavigationPopulator<Ticket>>();
             services.TryAddScoped<IEntityQueryService<Ticket, TicketDTO, TicketIdentifierType>,
                 EntityQueryService<Ticket, TicketDTO, TicketIdentifierType>>();

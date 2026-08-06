@@ -9,6 +9,18 @@
       "longName": "aggregate",
       "shortName": "a"
     },
+    "child": {
+      "longName": "child",
+      "shortName": "c"
+    },
+    "flat": {
+      "longName": "flat",
+      "shortName": ""
+    },
+    "noStatus": {
+      "longName": "no-status",
+      "shortName": ""
+    },
     "frameworkVersion": {
       "longName": "framework-version",
       "shortName": "f"
@@ -24,8 +36,9 @@
   },
   "usageExamples": [
     "-n Contoso.Support",
-    "-n Contoso.Support --module Orders --aggregate Order",
-    "-n Fabrikam.Desk --module Reservations --aggregate Reservation --framework-version 1.141.0",
+    "-n Contoso.Support --module Orders --aggregate Order --child Line",
+    "-n Contoso.Support --module Orders --aggregate Order --flat --no-status",
+    "-n Fabrikam.Desk --module Reservations --aggregate Reservation --framework-version 1.142.0",
     "-n Contoso.Support --local-mmca"
   ]
 }

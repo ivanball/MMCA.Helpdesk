@@ -76,9 +76,15 @@ Invoke-Step 'Install' {
 
 # Deliberately share no substring with the seed's own names: a rename that half-applies shows up as
 # a leftover Helpdesk or Ticket, which the token sweep below then fails on.
+#
+# The two cases are the two SHAPES, not two names. Contoso.Support takes both axis flags away, so it
+# proves the conditional regions and the file exclusions produce a solution that still compiles and
+# still tests; Zeta.Warehouse stays default, so it proves the same seed still produces the full
+# sample. Running both is the only way a marker region that removes one line too many (or too few)
+# fails here rather than in an adopter's first build.
 $cases = @(
-    @{ Name = 'Contoso.Support'; Module = 'Billing';      Aggregate = 'Invoice' },
-    @{ Name = 'Zeta.Warehouse';  Module = 'Reservations'; Aggregate = 'Reservation' }
+    @{ Name = 'Contoso.Support'; Module = 'Billing'; Aggregate = 'Invoice'; Flat = $true; NoStatus = $true },
+    @{ Name = 'Zeta.Warehouse'; Module = 'Reservations'; Aggregate = 'Reservation'; Flat = $false; NoStatus = $false }
 )
 
 $mmcaPinPattern = '<PackageVersion\s+Include="(MMCA\.Common[^"]*)"\s+Version="([^"]+)"'
@@ -133,12 +139,17 @@ Invoke-Step 'Explicit --framework-version is honored' {
 foreach ($case in $cases) {
     $appName = $case.Name
 
+    $shapeFlags = @()
+    if ($case.Flat) { $shapeFlags += '--flat' }
+    if ($case.NoStatus) { $shapeFlags += '--no-status' }
+    $shape = if ($shapeFlags) { $shapeFlags -join ' ' } else { 'default shape' }
+
     # Generate straight into WorkPath: preferNameDirectory already creates the <AppName> folder, so
     # a per-case subdirectory would nest it twice and cost 20 more characters of path budget.
-    Invoke-Step "Generate $appName (module $($case.Module), aggregate $($case.Aggregate))" {
+    Invoke-Step "Generate $appName (module $($case.Module), aggregate $($case.Aggregate), $shape)" {
         Push-Location $WorkPath
         try {
-            dotnet new mmca-app -n $appName --module $case.Module --aggregate $case.Aggregate --no-restore
+            dotnet new mmca-app -n $appName --module $case.Module --aggregate $case.Aggregate @shapeFlags --no-restore
         } finally {
             Pop-Location
         }
@@ -163,6 +174,45 @@ Residual seed tokens survived the rename in $($offenders.Count) file(s):
 "@
         }
         Write-Host "  no residual 'helpdesk' or 'ticket' tokens"
+    }
+
+    # The shape flags remove code rather than disable it, so the proof is that the tokens are gone,
+    # not that the app happens to build. Three exclusions, all deliberate: .editorconfig is copyOnly
+    # (its analyzer descriptions use "comment" as an English word), the UI page .resx files keep
+    # their full key set on purpose, because an orphan localization key costs nothing and
+    # conditionalizing six resource files to save it would not, and the README documents the flags
+    # themselves, so it names both axes by design. All three are swept for the seed's own tokens
+    # above; only the shape tokens are exempt here.
+    #
+    # Deliberately narrow patterns. A blanket "Status" would fire on StatusCodes.Status200OK in every
+    # controller, which is ASP.NET's, not the aggregate's.
+    if ($case.Flat -or $case.NoStatus) {
+        Invoke-Step "Shape sweep $appName ($shape)" {
+            $shapePatterns = @()
+            if ($case.Flat) { $shapePatterns += 'Comment' }
+            if ($case.NoStatus) { $shapePatterns += "$($case.Aggregate)Status", 'ChangeStatus' }
+            $shapeRegex = ($shapePatterns | ForEach-Object { [regex]::Escape($_) }) -join '|'
+
+            $offenders = Get-ChildItem -Path $appRoot -Recurse -File -Force |
+                Where-Object {
+                    $_.FullName -notmatch '[\\/](bin|obj)[\\/]' -and
+                    $_.Name -ne '.editorconfig' -and
+                    $_.Extension -ne '.resx' -and
+                    $_.Extension -ne '.md'
+                } |
+                ForEach-Object {
+                    $hit = Select-String -Path $_.FullName -Pattern $shapeRegex -CaseSensitive -List
+                    if ($hit) { "$($_.FullName.Substring($appRoot.Length)) line $($hit.LineNumber): $($hit.Line.Trim())" }
+                }
+
+            if ($offenders) {
+                throw @"
+Generated with $shape but $($offenders.Count) file(s) still carry the removed axis:
+  $($offenders -join "`n  ")
+"@
+            }
+            Write-Host "  no '$($shapePatterns -join "' / '")' tokens survive $shape"
+        }
     }
 
     Invoke-Step "Framework pin $appName" {
@@ -191,57 +241,41 @@ Residual seed tokens survived the rename in $($offenders.Count) file(s):
     $useCases = Join-Path $appRoot "Source/Modules/$($case.Module)/$appName.$($case.Module).Application/$($case.Module)/UseCases"
     if (-not (Test-Path $useCases)) { throw "No UseCases folder at $useCases" }
 
+    # The FALSE branch of the eager-load conditional, proved against an aggregate that genuinely owns
+    # no collection. That is the whole point of the conditional, and --flat is the shape that makes
+    # this app's aggregate that way, so a slice naming a navigation here does not merely look wrong,
+    # it does not compile. The TRUE branch is proved further down, inside the module added below,
+    # whose aggregate does own children.
     Invoke-Step "Generate slices into $appName" {
         Push-Location $useCases
         try {
             # --domain-method Delete: the command slice calls a guarded method on the aggregate, and
             # the scaffold cannot invent one. Pointing it at a method the generated aggregate
             # already has is what makes this step a compile check rather than a rename check.
-            #
-            # No --child-collection, deliberately: this is the shape an adopter gets by default, and
-            # it is the shape that used to ship a handler naming the seed's Comments collection.
             dotnet new mmca-command -n "Archive$($case.Aggregate)" --app $appName --module $case.Module --aggregate $case.Aggregate --domain-method Delete
             if ($LASTEXITCODE -ne 0) { throw "mmca-command failed with exit code $LASTEXITCODE" }
 
-            # The other branch of the same conditional: an aggregate that does own a collection.
-            dotnet new mmca-command -n "Restore$($case.Aggregate)" --app $appName --module $case.Module --aggregate $case.Aggregate --domain-method Delete --child-collection Comments
-            if ($LASTEXITCODE -ne 0) { throw "mmca-command --child-collection failed with exit code $LASTEXITCODE" }
-
-            # Same two branches on the read side. The query slice is staged from a GetById that maps
-            # children into its DTO, so it carried the identical navigation leak.
             dotnet new mmca-query -n "Get$($case.Aggregate)ByNumber" --app $appName --module $case.Module --aggregate $case.Aggregate
             if ($LASTEXITCODE -ne 0) { throw "mmca-query failed with exit code $LASTEXITCODE" }
-
-            dotnet new mmca-query -n "Find$($case.Aggregate)ByCode" --app $appName --module $case.Module --aggregate $case.Aggregate --child-collection Comments
-            if ($LASTEXITCODE -ne 0) { throw "mmca-query --child-collection failed with exit code $LASTEXITCODE" }
         } finally {
             Pop-Location
         }
     }
 
-    # Both branches of both slices, asserted on the generated text rather than only on the build.
-    # Without --child-collection the eager-load must be EMPTY, not renamed: a build check alone would
-    # pass on this app, whose aggregate does own Comments, and go on failing for every adopter whose
-    # aggregate does not.
+    # Asserted on the generated text rather than only on the build. Without --child-collection the
+    # eager-load must be EMPTY, not renamed.
     Invoke-Step "Eager-load conditional $appName" {
         $bare = @(
             Join-Path $useCases "Archive$($case.Aggregate)/Archive$($case.Aggregate)Handler.cs"
             Join-Path $useCases "Get$($case.Aggregate)ByNumber/Get$($case.Aggregate)ByNumberHandler.cs"
         )
-        $withChild = @(
-            Join-Path $useCases "Restore$($case.Aggregate)/Restore$($case.Aggregate)Handler.cs"
-            Join-Path $useCases "Find$($case.Aggregate)ByCode/Find$($case.Aggregate)ByCodeHandler.cs"
-        )
-
-        foreach ($handler in ($bare + $withChild)) {
-            if (-not (Test-Path $handler)) { throw "No generated handler at $handler" }
-            if ((Get-Content $handler -Raw) -match '//#if|//#else|//#endif') {
-                throw "Conditional directives survived into $handler. The templating engine did not process them, so the file ships commented-out scaffolding."
-            }
-        }
 
         foreach ($handler in $bare) {
+            if (-not (Test-Path $handler)) { throw "No generated handler at $handler" }
             $text = Get-Content $handler -Raw
+            if ($text -match '//#if|//#else|//#endif') {
+                throw "Conditional directives survived into $handler. The templating engine did not process them, so the file ships disabled scaffolding."
+            }
             if ($text -match 'includes: \[nameof') {
                 throw "Generated without --child-collection but $handler still names a navigation. It must fall back to an empty include list."
             }
@@ -252,19 +286,13 @@ Residual seed tokens survived the rename in $($offenders.Count) file(s):
             }
         }
 
-        foreach ($handler in $withChild) {
-            if ((Get-Content $handler -Raw) -notmatch 'includes: \[nameof\([A-Za-z]+\.Comments\)\]') {
-                throw "Generated with --child-collection Comments but $handler has no matching eager-load."
-            }
-        }
-
-        Write-Host "  empty include list without --child-collection, named navigation with it (command and query)"
+        Write-Host "  empty include list without --child-collection (command and query)"
     }
 
     Invoke-Step "Token sweep $appName slices" {
         $sliceFiles = @(Get-ChildItem -Path $useCases -Recurse -File |
-            Where-Object { $_.DirectoryName -match 'Archive|Restore|ByNumber|ByCode' })
-        if ($sliceFiles.Count -ne 8) { throw "Expected 8 slice files, found $($sliceFiles.Count)" }
+            Where-Object { $_.DirectoryName -match 'Archive|ByNumber' })
+        if ($sliceFiles.Count -ne 4) { throw "Expected 4 slice files, found $($sliceFiles.Count)" }
 
         $offenders = $sliceFiles | ForEach-Object {
             $hit = Select-String -Path $_.FullName -Pattern 'helpdesk|ticket' -CaseSensitive:$false -List
@@ -284,16 +312,54 @@ Residual seed tokens survived the rename in $($offenders.Count) file(s):
     # as a compile error nowhere else.
     $newModule = 'Shipping'
     $newAggregate = 'Shipment'
+    $newChild = 'Item'
     $short = $appName.Split('.')[-1]
 
-    Invoke-Step "Generate module $newModule into $appName" {
+    # --child Item, deliberately, and into an app generated --flat: one solution then holds a module
+    # with no children beside a module whose child is named something the seed never used. The child
+    # rename is a three-way substitution (type, plural navigation, lower-case route), and the only
+    # thing that catches a half-applied one is asserting on the generated names.
+    Invoke-Step "Generate module $newModule into $appName (child $newChild)" {
         Push-Location $appRoot
         try {
-            dotnet new mmca-module -n $newModule --app $appName --aggregate $newAggregate
+            dotnet new mmca-module -n $newModule --app $appName --aggregate $newAggregate --child $newChild
             if ($LASTEXITCODE -ne 0) { throw "mmca-module failed with exit code $LASTEXITCODE" }
         } finally {
             Pop-Location
         }
+    }
+
+    $newModuleRoot = Join-Path $appRoot "Source/Modules/$newModule"
+
+    Invoke-Step "Child rename $newAggregate$newChild" {
+        $expectedFiles = @(
+            "$appName.$newModule.Domain/$newModule/$newAggregate$newChild.cs"
+            "$appName.$newModule.Shared/$newModule/$newAggregate${newChild}DTO.cs"
+            "$appName.$newModule.Shared/$newModule/Add${newChild}Request.cs"
+            "$appName.$newModule.Shared/$newModule/Edit${newChild}Request.cs"
+            "$appName.$newModule.Application/$newModule/UseCases/Add$newChild/Add${newChild}Handler.cs"
+            "$appName.$newModule.Application/$newModule/UseCases/Edit$newChild/Edit${newChild}Handler.cs"
+            "$appName.$newModule.Application/$newModule/UseCases/Remove$newChild/Remove${newChild}Handler.cs"
+        )
+        foreach ($relative in $expectedFiles) {
+            $full = Join-Path $newModuleRoot $relative
+            if (-not (Test-Path $full)) { throw "--child $newChild produced no $relative" }
+        }
+
+        $entity = Get-Content (Join-Path $newModuleRoot "$appName.$newModule.Domain/$newModule/$newAggregate$newChild.cs") -Raw
+        if ($entity -notmatch "public sealed class $newAggregate$newChild\b") {
+            throw "The generated child entity is not named $newAggregate$newChild."
+        }
+
+        $controller = Get-Content (Join-Path $newModuleRoot "$appName.$newModule.API/Controllers/${newModule}Controller.cs") -Raw
+        if ($controller -notmatch [regex]::Escape('"{id}/items"')) {
+            throw "The generated controller has no /items route, so --child did not reach the lower-case plural form."
+        }
+        if ($controller -match 'Comment') {
+            throw "The generated controller still names Comment, so --child only half applied."
+        }
+
+        Write-Host "  $newAggregate$newChild, Add/Edit/Remove$newChild slices, /items routes"
     }
 
     Invoke-Step "Wire up module $newModule" {
@@ -398,6 +464,13 @@ Residual seed tokens survived the rename in $($offenders.Count) file(s):
             ($case.Module) = New-DataSourceEntry $case.Module
             ($newModule) = New-DataSourceEntry $newModule
         })
+
+        # IEventBus writes handler-published integration events to ONE configured outbox source per
+        # host. It defaults to Default, and Default is whichever module's WithSQLServerDataSource call
+        # ran last, so leaving it implicit means the outbox moves the day those calls are reordered.
+        $settings | Add-Member -NotePropertyName 'Outbox' -NotePropertyValue ([pscustomobject]@{
+            DatabaseName = $case.Module
+        })
         $settings | ConvertTo-Json -Depth 10 | Set-Content -Path $appSettingsPath
 
         Write-Host "  all six wire-ups applied"
@@ -415,6 +488,41 @@ Residual seed tokens survived the rename in $($offenders.Count) file(s):
             throw "The shipped Migrations/.editorconfig does not mark migration output as generated code."
         }
         Write-Host "  Migrations/.editorconfig present and marks output as generated code"
+    }
+
+    # The TRUE branch of the eager-load conditional, and the one place in the run where an aggregate
+    # actually owns a collection. It is also named Items rather than Comments, which is what proves
+    # --child-collection is a free-text symbol and not a second spelling of the seed's navigation.
+    $newUseCases = Join-Path $newModuleRoot "$appName.$newModule.Application/$newModule/UseCases"
+
+    Invoke-Step "Generate --child-collection slices into $newModule" {
+        Push-Location $newUseCases
+        try {
+            dotnet new mmca-command -n "Restore$newAggregate" --app $appName --module $newModule --aggregate $newAggregate --domain-method Delete --child-collection "${newChild}s"
+            if ($LASTEXITCODE -ne 0) { throw "mmca-command --child-collection failed with exit code $LASTEXITCODE" }
+
+            dotnet new mmca-query -n "Find${newAggregate}ByCode" --app $appName --module $newModule --aggregate $newAggregate --child-collection "${newChild}s"
+            if ($LASTEXITCODE -ne 0) { throw "mmca-query --child-collection failed with exit code $LASTEXITCODE" }
+        } finally {
+            Pop-Location
+        }
+
+        $withChild = @(
+            Join-Path $newUseCases "Restore$newAggregate/Restore${newAggregate}Handler.cs"
+            Join-Path $newUseCases "Find${newAggregate}ByCode/Find${newAggregate}ByCodeHandler.cs"
+        )
+        foreach ($handler in $withChild) {
+            if (-not (Test-Path $handler)) { throw "No generated handler at $handler" }
+            $text = Get-Content $handler -Raw
+            if ($text -match '//#if|//#else|//#endif') {
+                throw "Conditional directives survived into $handler. The templating engine did not process them, so the file ships disabled scaffolding."
+            }
+            if ($text -notmatch "includes: \[nameof\($newAggregate\.${newChild}s\)\]") {
+                throw "Generated with --child-collection ${newChild}s but $handler has no matching eager-load."
+            }
+        }
+
+        Write-Host "  named navigation with --child-collection (command and query)"
     }
 
     Invoke-Step "Rebuild $appName with two modules" { dotnet build $slnx -c Release }

@@ -8,7 +8,7 @@ using MMCA.Helpdesk.Tickets.Shared.Tickets;
 namespace MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.GetById;
 
 /// <summary>
-/// Loads a single ticket with its comments (the list endpoint omits children) and maps it to a DTO.
+/// Loads a single ticket with its children (the list endpoint omits them) and maps it to a DTO.
 /// </summary>
 public sealed class GetTicketByIdHandler(IUnitOfWork unitOfWork, TicketDTOMapper dtoMapper)
     : IQueryHandler<GetTicketByIdQuery, Result<TicketDTO>>

@@ -8,13 +8,21 @@ using MMCA.Common.API.Controllers;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.UseCases;
 using MMCA.Common.Shared.Abstractions;
+// template:begin child
 using MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.AddComment;
+// template:end child
+// template:begin status
 using MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.ChangeStatus;
+// template:end status
 using MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.Create;
 using MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.Delete;
+// template:begin child
 using MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.EditComment;
+// template:end child
 using MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.GetById;
+// template:begin child
 using MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.RemoveComment;
+// template:end child
 using MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.Update;
 using MMCA.Helpdesk.Tickets.Domain.Tickets;
 using MMCA.Helpdesk.Tickets.Shared.Tickets;
@@ -23,8 +31,8 @@ namespace MMCA.Helpdesk.Tickets.API.Controllers;
 
 /// <summary>
 /// REST API for support tickets. Read endpoints (GetAll / paged) come from
-/// <see cref="EntityControllerBase{TEntity, TDTO, TId}"/>; create, update, and comment operations
-/// inject handlers directly. Failures map to RFC 9457 ProblemDetails via <c>HandleFailure</c>.
+/// <see cref="EntityControllerBase{TEntity, TDTO, TId}"/>; the write operations inject their
+/// handlers directly. Failures map to RFC 9457 ProblemDetails via <c>HandleFailure</c>.
 /// </summary>
 [ApiController]
 [Route("[controller]")]
@@ -38,15 +46,19 @@ public sealed class TicketsController(
     IQueryHandler<GetTicketByIdQuery, Result<TicketDTO>> getByIdHandler,
     ICommandHandler<TicketCreateRequest, Result<TicketDTO>> createHandler,
     ICommandHandler<UpdateTicketCommand, Result<TicketDTO>> updateHandler,
+    // template:begin status
     ICommandHandler<ChangeTicketStatusCommand, Result<TicketDTO>> changeStatusHandler,
+    // template:end status
     ICommandHandler<DeleteTicketCommand, Result> deleteHandler,
+    // template:begin child
     ICommandHandler<AddCommentCommand, Result<TicketCommentDTO>> addCommentHandler,
     ICommandHandler<EditCommentCommand, Result> editCommentHandler,
     ICommandHandler<RemoveCommentCommand, Result> removeCommentHandler,
+    // template:end child
     ILogger<TicketsController> logger)
     : EntityControllerBase<Ticket, TicketDTO, TicketIdentifierType>(queryService, logger)
 {
-    /// <summary>Gets a single ticket including its comments.</summary>
+    /// <summary>Gets a single ticket by id, with its children.</summary>
     [HttpGet("{id}/details")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -97,6 +109,7 @@ public sealed class TicketsController(
         return result.IsFailure ? HandleFailure(result.Errors) : Ok(result.Value);
     }
 
+    // template:begin status
     /// <summary>Changes a ticket's status.</summary>
     [HttpPut("{id}/status")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -115,7 +128,8 @@ public sealed class TicketsController(
         return result.IsFailure ? HandleFailure(result.Errors) : Ok(result.Value);
     }
 
-    /// <summary>Soft-deletes a ticket (and cascade-soft-deletes its comments).</summary>
+    // template:end status
+    /// <summary>Soft-deletes a ticket, cascading to its children.</summary>
     [HttpDelete("{id}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -127,6 +141,7 @@ public sealed class TicketsController(
         return result.IsFailure ? HandleFailure(result.Errors) : NoContent();
     }
 
+    // template:begin child
     [HttpPost("{id}/comments")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -182,4 +197,5 @@ public sealed class TicketsController(
             cancellationToken).ConfigureAwait(false);
         return result.IsFailure ? HandleFailure(result.Errors) : NoContent();
     }
+    // template:end child
 }

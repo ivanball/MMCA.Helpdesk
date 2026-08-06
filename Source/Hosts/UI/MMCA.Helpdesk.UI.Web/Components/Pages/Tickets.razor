@@ -31,15 +31,19 @@
     <HeaderContent>
         <MudTh>@L["Column.Id"]</MudTh>
         <MudTh>@L["Column.Title"]</MudTh>
+        @* template:begin status *@
         <MudTh>@L["Column.Status"]</MudTh>
+        @* template:end status *@
         <MudTh>@L["Column.Requester"]</MudTh>
         <MudTh>@L["Column.Actions"]</MudTh>
     </HeaderContent>
     <RowTemplate>
         <MudTd DataLabel="@L["Column.Id"].Value">@context.Id</MudTd>
         <MudTd DataLabel="@L["Column.Title"].Value">@context.Title</MudTd>
+        @* template:begin status *@
         @* Enum display localizes via Status.* keys; the wire/enum value itself stays untranslated. *@
         <MudTd DataLabel="@L["Column.Status"].Value">@L[$"Status.{context.Status}"]</MudTd>
+        @* template:end status *@
         <MudTd DataLabel="@L["Column.Requester"].Value">@context.RequesterUserId</MudTd>
         <MudTd DataLabel="@L["Column.Actions"].Value">
             <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary"

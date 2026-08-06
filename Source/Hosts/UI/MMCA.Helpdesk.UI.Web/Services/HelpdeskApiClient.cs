@@ -9,7 +9,7 @@ namespace MMCA.Helpdesk.UI.Web.Services;
 /// Typed client for the Tickets REST API. Runs server-side (Blazor Server), so calls go directly to
 /// the API host resolved by Aspire service discovery (no browser CORS). On failure it uses the
 /// framework's <see cref="ServiceExceptionHelper"/> to read the RFC 9457 ProblemDetails body and throw
-/// with the domain error message (e.g. "Comments cannot be added to a closed ticket.") before the
+/// with the domain error message (whatever invariant the aggregate refused on) before the
 /// generic <c>EnsureSuccessStatusCode</c> fallback — the same pattern MMCA.Common.UI's
 /// <c>EntityServiceBase</c> uses, so pages surface a meaningful message.
 /// </summary>
@@ -69,6 +69,7 @@ public sealed class HelpdeskApiClient(HttpClient httpClient)
         response.EnsureSuccessStatusCode();
     }
 
+    // template:begin status
     public async Task ChangeStatusAsync(int id, TicketStatus status, CancellationToken cancellationToken = default)
     {
         using var response = await httpClient
@@ -78,6 +79,8 @@ public sealed class HelpdeskApiClient(HttpClient httpClient)
         response.EnsureSuccessStatusCode();
     }
 
+    // template:end status
+    // template:begin child
     public async Task AddCommentAsync(int id, string body, int authorUserId, CancellationToken cancellationToken = default)
     {
         using var response = await httpClient
@@ -104,4 +107,5 @@ public sealed class HelpdeskApiClient(HttpClient httpClient)
         await ServiceExceptionHelper.ThrowIfDomainExceptionAsync(response, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
     }
+    // template:end child
 }

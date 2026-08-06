@@ -23,20 +23,24 @@ internal sealed class TicketConfiguration : EntityTypeConfigurationSQLServer<Tic
             .HasMaxLength(TicketInvariants.DescriptionMaxLength)
             .IsRequired();
 
+        // template:begin status
         builder.Property(p => p.Status)
             .HasConversion<string>()
             .HasMaxLength(32)
             .IsRequired();
 
+        // template:end status
         builder.Property(p => p.RequesterUserId)
             .IsRequired();
 
         builder.HasIndex(p => p.RequesterUserId)
             .HasFilter("[IsDeleted] = 0");
 
+        // template:begin child
         builder.HasMany(p => p.Comments)
             .WithOne(c => c.Ticket)
             .HasForeignKey(c => c.TicketId)
             .IsRequired();
+        // template:end child
     }
 }

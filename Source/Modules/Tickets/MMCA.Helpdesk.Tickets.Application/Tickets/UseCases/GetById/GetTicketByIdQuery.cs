@@ -3,7 +3,7 @@ using MMCA.Common.Application.UseCases;
 namespace MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.GetById;
 
 /// <summary>
-/// Query for a single ticket including its (non-deleted) comments.
+/// Query for a single ticket including its (non-deleted) children.
 /// <para>
 /// This is the read half of the framework's caching pair. Implementing
 /// <see cref="IQueryCacheable"/> puts the query behind <c>CachingQueryDecorator</c>: the first call
