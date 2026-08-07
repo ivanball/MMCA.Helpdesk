@@ -87,7 +87,7 @@ dotnet_style_prefer_inferred_tuple_names = true:error
 dotnet_style_prefer_is_null_check_over_reference_equality_method = true:error
 dotnet_style_prefer_simplified_boolean_expressions = true:suggestion
 dotnet_style_prefer_simplified_interpolation = true:suggestion
-dotnet_style_namespace_match_folder = true:suggestion
+dotnet_style_namespace_match_folder = true:warning
 dotnet_style_prefer_foreach_explicit_cast_in_source = when_strongly_typed:suggestion
 
 # Field preferences
