@@ -771,8 +771,9 @@ if ($declaredVersion -ne $frameworkVersion) {
 #
 # This is appended to the STAGED copy, never to the seed's own .editorconfig: that file stays the
 # single source of the shared analyzer baseline that compare-analyzer-config.ps1 enforces across the
-# four repos. Two rules are relaxed, the other 212 severities are untouched, and the generated app
-# carries the one command that restores full strictness.
+# four repos. Three rules are relaxed (the delta ADDS entries; none of the three appears among the
+# seed's own explicit severities, which are all untouched), and the generated app carries the one
+# command that restores SA1210/SA1211 plus the by-hand note for IDE0021.
 $editorConfig = Join-Path $appStaging '.editorconfig'
 if (-not (Test-Path $editorConfig)) {
     throw "No .editorconfig in staging. Generated apps would build without the five analyzers."
