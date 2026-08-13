@@ -1,0 +1,9 @@
+<!-- Active local-source override, COMMITTED in this reference seed so a fresh clone alongside
+     ..\MMCA.Common builds against framework source with no GitHub Packages token. (In real consumer
+     repos like Store/ADC this file is gitignored.) Delete it to consume the published NuGet packages. -->
+<Project>
+  <PropertyGroup>
+    <UseLocalMMCA>true</UseLocalMMCA>
+    <LocalMMCAPath>$(MSBuildThisFileDirectory)..\MMCA.Common\Source\</LocalMMCAPath>
+  </PropertyGroup>
+</Project>
