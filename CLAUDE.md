@@ -145,7 +145,9 @@ The one module, `Tickets`, is split across five projects under `Source/Modules/T
 `Source/Hosting/` (AppHost + migrations).
 
 **The host DI sequence is load-bearing and fixed** (`Source/Hosts/MMCA.Helpdesk.Web/Program.cs`):
-`AddApplication()` → `AddInfrastructure()` → `AddAPI(modulesSettings)` →
+`AddApplication()` → `AddInfrastructure()` → the three v1.150.0 opt-ins that layer on top of it
+(`AddAuditTrail()` → `AddScheduledJobs()` → `AddMultiTenancy()`, order irrelevant among themselves)
+→ `AddAPI(modulesSettings)` →
 `AddErrorResources<TicketsErrorResources>()` (module error-code translations for localized
 ProblemDetails, ADR-027) → `ModuleLoader.DiscoverAndRegister(...)`
 → `AddBrokerMessaging()` → **`AddApplicationDecorators()` must come last** (it wraps the
@@ -196,6 +198,59 @@ assembly-name convention, which is why `Infrastructure/DependencyInjection.cs` i
 `HelpdeskApiClient` + Aspire service discovery (base address `https+http://web` from config): no
 browser CORS, no token. On failure it calls `ServiceExceptionHelper.ThrowIfDomainExceptionAsync` to
 surface the domain error message before the generic `EnsureSuccessStatusCode` fallback.
+
+## Multi-tenancy demo (and the other v1.150.0 opt-ins)
+
+This seed is the framework's **runnable reference for multi-tenancy**, so unlike ADC and Store it turns
+the feature on. `Ticket` and `TicketComment` implement `ITenantEntity`, which is the whole domain-side
+change: the framework adds a required `varchar(64)` `TenantId` column plus an index to each table, and
+composes a named `Tenant` query filter with the existing `SoftDelete` one. `Ticket` also implements
+`IAuditedEntity` (field-level change history in `dbo.AuditTrailEntries`, written in the same
+transaction as the data); `TicketComment` deliberately does not, because the trail records history per
+aggregate.
+
+**Two tenants, on purpose, because there are two isolation modes:**
+
+- **`acme`** carries no `Tenancy:Tenants:acme:DataSources` override, so it shares the pooled Helpdesk
+  database and is separated from other tenants only by the query filter (shared schema).
+- **`globex`** overrides the connection string and lands in its own `Helpdesk_Globex` database
+  (database per tenant). The AppHost declares that second database and injects its connection string
+  as `Tenancy__Tenants__globex__DataSources__Default__SQLServerConnectionString`; the host migrates it
+  at startup in the per-tenant pass, and the outbox drains per `(source, tenant)` pair.
+
+Two details that look wrong until you know them:
+
+- **The override key is `Default`, not `Tickets`.** Per-tenant overrides are keyed by **physical** data
+  source name. The AppHost injects the same connection string as both the `Tickets` logical source and
+  the top-level one, so the resolver collapses `Tickets` onto `Default`. Keying the override `Tickets`
+  fails `ValidateOnStart` with "overrides a SQLServer data source that does not exist". The design-time
+  factory mirrors that collapse for exactly the same reason: `ScheduledJobs` is a Default-source-only
+  table, so a factory whose physical source is not `Default` scaffolds a migration without it.
+- **`RequireTenant` is `false` here, against the framework default of `true`.** This seed runs
+  issuer-less (no Identity module, `[AllowAnonymous]` endpoints), so no request carries a `tenant_id`
+  claim and fail-closed would answer every unheadered call, including the health probes' neighbours and
+  the guides' first `curl`, with a 400. `false` makes an unresolved caller the **system** caller, which
+  reads across all tenants. Any app with a real issuer should delete the line and take the fail-closed
+  default. The trade-off is not free: an unresolved caller can read every tenant's rows, and a **write**
+  with no tenant resolved throws `CrossTenantWriteException` rather than inserting an untenanted row
+  (the column is NOT NULL). That is why the Blazor UI stamps the header rather than relying on the
+  permissive default.
+
+**Exercising it:** resolution is claim first, then the `X-Tenant-Id` header. `curl -H "X-Tenant-Id:
+acme" .../Tickets` and the same call with `globex` hit two different databases through one code path.
+The UI host sends the header for every call from its typed client, from `Api:TenantId` (default
+`acme`), so switching that one config value re-points the whole front end at the other tenant.
+
+**Adopting on existing data:** the migration adds `TenantId` with a `""` default, and `""` matches no
+tenant, so pre-existing rows become invisible to every tenant while staying visible to the system
+caller. A real app stamps those rows before turning `RequireTenant` on.
+
+The other two opt-ins are configuration only. `AuditTrail:Enabled` and `Scheduler:Enabled` are both
+true here, and they travel together: `AddAuditTrail` registers the `audit-trail-cleanup` retention job,
+but only the scheduler runner actually runs it. Both are mirrored by `EnableAuditTrail` /
+`EnableScheduler` on the design-time factory, and **those flags must stay in step with the host
+settings** or the scaffolded model drifts from the running one. CSV export needed no change at all:
+`EntityControllerBase` grew `GET /Tickets/export` on rebuild.
 
 ## Seed-specific gotchas
 

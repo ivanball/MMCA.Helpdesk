@@ -31,8 +31,20 @@ builder.Services.AddScoped<ICultureApplier, EndpointCultureApplier>();
 // the service-discovery handler (from AddServiceDefaults) resolves the "web" API resource at runtime.
 var apiBaseAddress = builder.Configuration["Api:BaseAddress"]
     ?? throw new InvalidOperationException("Api:BaseAddress is not configured.");
+// Multi-tenancy demo: the API resolves the tenant from a claim first, then the X-Tenant-Id header.
+// This client calls the API server-side and carries no user token, so it stamps the header from
+// config. Point Api:TenantId at "globex" to browse the tenant whose rows live in their own database,
+// with no other change anywhere in the UI. Leave it empty to call as the system caller, which sees
+// every tenant's rows.
+var tenantId = builder.Configuration["Api:TenantId"];
 builder.Services.AddHttpClient<HelpdeskApiClient>(client =>
-    client.BaseAddress = new Uri(apiBaseAddress));
+{
+    client.BaseAddress = new Uri(apiBaseAddress);
+    if (!string.IsNullOrWhiteSpace(tenantId))
+    {
+        client.DefaultRequestHeaders.Add("X-Tenant-Id", tenantId);
+    }
+});
 
 var app = builder.Build();
 
