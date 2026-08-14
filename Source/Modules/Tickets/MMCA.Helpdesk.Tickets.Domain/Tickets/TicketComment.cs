@@ -1,19 +1,25 @@
 using MMCA.Common.Domain.Attributes;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Extensions;
+using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Shared.Abstractions;
 
 namespace MMCA.Helpdesk.Tickets.Domain.Tickets;
 
 /// <summary>
 /// A comment on a <see cref="Ticket"/>. Child entity of the Ticket aggregate; created and managed
-/// through the aggregate root, never directly.
+/// through the aggregate root, never directly. Marked <see cref="ITenantEntity"/> so the child rows
+/// carry the same isolation as the root; <see cref="IAuditedEntity"/> is deliberately NOT applied
+/// here, because the audit trail records history per aggregate.
 /// </summary>
 [IdValueGenerated]
-public sealed class TicketComment : AuditableBaseEntity<TicketCommentIdentifierType>
+public sealed class TicketComment : AuditableBaseEntity<TicketCommentIdentifierType>, ITenantEntity
 {
     [Navigation]
     public Ticket? Ticket { get; set; }
+
+    // Owning tenant, stamped by the framework's tenant interceptor on insert (see Ticket.TenantId).
+    public string TenantId { get; private set; } = string.Empty;
 
     public TicketIdentifierType TicketId { get; init; }
 

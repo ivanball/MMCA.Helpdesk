@@ -246,15 +246,22 @@ $Manual
 function Get-JsonObjectRange {
     param([hashtable] $Document, [string] $Key, [switch] $Optional)
 
+    # TOP-LEVEL keys only. A nested object can carry the same name as a root one, and a per-tenant
+    # "DataSources" override under the tenancy section is exactly that case. Rewriting the nested
+    # object instead of the root one produces a file that is still valid JSON and silently wrong, so
+    # the search tracks brace depth and only accepts a match sitting directly in the root object.
     $openPattern = '^\s*"' + [regex]::Escape($Key) + '"\s*:\s*\{'
     $open = -1
+    $depth = 0
     for ($i = 0; $i -lt $Document.Lines.Count; $i++) {
-        if ($Document.Lines[$i] -match $openPattern) { $open = $i; break }
+        if ($depth -eq 1 -and $Document.Lines[$i] -match $openPattern) { $open = $i; break }
+        $depth += ([regex]::Matches($Document.Lines[$i], '\{')).Count
+        $depth -= ([regex]::Matches($Document.Lines[$i], '\}')).Count
     }
 
     if ($open -lt 0) {
         if ($Optional) { return $null }
-        throw "appsettings.json has no `"$Key`" section. Add it by hand (see the printed instructions from dotnet new mmca-module)."
+        throw "appsettings.json has no top-level `"$Key`" section. Add it by hand (see the printed instructions from dotnet new mmca-module)."
     }
 
     $depth = 0

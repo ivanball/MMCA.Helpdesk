@@ -91,6 +91,35 @@ To add real RS256/JWKS auth, add the Identity module (see
 [Building by Hand](https://ivanball.github.io/docs/guides/common-BUILD-BY-HAND.html), Phase 8),
 set `Authentication:JwtBearer:Authority`, and switch the controller back to `[Authorize]`.
 
+## Multi-tenancy demo
+
+This seed is also the framework's runnable **multi-tenancy** reference, so it ships the feature turned
+on (the production apps deliberately do not). `Ticket` and `TicketComment` implement `ITenantEntity`,
+which is the entire domain-side change: the framework adds the `TenantId` column and composes a tenant
+query filter with the existing soft-delete one. Two tenants are configured because there are two
+isolation modes to show:
+
+| Tenant | Isolation | Where its rows live |
+|---|---|---|
+| `acme` | shared schema, tenant query filter | the pooled `Helpdesk` database |
+| `globex` | database per tenant | its own `Helpdesk_Globex` database, via a per-tenant `DataSources` override the AppHost injects |
+
+The tenant is resolved from a `tenant_id` claim first, then the `X-Tenant-Id` header, so the same call
+against two headers reaches two different databases:
+
+```bash
+curl -H "X-Tenant-Id: acme"   https://localhost:<port>/Tickets
+curl -H "X-Tenant-Id: globex" https://localhost:<port>/Tickets
+```
+
+The Blazor UI sends the header on every server-side call from `Api:TenantId` (default `acme`), so
+switching that one setting re-points the whole front end at the other tenant. Because this seed runs
+issuer-less, `Tenancy:RequireTenant` is `false` here rather than the framework's fail-closed default: a
+caller with no tenant is the **system** caller and reads across tenants. An app with a real issuer
+should drop that line and keep the default. Alongside tenancy, the seed turns on the framework's
+**audit trail** (field-level history for `Ticket`) and the **job scheduler** that runs its retention
+job, and every entity controller now also serves `GET /Tickets/export` as RFC 4180 CSV.
+
 ## Status
 
 Build-verified here:
@@ -98,7 +127,8 @@ Build-verified here:
 - `dotnet build MMCA.Helpdesk.slnx` -> 0 warnings, 0 errors.
 - `dotnet test --solution` -> 91 passing (domain + application + architecture-fitness), no database needed.
 - `dotnet ef migrations add InitialCreate` -> generates `Tickets`, `TicketComments`, and the per-DB
-  `OutboxMessages` table with audit, soft-delete, and concurrency columns.
+  `OutboxMessages` table with audit, soft-delete, and concurrency columns. The follow-up migration adds
+  the `TenantId` columns plus the framework's `AuditTrailEntries` and `ScheduledJobs` tables.
 
 End-to-end run (POST/GET against SQL, and the Phase 8 extraction into a Tickets service behind a
 gateway) needs a reachable SQL Server and an Identity issuer, and is described step by step in

@@ -2,6 +2,7 @@ using MMCA.Common.Domain.Attributes;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Enums;
 using MMCA.Common.Domain.Extensions;
+using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Helpdesk.Tickets.Domain.Tickets.DomainEvents;
 // template:begin status
@@ -17,11 +18,18 @@ namespace MMCA.Helpdesk.Tickets.Domain.Tickets;
 /// template:begin child
 /// Comments are growable children managed via <see cref="AddComment"/>.
 /// template:end child
+/// Marked <see cref="IAuditedEntity"/> (field-level change history) and <see cref="ITenantEntity"/>
+/// (per-tenant row isolation): both are framework markers, opt-in per host through
+/// <c>AddAuditTrail</c> / <c>AddMultiTenancy</c>, and inert when those are not configured.
 /// </summary>
 [IdValueGenerated]
-public sealed class Ticket : AuditableAggregateRootEntity<TicketIdentifierType>
+public sealed class Ticket : AuditableAggregateRootEntity<TicketIdentifierType>, IAuditedEntity, ITenantEntity
 {
     public string Title { get; private set; }
+
+    // Owning tenant. Written by the framework's tenant interceptor on insert from the tenant resolved
+    // for the request (claim, then X-Tenant-Id header); domain code never assigns it.
+    public string TenantId { get; private set; } = string.Empty;
     // template:begin description
     public string Description { get; private set; }
     // template:end description

@@ -59,6 +59,19 @@ services.AddCommonExceptionHandlers();
 services.AddApplication();
 services.AddInfrastructure(builder.Configuration);
 
+// Enterprise capability opt-ins (MMCA.Common v1.150.0). Each one is inert until the matching
+// configuration section turns it on, and each is a single call on top of AddInfrastructure:
+//   AddAuditTrail      field-level change history for IAuditedEntity aggregates (Ticket), written in
+//                      the same transaction as the data, plus the audit-trail-cleanup retention job.
+//   AddScheduledJobs   the cron runner over the ScheduledJobs table in the Default source. It is what
+//                      actually RUNS the retention job AddAuditTrail registers, so the two travel
+//                      together here.
+//   AddMultiTenancy    binds and validates the Tenancy section. The resolution middleware is already
+//                      part of UseCommonMiddlewarePipeline(), so there is no second call to make.
+services.AddAuditTrail(builder.Configuration);
+services.AddScheduledJobs(builder.Configuration);
+services.AddMultiTenancy(builder.Configuration);
+
 services.AddOptions<ModulesSettings>()
     .Bind(builder.Configuration.GetSection(ModulesSettings.SectionName))
     .ValidateDataAnnotations()

@@ -12,11 +12,22 @@ var sql = builder.AddSqlServer("sql")
 
 var helpdeskDb = sql.AddDatabase("helpdesk", "Helpdesk");
 
+// Multi-tenancy demo (MMCA.Common v1.150.0). Two tenants show the two isolation modes the framework
+// supports at once: "acme" is any tenant WITHOUT an override and shares the pooled database above
+// (shared schema, rows separated by the TenantId query filter), while "globex" is routed onto its own
+// database by the per-tenant DataSources override below. The override is keyed by PHYSICAL source
+// name, and the seed's single "Tickets" logical source collapses onto Default, so the key is "Default".
+// The web host migrates this database on startup like any other tenant target.
+var globexDb = sql.AddDatabase("helpdesk-globex", "Helpdesk_Globex");
+
 // WaitFor the SQL server (healthy once the container accepts connections), not the database
 // resource. The web host CREATES the database via EF Migrate at startup, so waiting on the
 // database's existence would deadlock: it never exists until the app that is waiting runs.
 var web = builder.AddProject<Projects.MMCA_Helpdesk_Web>("web")
     .WithSQLServerDataSource(helpdeskDb, "Tickets")
+    .WithEnvironment(
+        "Tenancy__Tenants__globex__DataSources__Default__SQLServerConnectionString",
+        globexDb.Resource.ConnectionStringExpression)
     .WaitFor(sql)
     .WithExternalHttpEndpoints();
 
