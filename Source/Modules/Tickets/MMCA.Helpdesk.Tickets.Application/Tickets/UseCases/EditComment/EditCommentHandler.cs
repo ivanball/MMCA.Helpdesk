@@ -27,6 +27,10 @@ public sealed class EditCommentHandler(IUnitOfWork unitOfWork)
                 Error.NotFound.WithSource(nameof(EditCommentHandler)).WithTarget(nameof(Ticket)));
         }
 
+        // ADR-035: the concurrency token belongs to the aggregate ROOT, so a comment edit conditioned
+        // on a stale ticket version fails the save (mapped to 409). Null skips the check.
+        repository.SetOriginalRowVersion(ticket, command.RowVersion);
+
         var result = ticket.EditComment(command.CommentId, command.Body);
         if (result.IsFailure)
         {

@@ -525,6 +525,30 @@ $optionalAxisLines = @(
         Hits = 3
     },
     @{
+        Scope = 'both'
+        Path = 'Tests/Modules/Tickets/MMCA.Helpdesk.Tickets.Application.Tests/Concurrency/TicketConcurrencyTokenTests.cs'
+        Anchor = 'Ticket\.Create\(id: null, "Cannot log in", "The login page returns a 500\.", requesterUserId: 42\)'
+        Description = ', "The login page returns a 500\."'
+        Owner = ', requesterUserId: 42'
+        Hits = 1
+    },
+    @{
+        Scope = 'both'
+        Path = 'Tests/Modules/Tickets/MMCA.Helpdesk.Tickets.Application.Tests/Concurrency/TicketConcurrencyTokenTests.cs'
+        Anchor = 'new UpdateTicketCommand\(TicketId, "[^"]*", "Returns a 500\."\)'
+        Description = ', "Returns a 500\."'
+        Owner = ''
+        Hits = 2
+    },
+    @{
+        Scope = 'both'
+        Path = 'Tests/Modules/Tickets/MMCA.Helpdesk.Tickets.Application.Tests/Projections/TicketDTOProjectorTests.cs'
+        Anchor = 'Ticket\.Create\(id: null, "Cannot log in", "The login page returns a 500\.", requesterUserId: 42\)'
+        Description = ', "The login page returns a 500\."'
+        Owner = ', requesterUserId: 42'
+        Hits = 1
+    },
+    @{
         Scope = 'app'
         Path = 'Source/Hosts/UI/MMCA.Helpdesk.UI.Web/Services/HelpdeskApiClient.cs'
         Anchor = 'public async Task<TicketDTO\?> CreateTicketAsync\(string title, string description, int requesterUserId, CancellationToken cancellationToken = default\)'

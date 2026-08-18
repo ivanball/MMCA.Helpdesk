@@ -29,6 +29,10 @@ public sealed class ChangeTicketStatusHandler(IUnitOfWork unitOfWork, TicketDTOM
                 Error.NotFound.WithSource(nameof(ChangeTicketStatusHandler)).WithTarget(nameof(Ticket)));
         }
 
+        // ADR-035: stamp the client's last-seen rowversion back as the original so a conflicting
+        // concurrent edit fails the save (DbUpdateExceptionHandler maps it to 409). Null skips the check.
+        repository.SetOriginalRowVersion(ticket, command.RowVersion);
+
         var result = ticket.ChangeStatus(command.Status);
         if (result.IsFailure)
         {

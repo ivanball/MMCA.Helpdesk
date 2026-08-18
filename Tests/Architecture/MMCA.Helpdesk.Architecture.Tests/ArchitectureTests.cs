@@ -56,6 +56,15 @@ public sealed class ConcurrencyConventionTests : ConcurrencyConventionTestsBase
     protected override IArchitectureMap Map { get; } = new HelpdeskArchitectureMap();
 }
 
+// Gate the idempotency-intent convention: every POST action in the API layer must carry either
+// [Idempotent] (the Idempotency-Key filter replays the first response on a retry) or
+// [NonIdempotent("why")]. Non-vacuous: TicketsController's POST actions are all opted in, so a new
+// POST added without a declaration fails the build.
+public sealed class IdempotencyConventionTests : IdempotencyConventionTestsBase
+{
+    protected override IArchitectureMap Map { get; } = new HelpdeskArchitectureMap();
+}
+
 // The remaining applicable shared rules, adopted for full consumer parity with ADC/Store (drift
 // plan H1): naming, handler, controller, entity, and immutability conventions, the frozen
 // integration-event wire contract, the transport-at-the-edge extraction rules, the PII/erasure
