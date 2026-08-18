@@ -4,7 +4,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using MMCA.Common.API.Concurrency;
 using MMCA.Common.API.Controllers;
+using MMCA.Common.API.Idempotency;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.UseCases;
 using MMCA.Common.Shared.Abstractions;
@@ -70,7 +72,13 @@ public sealed class TicketsController(
         return result.IsFailure ? HandleFailure(result.Errors) : Ok(result.Value);
     }
 
+    /// <summary>
+    /// Opens a new ticket. <c>[Idempotent]</c> puts the action behind the <c>Idempotency-Key</c>
+    /// replay contract, so a client that retries a timed-out POST gets the original response
+    /// replayed instead of opening a second ticket. Callers that send no key are unaffected.
+    /// </summary>
     [HttpPost]
+    [Idempotent]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<TicketDTO>> CreateAsync(
@@ -91,8 +99,13 @@ public sealed class TicketsController(
         return Created(locationUri, dto);
     }
 
-    /// <summary>Updates a ticket's editable details.</summary>
+    /// <summary>
+    /// Updates a ticket's editable details. <c>[SupportsIfMatch]</c> lets the caller state the
+    /// concurrency token as an <c>If-Match</c> header (the <c>ETag</c> the read returned) instead of
+    /// in the body, in which case a stale token answers 412 rather than 409 (ADR-035).
+    /// </summary>
     [HttpPut("{id}")]
+    [SupportsIfMatch]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -110,8 +123,12 @@ public sealed class TicketsController(
     }
 
     // template:begin status
-    /// <summary>Changes a ticket's status.</summary>
+    /// <summary>
+    /// Changes a ticket's status. Conditional-write capable through <c>If-Match</c>, same contract
+    /// as the details update (ADR-035).
+    /// </summary>
     [HttpPut("{id}/status")]
+    [SupportsIfMatch]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -123,7 +140,7 @@ public sealed class TicketsController(
         ArgumentNullException.ThrowIfNull(request);
 
         var result = await changeStatusHandler.HandleAsync(
-            new ChangeTicketStatusCommand(id, request.Status),
+            new ChangeTicketStatusCommand(id, request.Status) { RowVersion = request.RowVersion },
             cancellationToken).ConfigureAwait(false);
         return result.IsFailure ? HandleFailure(result.Errors) : Ok(result.Value);
     }
@@ -142,7 +159,12 @@ public sealed class TicketsController(
     }
 
     // template:begin child
+    /// <summary>
+    /// Adds a comment to a ticket. <c>[Idempotent]</c> for the same reason the create action is: a
+    /// retried POST must not append the same comment twice.
+    /// </summary>
     [HttpPost("{id}/comments")]
+    [Idempotent]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -164,8 +186,12 @@ public sealed class TicketsController(
         return Ok(result.Value);
     }
 
-    /// <summary>Edits the body of an existing comment.</summary>
+    /// <summary>
+    /// Edits the body of an existing comment. Conditional-write capable through <c>If-Match</c>,
+    /// carrying the owning ticket's token (ADR-035).
+    /// </summary>
     [HttpPut("{id}/comments/{commentId}")]
+    [SupportsIfMatch]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -178,7 +204,7 @@ public sealed class TicketsController(
         ArgumentNullException.ThrowIfNull(request);
 
         var result = await editCommentHandler.HandleAsync(
-            new EditCommentCommand(id, commentId, request.Body),
+            new EditCommentCommand(id, commentId, request.Body) { RowVersion = request.RowVersion },
             cancellationToken).ConfigureAwait(false);
         return result.IsFailure ? HandleFailure(result.Errors) : NoContent();
     }

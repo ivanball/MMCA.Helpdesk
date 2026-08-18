@@ -22,6 +22,9 @@
     <PackageReference Include="MMCA.Common.API" />
     <!-- Shared fitness-function rule library + abstract test bases -->
     <PackageReference Include="MMCA.Common.Testing.Architecture" />
+    <!-- DecoratorPipelineOrderTestsBase (a runtime DI fitness function) plus its test doubles -->
+    <PackageReference Include="MMCA.Common.Testing" />
+    <PackageReference Include="Moq" />
     <!-- Tickets module layers -->
     <ProjectReference Include="..\..\..\Source\Modules\Tickets\MMCA.Helpdesk.Tickets.Domain\MMCA.Helpdesk.Tickets.Domain.csproj" />
     <ProjectReference Include="..\..\..\Source\Modules\Tickets\MMCA.Helpdesk.Tickets.Application\MMCA.Helpdesk.Tickets.Application.csproj" />
