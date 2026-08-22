@@ -40,12 +40,18 @@ services.AddCommonResponseCompression();
 // authority is unset and we register a bare auth scheme to satisfy the middleware pipeline; the Tickets
 // endpoints are [AllowAnonymous] until you add Identity (GETTING-STARTED.md Phase 8) and set the
 // authority, at which point you flip the controller back to [Authorize].
+// Passing the configuration and the environment lets the framework resolve RequireHttpsMetadata
+// secure-by-default: HTTPS metadata is required everywhere except Development, and an authority that
+// can only be reached over cleartext (an in-cluster internal ingress) opts out per environment with
+// Authentication:JwtBearer:RequireHttpsMetadata = false, which logs one startup warning.
 var jwtAuthority = builder.Configuration["Authentication:JwtBearer:Authority"];
 if (!string.IsNullOrWhiteSpace(jwtAuthority))
 {
     services.AddForwardedJwtBearer(
         authority: jwtAuthority,
-        audience: builder.Configuration["Jwt:Audience"] ?? "helpdesk");
+        audience: builder.Configuration["Jwt:Audience"] ?? "helpdesk",
+        configuration: builder.Configuration,
+        environment: builder.Environment);
 }
 else
 {
