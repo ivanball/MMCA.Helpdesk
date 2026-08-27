@@ -551,7 +551,7 @@ $optionalAxisLines = @(
     @{
         Scope = 'app'
         Path = 'Source/Hosts/UI/MMCA.Helpdesk.UI.Web/Services/HelpdeskApiClient.cs'
-        Anchor = 'public async Task<TicketDTO\?> CreateTicketAsync\(string title, string description, int requesterUserId, CancellationToken cancellationToken = default\)'
+        Anchor = 'public Task<Result<TicketDTO>> CreateTicketAsync\(string title, string description, int requesterUserId, CancellationToken cancellationToken = default\)'
         Description = 'string description, '
         Owner = 'int requesterUserId, '
         Hits = 1
@@ -567,7 +567,7 @@ $optionalAxisLines = @(
     @{
         Scope = 'app'
         Path = 'Source/Hosts/UI/MMCA.Helpdesk.UI.Web/Services/HelpdeskApiClient.cs'
-        Anchor = 'public async Task UpdateTicketAsync\(int id, string title, string description, CancellationToken cancellationToken = default\)'
+        Anchor = 'public Task<Result> UpdateTicketAsync\(int id, string title, string description, CancellationToken cancellationToken = default\)'
         Description = 'string description, '
         Owner = ''
         Hits = 1

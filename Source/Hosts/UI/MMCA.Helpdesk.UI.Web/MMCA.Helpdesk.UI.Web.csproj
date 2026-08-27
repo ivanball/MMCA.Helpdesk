@@ -2,9 +2,12 @@
   <ItemGroup>
     <PackageReference Include="MudBlazor" />
     <PackageReference Include="MMCA.Common.Aspire" />
-    <!-- For ServiceExceptionHelper (surfaces ProblemDetails domain messages) plus the shared Common.UI
+    <!-- For HttpResultExecutor (turns a transport fault into a failure Result) and the page ergonomics
+         in MMCA.Common.UI.Common (TryGetValue / LocalizedErrorMessage), plus the shared Common.UI
          components this host renders in its layout: CultureSwitcher + ThemeToggle (ADR-027/028) and the
-         MMCATheme/ThemeService pair. The Common.UI auth services/pages are not used (issuer-less seed). -->
+         MMCATheme/ThemeService pair. The Common.UI auth services/pages are not used (issuer-less seed):
+         this host's Routes.razor sets AppAssembly to its own assembly with no AdditionalAssemblies, so
+         the framework's /profile/sessions page does not route here and its NavMenu is not rendered. -->
     <PackageReference Include="MMCA.Common.UI" />
     <!-- For the shared SSR /Error page: UseExceptionHandler("/Error") re-executes to that route, which
          previously had no page in this host (production errors 404'd). The router picks it up via

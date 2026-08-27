@@ -7,6 +7,9 @@
 @using Microsoft.AspNetCore.Components.Web.Virtualization
 @using Microsoft.JSInterop
 @using MudBlazor
+@* Result page ergonomics (TryGetValue / LocalizedErrorMessage): the typed API client returns
+   Result instead of throwing, so pages branch on the result rather than catching. *@
+@using MMCA.Common.UI.Common
 @using MMCA.Helpdesk.UI.Web
 @using MMCA.Helpdesk.UI.Web.Components
 @using MMCA.Helpdesk.UI.Web.Components.Layout

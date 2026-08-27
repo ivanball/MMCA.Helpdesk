@@ -146,21 +146,25 @@ else
         _busy = true;
         try
         {
-            _ticket = await Api.GetTicketAsync(Id);
-            if (_ticket is not null)
+            // A missing ticket is a NotFound failure now, not a null value, so the one branch below
+            // covers both "gone" and "the call failed": TryGetValue unwraps the success and
+            // LocalizedErrorMessage composes whatever the API's ProblemDetails body reported.
+            var result = await Api.GetTicketAsync(Id);
+            if (result.TryGetValue(out var ticket))
             {
-                _title = _ticket.Title;
+                _ticket = ticket;
+                _title = ticket.Title;
                 @* template:begin description *@
-                _description = _ticket.Description;
+                _description = ticket.Description;
                 @* template:end description *@
                 @* template:begin status *@
-                _status = _ticket.Status;
+                _status = ticket.Status;
                 @* template:end status *@
             }
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add(L["Snackbar.LoadFailed", ex.Message], Severity.Error);
+            else
+            {
+                Snackbar.Add(L["Snackbar.LoadFailed", result.LocalizedErrorMessage(L) ?? string.Empty], Severity.Error);
+            }
         }
         finally
         {
@@ -185,13 +189,16 @@ else
         _busy = true;
         try
         {
-            await Api.UpdateTicketAsync(Id, _title, _description);
-            Snackbar.Add(L["Snackbar.Updated"], Severity.Success);
-            await LoadAsync();
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add(L["Snackbar.UpdateFailed", ex.Message], Severity.Error);
+            var result = await Api.UpdateTicketAsync(Id, _title, _description);
+            if (result.IsSuccess)
+            {
+                Snackbar.Add(L["Snackbar.Updated"], Severity.Success);
+                await LoadAsync();
+            }
+            else
+            {
+                Snackbar.Add(L["Snackbar.UpdateFailed", result.LocalizedErrorMessage(L) ?? string.Empty], Severity.Error);
+            }
         }
         finally
         {
@@ -205,13 +212,16 @@ else
         _busy = true;
         try
         {
-            await Api.ChangeStatusAsync(Id, _status);
-            Snackbar.Add(L["Snackbar.StatusUpdated"], Severity.Success);
-            await LoadAsync();
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add(L["Snackbar.StatusChangeFailed", ex.Message], Severity.Error);
+            var result = await Api.ChangeStatusAsync(Id, _status);
+            if (result.IsSuccess)
+            {
+                Snackbar.Add(L["Snackbar.StatusUpdated"], Severity.Success);
+                await LoadAsync();
+            }
+            else
+            {
+                Snackbar.Add(L["Snackbar.StatusChangeFailed", result.LocalizedErrorMessage(L) ?? string.Empty], Severity.Error);
+            }
         }
         finally
         {
@@ -232,13 +242,16 @@ else
         _busy = true;
         try
         {
-            await Api.AddCommentAsync(Id, _newComment, authorUserId: 1);
-            _newComment = string.Empty;
-            await LoadAsync();
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add(L["Snackbar.AddCommentFailed", ex.Message], Severity.Error);
+            var result = await Api.AddCommentAsync(Id, _newComment, authorUserId: 1);
+            if (result.IsSuccess)
+            {
+                _newComment = string.Empty;
+                await LoadAsync();
+            }
+            else
+            {
+                Snackbar.Add(L["Snackbar.AddCommentFailed", result.LocalizedErrorMessage(L) ?? string.Empty], Severity.Error);
+            }
         }
         finally
         {
@@ -269,13 +282,16 @@ else
         _busy = true;
         try
         {
-            await Api.EditCommentAsync(Id, commentId, _editCommentBody);
-            _editingCommentId = null;
-            await LoadAsync();
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add(L["Snackbar.EditFailed", ex.Message], Severity.Error);
+            var result = await Api.EditCommentAsync(Id, commentId, _editCommentBody);
+            if (result.IsSuccess)
+            {
+                _editingCommentId = null;
+                await LoadAsync();
+            }
+            else
+            {
+                Snackbar.Add(L["Snackbar.EditFailed", result.LocalizedErrorMessage(L) ?? string.Empty], Severity.Error);
+            }
         }
         finally
         {
@@ -288,12 +304,15 @@ else
         _busy = true;
         try
         {
-            await Api.RemoveCommentAsync(Id, commentId);
-            await LoadAsync();
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add(L["Snackbar.RemoveFailed", ex.Message], Severity.Error);
+            var result = await Api.RemoveCommentAsync(Id, commentId);
+            if (result.IsSuccess)
+            {
+                await LoadAsync();
+            }
+            else
+            {
+                Snackbar.Add(L["Snackbar.RemoveFailed", result.LocalizedErrorMessage(L) ?? string.Empty], Severity.Error);
+            }
         }
         finally
         {
@@ -315,15 +334,17 @@ else
         }
 
         _busy = true;
-        try
+        var result = await Api.DeleteTicketAsync(Id);
+        if (result.IsSuccess)
         {
-            await Api.DeleteTicketAsync(Id);
             Snackbar.Add(L["Snackbar.Deleted"], Severity.Success);
+            // Deliberately leaves _busy set: the page is navigating away, so re-enabling the buttons
+            // would only flicker them back on for the frame before the route changes.
             Nav.NavigateTo("/tickets");
         }
-        catch (Exception ex)
+        else
         {
-            Snackbar.Add(L["Snackbar.DeleteFailed", ex.Message], Severity.Error);
+            Snackbar.Add(L["Snackbar.DeleteFailed", result.LocalizedErrorMessage(L) ?? string.Empty], Severity.Error);
             _busy = false;
         }
     }
