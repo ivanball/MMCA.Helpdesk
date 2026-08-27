@@ -80,11 +80,18 @@
         _busy = true;
         try
         {
-            _tickets = await Api.GetTicketsAsync();
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add(L["Snackbar.LoadFailed", ex.Message], Severity.Error);
+            // The client returns a result rather than throwing, so the page branches instead of
+            // catching: TryGetValue unwraps the success, LocalizedErrorMessage composes the failure
+            // (ProblemDetails errors, most severe first) through this page's own localizer.
+            var result = await Api.GetTicketsAsync();
+            if (result.TryGetValue(out var tickets))
+            {
+                _tickets = tickets;
+            }
+            else
+            {
+                Snackbar.Add(L["Snackbar.LoadFailed", result.LocalizedErrorMessage(L) ?? string.Empty], Severity.Error);
+            }
         }
         finally
         {
@@ -107,13 +114,16 @@
         _busy = true;
         try
         {
-            await Api.DeleteTicketAsync(id);
-            Snackbar.Add(L["Snackbar.Deleted"], Severity.Success);
-            await LoadAsync();
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add(L["Snackbar.DeleteFailed", ex.Message], Severity.Error);
+            var result = await Api.DeleteTicketAsync(id);
+            if (result.IsSuccess)
+            {
+                Snackbar.Add(L["Snackbar.Deleted"], Severity.Success);
+                await LoadAsync();
+            }
+            else
+            {
+                Snackbar.Add(L["Snackbar.DeleteFailed", result.LocalizedErrorMessage(L) ?? string.Empty], Severity.Error);
+            }
         }
         finally
         {
@@ -138,17 +148,20 @@
         _busy = true;
         try
         {
-            await Api.CreateTicketAsync(_title, _description, requesterUserId: 1);
-            Snackbar.Add(L["Snackbar.Opened"], Severity.Success);
-            _title = string.Empty;
-            @* template:begin description *@
-            _description = string.Empty;
-            @* template:end description *@
-            await LoadAsync();
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add(L["Snackbar.OpenFailed", ex.Message], Severity.Error);
+            var result = await Api.CreateTicketAsync(_title, _description, requesterUserId: 1);
+            if (result.IsSuccess)
+            {
+                Snackbar.Add(L["Snackbar.Opened"], Severity.Success);
+                _title = string.Empty;
+                @* template:begin description *@
+                _description = string.Empty;
+                @* template:end description *@
+                await LoadAsync();
+            }
+            else
+            {
+                Snackbar.Add(L["Snackbar.OpenFailed", result.LocalizedErrorMessage(L) ?? string.Empty], Severity.Error);
+            }
         }
         finally
         {

@@ -21,11 +21,26 @@ jobs:
           path: MMCA.Helpdesk
           fetch-depth: 0
 
+      # Coordinated-break support (mirror of MMCA.Common's consumer-canary resolution): a breaking
+      # framework change and this repo's adaptation must build as a PAIR, or the two main-pinned
+      # gates deadlock each other. Convention: name the adaptation branch here identically to the
+      # framework branch; this step then builds against that branch. No match means main.
+      - name: Resolve MMCA.Common ref (same-name branch, else main)
+        id: common-ref
+        run: |
+          ref=main
+          head='${{ github.head_ref }}'
+          if [ -n "$head" ] && git ls-remote --exit-code --heads https://github.com/ivanball/MMCA.Common.git "$head" >/dev/null 2>&1; then
+            ref="$head"
+          fi
+          echo "Using MMCA.Common ref: $ref"
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+
       - name: Checkout MMCA.Common (source companion)
         uses: actions/checkout@v7
         with:
           repository: ivanball/MMCA.Common
-          ref: main
+          ref: ${{ steps.common-ref.outputs.ref }}
           path: MMCA.Common
           fetch-depth: 0 # MinVer needs full history
           # Public repo builds with the default token; if MMCA.Common is private, set a

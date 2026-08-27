@@ -196,8 +196,15 @@ assembly-name convention, which is why `Infrastructure/DependencyInjection.cs` i
 
 **UI** (`Source/Hosts/UI/...`): Blazor Server + MudBlazor calling the API **server-side** via the typed
 `HelpdeskApiClient` + Aspire service discovery (base address `https+http://web` from config): no
-browser CORS, no token. On failure it calls `ServiceExceptionHelper.ThrowIfDomainExceptionAsync` to
-surface the domain error message before the generic `EnsureSuccessStatusCode` fallback.
+browser CORS, no token. **It throws nothing for a server answer**: every method returns `Result` /
+`Result<T>`, the same contract `EntityServiceBase` honors, composed from the two framework pieces
+`ProblemDetailsResultReader` (reads the RFC 9457 body into errors, so a failure carries whatever
+invariant the aggregate refused on) and `HttpResultExecutor` (turns a fault with no response at all,
+connection refused or timeout, into a failure too). Only the caller's own `OperationCanceledException`
+still propagates, and `GetTicketAsync` reports a missing ticket as a `NotFound` failure rather than a
+null. The two pages therefore **branch instead of catching**, using the ergonomics in
+`MMCA.Common.UI.Common` (`TryGetValue` to unwrap, `LocalizedErrorMessage` to compose the snackbar
+text through the page's own localizer); `_Imports.razor` carries that namespace.
 
 ## Multi-tenancy demo (and the other v1.150.0 opt-ins)
 
