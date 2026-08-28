@@ -168,16 +168,14 @@ public sealed class Ticket : AuditableAggregateRootEntity<TicketIdentifierType>,
         }
 
         // template:end status
-        var commentResult = GetChildOrNotFound(_comments, commentId, nameof(RemoveComment));
+        // The framework helper is the lookup plus the child's own Delete(), with the same NotFound
+        // failure the lookup alone would have produced. The removed comment comes back in the result
+        // rather than being consumed there, because which domain event a removal raises is aggregate
+        // vocabulary: the helper owns the mechanics, this method owns the meaning.
+        var commentResult = RemoveChildOrNotFound(_comments, commentId, nameof(RemoveComment));
         if (commentResult.IsFailure)
         {
             return Result.Failure(commentResult.Errors);
-        }
-
-        var deleteResult = commentResult.Value!.Delete();
-        if (deleteResult.IsFailure)
-        {
-            return deleteResult;
         }
 
         AddDomainEvent(new TicketChanged(DomainEntityState.Updated, Id));

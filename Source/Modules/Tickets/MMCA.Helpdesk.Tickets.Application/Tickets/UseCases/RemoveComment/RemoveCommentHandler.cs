@@ -6,35 +6,24 @@ using MMCA.Helpdesk.Tickets.Domain.Tickets;
 namespace MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.RemoveComment;
 
 /// <summary>
-/// Removes (soft-deletes) a comment through the ticket aggregate (loaded tracked with its comments).
+/// Removes (soft-deletes) a comment through the ticket aggregate. The framework's
+/// <see cref="RemoveChildEntityHandlerBase{TCommand, TParent, TIdentifierType}"/> is the
+/// load-mutate-save pipeline with the child collection made a required include, because a remove
+/// that cannot see the collection cannot find the comment and reports a wrong <c>NotFound</c>.
 /// </summary>
 public sealed class RemoveCommentHandler(IUnitOfWork unitOfWork)
-    : ICommandHandler<RemoveCommentCommand, Result>
+    : RemoveChildEntityHandlerBase<RemoveCommentCommand, Ticket, TicketIdentifierType>(unitOfWork)
 {
-    public async Task<Result> HandleAsync(RemoveCommentCommand command, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(command);
+    /// <inheritdoc />
+    protected override IEnumerable<string> Includes => [nameof(Ticket.Comments)];
 
-        var repository = unitOfWork.GetRepository<Ticket, TicketIdentifierType>();
-        var ticket = await repository.GetByIdAsync(
-            command.TicketId,
-            includes: [nameof(Ticket.Comments)],
-            asTracking: true,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-        if (ticket is null)
-        {
-            return Result.Failure(
-                Error.NotFound.WithSource(nameof(RemoveCommentHandler)).WithTarget(nameof(Ticket)));
-        }
+    /// <inheritdoc />
+    protected override TicketIdentifierType EntityId(RemoveCommentCommand command) => command.TicketId;
 
-        var result = ticket.RemoveComment(command.CommentId);
-        if (result.IsFailure)
-        {
-            return result;
-        }
-
-        await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-        return Result.Success();
-    }
+    /// <inheritdoc />
+    protected override Task<Result> MutateAsync(
+        Ticket ticket,
+        RemoveCommentCommand command,
+        CancellationToken cancellationToken) =>
+        Task.FromResult(ticket.RemoveComment(command.CommentId));
 }
