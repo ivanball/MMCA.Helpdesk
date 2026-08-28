@@ -8,39 +8,41 @@ using MMCA.Helpdesk.Tickets.Shared.Tickets;
 namespace MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.ChangeStatus;
 
 /// <summary>
-/// Changes a ticket's status through the aggregate root, then returns the refreshed DTO.
+/// Changes a ticket's status through the aggregate root, then returns the refreshed DTO. The
+/// load-mutate-save workflow (load tracked with the includes the mutation needs, fail with
+/// <c>NotFound</c> when the ticket is gone, stamp the concurrency token, save only when the domain
+/// method succeeded) is the framework's
+/// <see cref="MutateEntityHandlerBase{TCommand, TEntity, TIdentifierType, TEntityDTO}"/>; the
+/// overrides below are the only per-use-case parts.
 /// </summary>
 public sealed class ChangeTicketStatusHandler(IUnitOfWork unitOfWork, TicketDTOMapper dtoMapper)
-    : ICommandHandler<ChangeTicketStatusCommand, Result<TicketDTO>>
+    : MutateEntityHandlerBase<ChangeTicketStatusCommand, Ticket, TicketIdentifierType, TicketDTO>(
+        unitOfWork, dtoMapper)
 {
-    public async Task<Result<TicketDTO>> HandleAsync(ChangeTicketStatusCommand command, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(command);
+    // template:begin child
+    /// <summary>
+    /// The comments are eager-loaded because the DTO this handler answers with carries them: a
+    /// no-include load would return a ticket whose comment list is empty.
+    /// </summary>
+    protected override IEnumerable<string> Includes => [nameof(Ticket.Comments)];
 
-        var repository = unitOfWork.GetRepository<Ticket, TicketIdentifierType>();
-        var ticket = await repository.GetByIdAsync(
-            command.TicketId,
-            includes: [nameof(Ticket.Comments)],
-            asTracking: true,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-        if (ticket is null)
-        {
-            return Result.Failure<TicketDTO>(
-                Error.NotFound.WithSource(nameof(ChangeTicketStatusHandler)).WithTarget(nameof(Ticket)));
-        }
+    // template:end child
+    /// <inheritdoc />
+    protected override TicketIdentifierType EntityId(ChangeTicketStatusCommand command) => command.TicketId;
 
-        // ADR-035: stamp the client's last-seen rowversion back as the original so a conflicting
-        // concurrent edit fails the save (DbUpdateExceptionHandler maps it to 409). Null skips the check.
-        repository.SetOriginalRowVersion(ticket, command.RowVersion);
+    /// <summary>
+    /// ADR-035: the base stamps the client's last-seen rowversion back as the original, so a
+    /// conflicting concurrent edit fails the save (DbUpdateExceptionHandler maps it to 409). Null
+    /// skips the check.
+    /// </summary>
+    /// <param name="command">The command being handled.</param>
+    /// <returns>The client's last-observed row version, or null to skip the check.</returns>
+    protected override byte[]? RowVersion(ChangeTicketStatusCommand command) => command.RowVersion;
 
-        var result = ticket.ChangeStatus(command.Status);
-        if (result.IsFailure)
-        {
-            return Result.Failure<TicketDTO>(result.Errors);
-        }
-
-        await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-        return Result.Success(dtoMapper.MapToDTO(ticket));
-    }
+    /// <inheritdoc />
+    protected override Task<Result> MutateAsync(
+        Ticket ticket,
+        ChangeTicketStatusCommand command,
+        CancellationToken cancellationToken) =>
+        Task.FromResult(ticket.ChangeStatus(command.Status));
 }

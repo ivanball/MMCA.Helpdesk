@@ -8,37 +8,38 @@ using MMCA.Helpdesk.Tickets.Shared.Tickets;
 namespace MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.AddComment;
 
 /// <summary>
-/// Loads the ticket (tracked, with its comments), appends a comment through the aggregate root, and
-/// saves. Demonstrates the canonical eager-load-then-mutate idiom for adding a child to an aggregate.
+/// Appends a comment to a ticket. The canonical eager-load-then-mutate idiom for adding a child to
+/// an aggregate is the framework's
+/// <see cref="AddChildEntityHandlerBase{TCommand, TParent, TIdentifierType, TChild, TChildDTO}"/>:
+/// load the ticket tracked and with its comments, fail with <c>NotFound</c> when it is gone,
+/// delegate to the aggregate method that owns the invariant, save only on success, and answer with
+/// the new comment's DTO.
 /// </summary>
 public sealed class AddCommentHandler(
     IUnitOfWork unitOfWork,
-    TicketCommentDTOMapper commentDTOMapper) : ICommandHandler<AddCommentCommand, Result<TicketCommentDTO>>
+    TicketCommentDTOMapper commentDTOMapper)
+    : AddChildEntityHandlerBase<AddCommentCommand, Ticket, TicketIdentifierType, TicketComment, TicketCommentDTO>(
+        unitOfWork)
 {
-    public async Task<Result<TicketCommentDTO>> HandleAsync(AddCommentCommand command, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// The comments are eager-loaded because the aggregate's add rule reads the existing collection:
+    /// naming the navigation is deliberate rather than inherited, which is why the base leaves it
+    /// abstract.
+    /// </summary>
+    protected override IEnumerable<string> Includes => [nameof(Ticket.Comments)];
+
+    /// <inheritdoc />
+    protected override TicketIdentifierType ParentId(AddCommentCommand command) => command.TicketId;
+
+    /// <inheritdoc />
+    protected override Result<TicketComment> Apply(Ticket parent, AddCommentCommand command)
     {
+        ArgumentNullException.ThrowIfNull(parent);
         ArgumentNullException.ThrowIfNull(command);
 
-        var repository = unitOfWork.GetRepository<Ticket, TicketIdentifierType>();
-        var ticket = await repository.GetByIdAsync(
-            command.TicketId,
-            includes: [nameof(Ticket.Comments)],
-            asTracking: true,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-        if (ticket is null)
-        {
-            return Result.Failure<TicketCommentDTO>(
-                Error.NotFound.WithSource(nameof(AddCommentHandler)).WithTarget(nameof(Ticket)));
-        }
-
-        var result = ticket.AddComment(id: null, command.Body, command.AuthorUserId);
-        if (result.IsFailure)
-        {
-            return Result.Failure<TicketCommentDTO>(result.Errors);
-        }
-
-        await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-        return Result.Success(commentDTOMapper.MapToDTO(result.Value!));
+        return parent.AddComment(id: null, command.Body, command.AuthorUserId);
     }
+
+    /// <inheritdoc />
+    protected override TicketCommentDTO MapChild(TicketComment child) => commentDTOMapper.MapToDTO(child);
 }

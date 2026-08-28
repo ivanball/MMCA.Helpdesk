@@ -6,39 +6,35 @@ using MMCA.Helpdesk.Tickets.Domain.Tickets;
 namespace MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.EditComment;
 
 /// <summary>
-/// Edits a comment's body through the ticket aggregate (loaded tracked with its comments).
+/// Edits a comment's body through the ticket aggregate. The load-mutate-save workflow is the
+/// framework's <see cref="MutateEntityHandlerBase{TCommand, TEntity, TIdentifierType}"/>, whose bare
+/// <see cref="Result"/> shape is the right one here: the caller needs success or the refused
+/// invariant, not a re-rendered ticket.
 /// </summary>
 public sealed class EditCommentHandler(IUnitOfWork unitOfWork)
-    : ICommandHandler<EditCommentCommand, Result>
+    : MutateEntityHandlerBase<EditCommentCommand, Ticket, TicketIdentifierType>(unitOfWork)
 {
-    public async Task<Result> HandleAsync(EditCommentCommand command, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(command);
+    /// <summary>
+    /// The comments are eager-loaded because the aggregate searches that collection for the comment
+    /// being edited: without them the edit would report a wrong <c>NotFound</c>.
+    /// </summary>
+    protected override IEnumerable<string> Includes => [nameof(Ticket.Comments)];
 
-        var repository = unitOfWork.GetRepository<Ticket, TicketIdentifierType>();
-        var ticket = await repository.GetByIdAsync(
-            command.TicketId,
-            includes: [nameof(Ticket.Comments)],
-            asTracking: true,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-        if (ticket is null)
-        {
-            return Result.Failure(
-                Error.NotFound.WithSource(nameof(EditCommentHandler)).WithTarget(nameof(Ticket)));
-        }
+    /// <inheritdoc />
+    protected override TicketIdentifierType EntityId(EditCommentCommand command) => command.TicketId;
 
-        // ADR-035: the concurrency token belongs to the aggregate ROOT, so a comment edit conditioned
-        // on a stale ticket version fails the save (mapped to 409). Null skips the check.
-        repository.SetOriginalRowVersion(ticket, command.RowVersion);
+    /// <summary>
+    /// ADR-035: the concurrency token belongs to the aggregate ROOT, so a comment edit conditioned on
+    /// a stale ticket version fails the save (mapped to 409). Null skips the check.
+    /// </summary>
+    /// <param name="command">The command being handled.</param>
+    /// <returns>The client's last-observed row version, or null to skip the check.</returns>
+    protected override byte[]? RowVersion(EditCommentCommand command) => command.RowVersion;
 
-        var result = ticket.EditComment(command.CommentId, command.Body);
-        if (result.IsFailure)
-        {
-            return result;
-        }
-
-        await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-        return Result.Success();
-    }
+    /// <inheritdoc />
+    protected override Task<Result> MutateAsync(
+        Ticket ticket,
+        EditCommentCommand command,
+        CancellationToken cancellationToken) =>
+        Task.FromResult(ticket.EditComment(command.CommentId, command.Body));
 }

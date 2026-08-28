@@ -18,10 +18,10 @@
     <PackageVersion Include="bunit" Version="2.9.0" />
     <PackageVersion Include="NetArchTest.eNhancedEdition" Version="1.4.5" />
     <PackageVersion Include="Riok.Mapperly" Version="4.3.1" />
-    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.123" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.190" />
     <PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="18.7.23" />
-    <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
-    <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.29.0.143774" />
+    <PackageVersion Include="Roslynator.Analyzers" Version="5.0.0" />
+    <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.33.0.1635" />
     <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.22.0" />
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
@@ -34,11 +34,11 @@
     <PackageVersion Include="Microsoft.Playwright" Version="1.62.0" />
     <PackageVersion Include="Testcontainers.MsSql" Version="4.14.0" />
     <!-- Aspire -->
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.5.2" />
-    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.5.2" />
-    <PackageVersion Include="Aspire.Hosting.Redis" Version="13.5.2" />
-    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.5.2" />
-    <PackageVersion Include="Aspire.StackExchange.Redis.DistributedCaching" Version="13.5.2" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.5.3" />
+    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.5.3" />
+    <PackageVersion Include="Aspire.Hosting.Redis" Version="13.5.3" />
+    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.5.3" />
+    <PackageVersion Include="Aspire.StackExchange.Redis.DistributedCaching" Version="13.5.3" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.9.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.9.0" />
     <!-- OpenTelemetry.Api pinned directly to force transitive resolution to non-vulnerable version. -->
@@ -51,22 +51,22 @@
     <PackageVersion Include="Grpc.AspNetCore.Server.Reflection" Version="2.83.0" />
     <PackageVersion Include="Grpc.Net.ClientFactory" Version="2.83.0" />
     <PackageVersion Include="Grpc.Tools" Version="2.82.0" />
-    <PackageVersion Include="MMCA.Common.Grpc" Version="1.164.1" />
+    <PackageVersion Include="MMCA.Common.Grpc" Version="1.165.0" />
     <!-- MMCA Common Packages -->
-    <PackageVersion Include="MMCA.Common.Shared" Version="1.164.1" />
-    <PackageVersion Include="MMCA.Common.Domain" Version="1.164.1" />
-    <PackageVersion Include="MMCA.Common.Application" Version="1.164.1" />
-    <PackageVersion Include="MMCA.Common.Infrastructure" Version="1.164.1" />
-    <PackageVersion Include="MMCA.Common.API" Version="1.164.1" />
-    <PackageVersion Include="MMCA.Common.Aspire" Version="1.164.1" />
-    <PackageVersion Include="MMCA.Common.Aspire.Hosting" Version="1.164.1" />
+    <PackageVersion Include="MMCA.Common.Shared" Version="1.165.0" />
+    <PackageVersion Include="MMCA.Common.Domain" Version="1.165.0" />
+    <PackageVersion Include="MMCA.Common.Application" Version="1.165.0" />
+    <PackageVersion Include="MMCA.Common.Infrastructure" Version="1.165.0" />
+    <PackageVersion Include="MMCA.Common.API" Version="1.165.0" />
+    <PackageVersion Include="MMCA.Common.Aspire" Version="1.165.0" />
+    <PackageVersion Include="MMCA.Common.Aspire.Hosting" Version="1.165.0" />
     <PackageVersion Include="Yarp.ReverseProxy" Version="2.3.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery.Yarp" Version="10.9.0" />
-    <PackageVersion Include="MMCA.Common.Testing" Version="1.164.1" />
-    <PackageVersion Include="MMCA.Common.Testing.E2E" Version="1.164.1" />
-    <PackageVersion Include="MMCA.Common.Testing.UI" Version="1.164.1" />
-    <PackageVersion Include="MMCA.Common.Testing.Architecture" Version="1.164.1" />
-    <PackageVersion Include="MMCA.Common.UI" Version="1.164.1" />
-    <PackageVersion Include="MMCA.Common.UI.Web" Version="1.164.1" />
+    <PackageVersion Include="MMCA.Common.Testing" Version="1.165.0" />
+    <PackageVersion Include="MMCA.Common.Testing.E2E" Version="1.165.0" />
+    <PackageVersion Include="MMCA.Common.Testing.UI" Version="1.165.0" />
+    <PackageVersion Include="MMCA.Common.Testing.Architecture" Version="1.165.0" />
+    <PackageVersion Include="MMCA.Common.UI" Version="1.165.0" />
+    <PackageVersion Include="MMCA.Common.UI.Web" Version="1.165.0" />
   </ItemGroup>
 </Project>
