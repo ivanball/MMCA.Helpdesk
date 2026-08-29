@@ -1,8 +1,8 @@
 @page "/tickets/{Id:int}"
 @inject HelpdeskApiClient Api
-@inject ISnackbar Snackbar
+@inject IToastService Toast
 @inject NavigationManager Nav
-@inject IDialogService DialogService
+@inject IAppDialogService Dialog
 @inject Microsoft.Extensions.Localization.IStringLocalizer<TicketDetail> L
 
 <PageHeading Text="@(L["Browser.Tab", Id].Value)" />
@@ -163,7 +163,7 @@ else
             }
             else
             {
-                Snackbar.Add(L["Snackbar.LoadFailed", result.LocalizedErrorMessage(L) ?? string.Empty], Severity.Error);
+                Toast.Error(L["Snackbar.LoadFailed", result.LocalizedErrorMessage(L) ?? string.Empty]);
             }
         }
         finally
@@ -182,7 +182,7 @@ else
         @* template:end description *@
         if (missingRequired)
         {
-            Snackbar.Add(L["Snackbar.RequiredFields"], Severity.Warning);
+            Toast.Warning(L["Snackbar.RequiredFields"]);
             return;
         }
 
@@ -192,12 +192,12 @@ else
             var result = await Api.UpdateTicketAsync(Id, _title, _description);
             if (result.IsSuccess)
             {
-                Snackbar.Add(L["Snackbar.Updated"], Severity.Success);
+                Toast.Success(L["Snackbar.Updated"]);
                 await LoadAsync();
             }
             else
             {
-                Snackbar.Add(L["Snackbar.UpdateFailed", result.LocalizedErrorMessage(L) ?? string.Empty], Severity.Error);
+                Toast.Error(L["Snackbar.UpdateFailed", result.LocalizedErrorMessage(L) ?? string.Empty]);
             }
         }
         finally
@@ -215,12 +215,12 @@ else
             var result = await Api.ChangeStatusAsync(Id, _status);
             if (result.IsSuccess)
             {
-                Snackbar.Add(L["Snackbar.StatusUpdated"], Severity.Success);
+                Toast.Success(L["Snackbar.StatusUpdated"]);
                 await LoadAsync();
             }
             else
             {
-                Snackbar.Add(L["Snackbar.StatusChangeFailed", result.LocalizedErrorMessage(L) ?? string.Empty], Severity.Error);
+                Toast.Error(L["Snackbar.StatusChangeFailed", result.LocalizedErrorMessage(L) ?? string.Empty]);
             }
         }
         finally
@@ -235,7 +235,7 @@ else
     {
         if (string.IsNullOrWhiteSpace(_newComment))
         {
-            Snackbar.Add(L["Snackbar.CommentEmpty"], Severity.Warning);
+            Toast.Warning(L["Snackbar.CommentEmpty"]);
             return;
         }
 
@@ -250,7 +250,7 @@ else
             }
             else
             {
-                Snackbar.Add(L["Snackbar.AddCommentFailed", result.LocalizedErrorMessage(L) ?? string.Empty], Severity.Error);
+                Toast.Error(L["Snackbar.AddCommentFailed", result.LocalizedErrorMessage(L) ?? string.Empty]);
             }
         }
         finally
@@ -275,7 +275,7 @@ else
     {
         if (string.IsNullOrWhiteSpace(_editCommentBody))
         {
-            Snackbar.Add(L["Snackbar.CommentEmpty"], Severity.Warning);
+            Toast.Warning(L["Snackbar.CommentEmpty"]);
             return;
         }
 
@@ -290,7 +290,7 @@ else
             }
             else
             {
-                Snackbar.Add(L["Snackbar.EditFailed", result.LocalizedErrorMessage(L) ?? string.Empty], Severity.Error);
+                Toast.Error(L["Snackbar.EditFailed", result.LocalizedErrorMessage(L) ?? string.Empty]);
             }
         }
         finally
@@ -311,7 +311,7 @@ else
             }
             else
             {
-                Snackbar.Add(L["Snackbar.RemoveFailed", result.LocalizedErrorMessage(L) ?? string.Empty], Severity.Error);
+                Toast.Error(L["Snackbar.RemoveFailed", result.LocalizedErrorMessage(L) ?? string.Empty]);
             }
         }
         finally
@@ -323,12 +323,12 @@ else
     @* template:end child *@
     private async Task DeleteAsync()
     {
-        var confirmed = await DialogService.ShowMessageBoxAsync(
+        var confirmed = await Dialog.ConfirmAsync(
             L["Dialog.Delete.Heading"],
             L["Dialog.Delete.Message", Id],
-            yesText: L["Dialog.Delete.Confirm"],
-            cancelText: L["Dialog.Cancel"]);
-        if (confirmed is not true)
+            L["Dialog.Delete.Confirm"],
+            L["Dialog.Cancel"]);
+        if (!confirmed)
         {
             return;
         }
@@ -337,14 +337,14 @@ else
         var result = await Api.DeleteTicketAsync(Id);
         if (result.IsSuccess)
         {
-            Snackbar.Add(L["Snackbar.Deleted"], Severity.Success);
+            Toast.Success(L["Snackbar.Deleted"]);
             // Deliberately leaves _busy set: the page is navigating away, so re-enabling the buttons
             // would only flicker them back on for the frame before the route changes.
             Nav.NavigateTo("/tickets");
         }
         else
         {
-            Snackbar.Add(L["Snackbar.DeleteFailed", result.LocalizedErrorMessage(L) ?? string.Empty], Severity.Error);
+            Toast.Error(L["Snackbar.DeleteFailed", result.LocalizedErrorMessage(L) ?? string.Empty]);
             _busy = false;
         }
     }

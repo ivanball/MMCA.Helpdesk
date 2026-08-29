@@ -16,7 +16,7 @@ namespace MMCA.Helpdesk.Tickets.Domain.Tickets;
 public sealed class TicketComment : AuditableBaseEntity<TicketCommentIdentifierType>, ITenantEntity
 {
     [Navigation]
-    public Ticket? Ticket { get; set; }
+    public Ticket? Ticket { get; private set; }
 
     // Owning tenant, stamped by the framework's tenant interceptor on insert (see Ticket.TenantId).
     public string TenantId { get; private set; } = string.Empty;
