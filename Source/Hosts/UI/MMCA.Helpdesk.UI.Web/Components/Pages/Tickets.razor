@@ -1,9 +1,9 @@
 @page "/"
 @page "/tickets"
 @inject HelpdeskApiClient Api
-@inject ISnackbar Snackbar
+@inject IToastService Toast
 @inject NavigationManager Nav
-@inject IDialogService DialogService
+@inject IAppDialogService Dialog
 @inject Microsoft.Extensions.Localization.IStringLocalizer<Tickets> L
 
 <PageHeading Text="@(L["Browser.Tab"].Value)" />
@@ -90,7 +90,7 @@
             }
             else
             {
-                Snackbar.Add(L["Snackbar.LoadFailed", result.LocalizedErrorMessage(L) ?? string.Empty], Severity.Error);
+                Toast.Error(L["Snackbar.LoadFailed", result.LocalizedErrorMessage(L) ?? string.Empty]);
             }
         }
         finally
@@ -101,12 +101,12 @@
 
     private async Task DeleteAsync(int id)
     {
-        var confirmed = await DialogService.ShowMessageBoxAsync(
+        var confirmed = await Dialog.ConfirmAsync(
             L["Dialog.Delete.Heading"],
             L["Dialog.Delete.Message", id],
-            yesText: L["Dialog.Delete.Confirm"],
-            cancelText: L["Dialog.Cancel"]);
-        if (confirmed is not true)
+            L["Dialog.Delete.Confirm"],
+            L["Dialog.Cancel"]);
+        if (!confirmed)
         {
             return;
         }
@@ -117,12 +117,12 @@
             var result = await Api.DeleteTicketAsync(id);
             if (result.IsSuccess)
             {
-                Snackbar.Add(L["Snackbar.Deleted"], Severity.Success);
+                Toast.Success(L["Snackbar.Deleted"]);
                 await LoadAsync();
             }
             else
             {
-                Snackbar.Add(L["Snackbar.DeleteFailed", result.LocalizedErrorMessage(L) ?? string.Empty], Severity.Error);
+                Toast.Error(L["Snackbar.DeleteFailed", result.LocalizedErrorMessage(L) ?? string.Empty]);
             }
         }
         finally
@@ -141,7 +141,7 @@
         @* template:end description *@
         if (missingRequired)
         {
-            Snackbar.Add(L["Snackbar.RequiredFields"], Severity.Warning);
+            Toast.Warning(L["Snackbar.RequiredFields"]);
             return;
         }
 
@@ -151,7 +151,7 @@
             var result = await Api.CreateTicketAsync(_title, _description, requesterUserId: 1);
             if (result.IsSuccess)
             {
-                Snackbar.Add(L["Snackbar.Opened"], Severity.Success);
+                Toast.Success(L["Snackbar.Opened"]);
                 _title = string.Empty;
                 @* template:begin description *@
                 _description = string.Empty;
@@ -160,7 +160,7 @@
             }
             else
             {
-                Snackbar.Add(L["Snackbar.OpenFailed", result.LocalizedErrorMessage(L) ?? string.Empty], Severity.Error);
+                Toast.Error(L["Snackbar.OpenFailed", result.LocalizedErrorMessage(L) ?? string.Empty]);
             }
         }
         finally
