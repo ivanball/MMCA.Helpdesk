@@ -145,6 +145,38 @@ public sealed class LocalizedTextConventionTests : LocalizedTextConventionTestsB
     protected override int MinimumScannedFiles => 5;
 }
 
+// Command-validation coverage: the Validating decorator runs FluentValidation before the transaction
+// opens, so a data-carrying command with no validator walks whatever the caller sent straight into the
+// handler. Non-vacuous here: every ticket command that carries content is covered by a validator in the
+// module's Application layer, and the two entries below are the identifier-only exceptions.
+public sealed class CommandValidatorCoverageTests : CommandValidatorCoverageTestsBase
+{
+    protected override IArchitectureMap Map { get; } = new HelpdeskArchitectureMap();
+
+    /// <summary>
+    /// Identifier-only commands. Their whole payload is a route-supplied id, so there is no field a
+    /// validator could reject that the handler's existence check does not already answer with a
+    /// <c>NotFound</c>. Nothing else belongs here: an entry for a command that carries content would
+    /// be frozen debt, not an exemption.
+    /// </summary>
+    protected override IReadOnlyCollection<string> AllowedUnvalidatedCommands =>
+    [
+        "MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.Delete.DeleteTicketCommand",
+        // template:begin child
+        "MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.RemoveComment.RemoveCommentCommand",
+        // template:end child
+    ];
+
+    // template:begin childStatus
+    /// <summary>
+    /// The scan finds 7 handled, data-carrying commands in the Tickets module. The floor sits just
+    /// below that so adding or renaming one does not trip it, while the module dropping out of the map
+    /// (which would make the coverage rule vacuous) still fails loudly.
+    /// </summary>
+    protected override int MinimumCommands => 6;
+    // template:end childStatus
+}
+
 // NOT adopted (legitimately inapplicable, not an enforcement gap): ConstructorDependencyCountTestsBase
 // scans Application *Service classes and deliberately fails when it finds none (anti-vacuity guard).
 // This seed's Application layer is handlers-only. Subclass it (ceiling 7, matching ADC) as soon as the

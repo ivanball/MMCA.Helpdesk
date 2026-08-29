@@ -29,10 +29,18 @@ var web = builder.AddProject<Projects.MMCA_Helpdesk_Web>("web")
         "Tenancy__Tenants__globex__DataSources__Default__SQLServerConnectionString",
         globexDb.Resource.ConnectionStringExpression)
     .WaitFor(sql)
+    // Declares the readiness probe as this resource's health check, which is what makes a downstream
+    // WaitFor(web) mean "wait until the API is HEALTHY" instead of "wait until its process started".
+    // MapDefaultEndpoints() serves /health/ready from the same MMCA.Common.Aspire pipeline the Azure
+    // Container Apps readiness probe uses, so local orchestration and the deployed probe gate on the
+    // same signal: the required SQL check passing (optional dependencies deliberately do not gate it).
+    .WithHttpHealthCheck("/health/ready")
     .WithExternalHttpEndpoints();
 
 // Blazor Server UI. Calls the API server-side via service discovery ("web"); WithReference injects
-// the endpoint the UI's typed HttpClient resolves. WaitFor(web) gates the UI until the API is healthy.
+// the endpoint the UI's typed HttpClient resolves. WaitFor(web) holds the UI back until the API's
+// health check above reports healthy, so the first page render cannot race a host that is still
+// migrating the database.
 builder.AddProject<Projects.MMCA_Helpdesk_UI_Web>("ui")
     .WithReference(web)
     .WaitFor(web)
