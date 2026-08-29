@@ -1,8 +1,8 @@
-// template:begin owner
-// Only HasFilter on the requester index reaches into this namespace (it is a relational extension
-// method); every other call below is an instance method on a builder from Metadata.Builders.
+// template:begin childOrOwner
+// A couple of calls below (a relational index filter, a navigation access mode) reach into this
+// namespace; every other call is an instance method on a builder from Metadata.Builders.
 using Microsoft.EntityFrameworkCore;
-// template:end owner
+// template:end childOrOwner
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration;
 using MMCA.Helpdesk.Tickets.Domain.Tickets;
@@ -49,6 +49,11 @@ internal sealed class TicketConfiguration : EntityTypeConfigurationSQLServer<Tic
             .WithOne(c => c.Ticket)
             .HasForeignKey(c => c.TicketId)
             .IsRequired();
+
+        // The child collection is a read-only wrapper over a backing field, so EF must read and
+        // materialize through the field rather than the property.
+        builder.Navigation(p => p.Comments)
+            .UsePropertyAccessMode(PropertyAccessMode.Field);
         // template:end child
     }
 }

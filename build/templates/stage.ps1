@@ -140,6 +140,7 @@ $markerConditions = @{
     'owner'         = '!noOwner'
     'statusOwner'   = '!(noStatus || noOwner)'
     'statusOrOwner' = '!(noStatus && noOwner)'
+    'childOrOwner'  = '!(flat && noOwner)'
 }
 
 # dotnet new picks the conditional syntax from the file extension, and it is not one syntax. C files
