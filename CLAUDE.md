@@ -53,8 +53,9 @@ rather than to a generated app and laying `build/templates/overlay/` on top. Con
   partial-file regions are marked in the seed with `// template:begin child` / `// template:end child`
   (`<!-- ... -->` in XML and resx, `@* ... *@` in razor, `/// ...` inside an XML doc block). Axis
   labels are `child` -> `!flat`, `status` -> `!noStatus`, `description` -> `!noDescription`,
-  `owner` -> `!noOwner`, plus three combination labels: `childStatus` -> `!(flat || noStatus)`,
-  `statusOwner` -> `!(noStatus || noOwner)`, `statusOrOwner` -> `!(noStatus && noOwner)`.
+  `owner` -> `!noOwner`, plus four combination labels: `childStatus` -> `!(flat || noStatus)`,
+  `statusOwner` -> `!(noStatus || noOwner)`, `statusOrOwner` -> `!(noStatus && noOwner)`,
+  `childOrOwner` -> `!(flat && noOwner)`.
   `stage.ps1` converts them to dotnet-new directives in the STAGED copies and throws on an
   unbalanced or unknown-label marker. **Never put a raw `//#if` in the seed**, and keep a region's
   trailing blank line INSIDE it (a marker followed by a blank line is SA1512).
