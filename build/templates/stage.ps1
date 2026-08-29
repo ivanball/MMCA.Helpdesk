@@ -933,8 +933,15 @@ if (-not (Test-Path (Join-Path $appStaging '.template.config/template.json'))) {
 $sliceRoot = Join-Path $repoRoot 'templates'
 $useCases = Join-Path $repoRoot 'Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/Tickets/UseCases'
 
+# The command slice ships its validator alongside the command, and that is load-bearing rather than
+# generous. The generated app's CommandValidatorCoverageTests fails any handled, data-carrying command
+# with no validator, and the rule's allowlist matches full type names or namespace prefixes only: an
+# app cannot pre-allow a slice whose name the adopter has not chosen yet. So a scaffolded command that
+# arrived without a validator would turn the adopter's next test run red, in a file they did not write.
+# Shipping the seed's identifier-only validator makes the slice green on arrival and leaves the rules
+# to grow with the payload. Queries are not in that rule's scope, so mmca-query ships two files.
 $slices = @(
-    @{ Name = 'mmca-command'; Source = 'Delete';  Files = @('DeleteTicketCommand.cs', 'DeleteTicketHandler.cs') },
+    @{ Name = 'mmca-command'; Source = 'Delete';  Files = @('DeleteTicketCommand.cs', 'DeleteTicketCommandValidator.cs', 'DeleteTicketHandler.cs') },
     @{ Name = 'mmca-query';   Source = 'GetById'; Files = @('GetTicketByIdQuery.cs', 'GetTicketByIdHandler.cs') }
 )
 

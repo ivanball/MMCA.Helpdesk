@@ -197,6 +197,11 @@ your aggregate before the command slice compiles, and keep the query's `CacheKey
 module's `*CacheKeys.Prefix`: the caching decorator matches reads to invalidating commands by string
 prefix, so a key that drifts out of it goes stale silently.
 
+The command slice arrives with a validator beside its command, asserting that the identifier it
+carries is a real one. Keep it and grow its rules as the command grows a payload: the solution's
+`CommandValidatorCoverageTests` fails any handled command that carries data and has no validator, so
+deleting it turns your next test run red.
+
 ## Where to look next
 
 - **[Getting started](https://ivanball.github.io/docs/guides/common-GETTING-STARTED.html)**: the

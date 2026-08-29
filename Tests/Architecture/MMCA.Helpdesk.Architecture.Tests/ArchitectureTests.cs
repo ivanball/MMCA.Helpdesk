@@ -145,6 +145,33 @@ public sealed class LocalizedTextConventionTests : LocalizedTextConventionTestsB
     protected override int MinimumScannedFiles => 5;
 }
 
+// Command-validation coverage: the Validating decorator runs FluentValidation before the transaction
+// opens, so a data-carrying command with no validator walks whatever the caller sent straight into the
+// handler. Non-vacuous here: every ticket command is covered by a validator in the module's Application
+// layer, the identifier-only ones included; their validators assert only that an id arrived, which is
+// all there is to assert.
+//
+// AllowedUnvalidatedCommands is deliberately NOT overridden, and that is a template property as much
+// as a seed one. An allowlist entry is a full type name, and the rule matches it exactly or as a
+// namespace prefix, so entries written here name THIS module's use cases and can cover no other: a
+// generated app that runs build/add-module.ps1, or scaffolds a slice with dotnet new mmca-command,
+// gets commands under names no entry inherited from the seed can anticipate. Covering the
+// identifier-only commands with real validators instead is what makes the gate survive every rename
+// and every module an adopter adds. Keep this list empty; write the validator.
+public sealed class CommandValidatorCoverageTests : CommandValidatorCoverageTestsBase
+{
+    protected override IArchitectureMap Map { get; } = new HelpdeskArchitectureMap();
+
+    // template:begin childStatus
+    /// <summary>
+    /// The scan finds 7 handled, data-carrying commands in the Tickets module. The floor sits just
+    /// below that so adding or renaming one does not trip it, while the module dropping out of the map
+    /// (which would make the coverage rule vacuous) still fails loudly.
+    /// </summary>
+    protected override int MinimumCommands => 6;
+    // template:end childStatus
+}
+
 // NOT adopted (legitimately inapplicable, not an enforcement gap): ConstructorDependencyCountTestsBase
 // scans Application *Service classes and deliberately fails when it finds none (anti-vacuity guard).
 // This seed's Application layer is handlers-only. Subclass it (ceiling 7, matching ADC) as soon as the

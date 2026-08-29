@@ -17,7 +17,12 @@ public sealed class GetTicketByIdHandler(IUnitOfWork unitOfWork, TicketDTOMapper
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var repository = unitOfWork.GetRepository<Ticket, TicketIdentifierType>();
+        // A query handler asks the unit of work for the READ repository: GetRepository would hand back
+        // the write surface (Add/Update/SaveChanges) this read has no business holding. The local is
+        // typed to the narrow IEntityReader rather than the wide IReadRepository because a by-id
+        // lookup is all this handler does, so the declaration states the access it actually needs.
+        IEntityReader<Ticket, TicketIdentifierType> repository =
+            unitOfWork.GetReadRepository<Ticket, TicketIdentifierType>();
         var ticket = await repository.GetByIdAsync(
             query.Id,
             includes: [nameof(Ticket.Comments)],

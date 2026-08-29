@@ -377,7 +377,8 @@ identical to the shape sweep above. This is the check that tells them apart.
     Invoke-Step "Token sweep $appName slices" {
         $sliceFiles = @(Get-ChildItem -Path $useCases -Recurse -File |
             Where-Object { $_.DirectoryName -match 'Archive|ByNumber' })
-        if ($sliceFiles.Count -ne 4) { throw "Expected 4 slice files, found $($sliceFiles.Count)" }
+        # 3 for the command slice (command, its validator, handler) and 2 for the query slice.
+        if ($sliceFiles.Count -ne 5) { throw "Expected 5 slice files, found $($sliceFiles.Count)" }
 
         $offenders = $sliceFiles | ForEach-Object {
             $hit = Select-String -Path $_.FullName -Pattern 'helpdesk|ticket' -CaseSensitive:$false -List

@@ -22,7 +22,7 @@ per-database migrations project, and domain, application, and architecture-fitne
 |---|---|
 | `mmca-app` | the whole solution: build plumbing, one module, both hosts, the AppHost, migrations, tests |
 | `mmca-module` | a new business module across all five layers, plus its test and migrations projects |
-| `mmca-command` | one write-side vertical slice inside an existing module: command record + handler |
+| `mmca-command` | one write-side vertical slice inside an existing module: command record + its validator + handler |
 | `mmca-query` | one read-side vertical slice inside an existing module: cacheable query record + handler |
 
 ## `mmca-app` parameters
