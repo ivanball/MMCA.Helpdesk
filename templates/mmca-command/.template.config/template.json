@@ -5,7 +5,7 @@
   "identity": "MMCA.Templates.Slice.Command",
   "name": "MMCA command slice (command + handler)",
   "shortName": "mmca-command",
-  "description": "One write-side vertical slice for an existing MMCA module: a command record wired for cache invalidation, plus its handler loading the aggregate through IUnitOfWork and returning Result. Generated into a folder named after the use case.",
+  "description": "One write-side vertical slice for an existing MMCA module: a command record wired for cache invalidation, a FluentValidation validator for it, and the handler loading the aggregate through IUnitOfWork and returning Result. Generated into a folder named after the use case. The validator starts by asserting only that the identifier arrived, which is what keeps the slice passing the app's command-validation coverage rule on arrival; grow its rules as the command grows a payload.",
   "tags": {
     "language": "C#",
     "type": "item"

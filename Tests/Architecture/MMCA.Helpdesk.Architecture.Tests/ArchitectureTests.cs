@@ -147,25 +147,20 @@ public sealed class LocalizedTextConventionTests : LocalizedTextConventionTestsB
 
 // Command-validation coverage: the Validating decorator runs FluentValidation before the transaction
 // opens, so a data-carrying command with no validator walks whatever the caller sent straight into the
-// handler. Non-vacuous here: every ticket command that carries content is covered by a validator in the
-// module's Application layer, and the two entries below are the identifier-only exceptions.
+// handler. Non-vacuous here: every ticket command is covered by a validator in the module's Application
+// layer, the identifier-only ones included; their validators assert only that an id arrived, which is
+// all there is to assert.
+//
+// AllowedUnvalidatedCommands is deliberately NOT overridden, and that is a template property as much
+// as a seed one. An allowlist entry is a full type name, and the rule matches it exactly or as a
+// namespace prefix, so entries written here name THIS module's use cases and can cover no other: a
+// generated app that runs build/add-module.ps1, or scaffolds a slice with dotnet new mmca-command,
+// gets commands under names no entry inherited from the seed can anticipate. Covering the
+// identifier-only commands with real validators instead is what makes the gate survive every rename
+// and every module an adopter adds. Keep this list empty; write the validator.
 public sealed class CommandValidatorCoverageTests : CommandValidatorCoverageTestsBase
 {
     protected override IArchitectureMap Map { get; } = new HelpdeskArchitectureMap();
-
-    /// <summary>
-    /// Identifier-only commands. Their whole payload is a route-supplied id, so there is no field a
-    /// validator could reject that the handler's existence check does not already answer with a
-    /// <c>NotFound</c>. Nothing else belongs here: an entry for a command that carries content would
-    /// be frozen debt, not an exemption.
-    /// </summary>
-    protected override IReadOnlyCollection<string> AllowedUnvalidatedCommands =>
-    [
-        "MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.Delete.DeleteTicketCommand",
-        // template:begin child
-        "MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.RemoveComment.RemoveCommentCommand",
-        // template:end child
-    ];
 
     // template:begin childStatus
     /// <summary>
