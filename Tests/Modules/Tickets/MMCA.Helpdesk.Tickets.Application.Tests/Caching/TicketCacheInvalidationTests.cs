@@ -19,7 +19,7 @@ using MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.GetById;
 // template:begin child
 using MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.RemoveComment;
 // template:end child
-using MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.Update;
+using MMCA.Helpdesk.Tickets.Domain.Tickets;
 using MMCA.Helpdesk.Tickets.Shared.Tickets;
 
 namespace MMCA.Helpdesk.Tickets.Application.Tests.Caching;
@@ -37,6 +37,23 @@ namespace MMCA.Helpdesk.Tickets.Application.Tests.Caching;
 public class TicketCacheInvalidationTests
 {
     private const TicketIdentifierType TicketId = 7;
+
+    /// <summary>
+    /// The update command is the framework's generic one, and its default <c>CachePrefix</c> is the
+    /// aggregate-prefix convention (<c>{entity full name}:</c>), which is what
+    /// <see cref="TicketCacheKeys.Prefix"/> is derived from: the two agree with nothing to configure.
+    /// Built once here so the shape flags reach a single object initializer.
+    /// </summary>
+    /// <param name="title">The new title.</param>
+    /// <returns>An update command for <see cref="TicketId"/>.</returns>
+    private static UpdateEntityCommand<Ticket, TicketUpdateRequest, TicketIdentifierType> UpdateCommand(string title) =>
+        new(TicketId, new TicketUpdateRequest
+        {
+            Title = title,
+            // template:begin description
+            Description = "Returns a 500.",
+            // template:end description
+        });
 
     [Fact]
     public async Task Read_IsServedFromTheCache_OnTheSecondCall()
@@ -62,14 +79,14 @@ public class TicketCacheInvalidationTests
         var cache = new DictionaryCache();
         var queryHandler = new CountingQueryHandler(TicketResult());
         var read = new CachingQueryDecorator<GetTicketByIdQuery, Result<TicketDTO>>(queryHandler, cache);
-        var write = new CachingCommandDecorator<UpdateTicketCommand, Result<TicketDTO>>(
+        var write = new CachingCommandDecorator<UpdateEntityCommand<Ticket, TicketUpdateRequest, TicketIdentifierType>, Result<TicketDTO>>(
             new StubCommandHandler(TicketResult()), cache);
 
         await read.HandleAsync(new GetTicketByIdQuery(TicketId));
         await read.HandleAsync(new GetTicketByIdQuery(TicketId));
         queryHandler.Invocations.Should().Be(1, "the cache is warm before the write");
 
-        var written = await write.HandleAsync(new UpdateTicketCommand(TicketId, "Still cannot log in", "Returns a 500."));
+        var written = await write.HandleAsync(UpdateCommand("Still cannot log in"));
 
         written.IsSuccess.Should().BeTrue();
         cache.Keys.Should().BeEmpty("a successful command evicts everything under its CachePrefix");
@@ -86,12 +103,12 @@ public class TicketCacheInvalidationTests
         var cache = new DictionaryCache();
         var queryHandler = new CountingQueryHandler(TicketResult());
         var read = new CachingQueryDecorator<GetTicketByIdQuery, Result<TicketDTO>>(queryHandler, cache);
-        var write = new CachingCommandDecorator<UpdateTicketCommand, Result<TicketDTO>>(
+        var write = new CachingCommandDecorator<UpdateEntityCommand<Ticket, TicketUpdateRequest, TicketIdentifierType>, Result<TicketDTO>>(
             new StubCommandHandler(Result.Failure<TicketDTO>(Error.NotFound)), cache);
 
         await read.HandleAsync(new GetTicketByIdQuery(TicketId));
 
-        var written = await write.HandleAsync(new UpdateTicketCommand(TicketId, "Still cannot log in", "Returns a 500."));
+        var written = await write.HandleAsync(UpdateCommand("Still cannot log in"));
 
         written.IsFailure.Should().BeTrue();
         cache.RemoveByPrefixCalls.Should().Be(0, "a command that persisted nothing must not evict valid entries");
@@ -129,7 +146,7 @@ public class TicketCacheInvalidationTests
             RequesterUserId = 42,
             // template:end owner
         },
-        new UpdateTicketCommand(TicketId, "Cannot log in", "Returns a 500."),
+        UpdateCommand("Cannot log in"),
         new DeleteTicketCommand(TicketId),
         // template:begin status
         new ChangeTicketStatusCommand(TicketId, TicketStatus.Closed),
@@ -174,10 +191,10 @@ public class TicketCacheInvalidationTests
 
     /// <summary>Stands in for the persistence-backed command handler, returning a fixed outcome.</summary>
     private sealed class StubCommandHandler(Result<TicketDTO> result)
-        : ICommandHandler<UpdateTicketCommand, Result<TicketDTO>>
+        : ICommandHandler<UpdateEntityCommand<Ticket, TicketUpdateRequest, TicketIdentifierType>, Result<TicketDTO>>
     {
         public Task<Result<TicketDTO>> HandleAsync(
-            UpdateTicketCommand command,
+            UpdateEntityCommand<Ticket, TicketUpdateRequest, TicketIdentifierType> command,
             CancellationToken cancellationToken = default) => Task.FromResult(result);
     }
 

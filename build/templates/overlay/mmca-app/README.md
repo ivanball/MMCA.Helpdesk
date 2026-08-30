@@ -80,6 +80,14 @@ Tests/
 - **`AddApplicationDecorators()` must be the last DI call** in `Source/Hosts/MMCA.Helpdesk.Web/Program.cs`.
   Decorators wrap handlers that already exist, and the module handlers are registered by
   `ModuleLoader`. Move it earlier and the pipeline silently stops wrapping them.
+- **`AddEntityCrud<...>()` must come AFTER the module's convention scan**, in
+  `Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/DependencyInjection.cs`. It registers the
+  framework's create, update and delete handlers with `TryAdd`, which is what lets the module keep a
+  verb it wrote itself; above the scan it would take those verbs instead, with no error. The line
+  beneath it is load-bearing for the same reason: the framework's automatic validator bridge only
+  sees commands declared in the module assembly, and `UpdateEntityCommand` is declared in
+  MMCA.Common, so the module registers the `CommandRequestValidator` bridge by hand or its
+  `*UpdateRequestValidator` silently stops running. `TicketsCrudRegistrationTests` pins both.
 - **On SQL Server the AppHost waits on `sql`, not on the database resource.** The host creates the
   database via EF `Migrate` at startup, so `WaitFor(db)` deadlocks: the database is never healthy
   until it exists, and the only thing that creates it is the host doing the waiting. A SQLite

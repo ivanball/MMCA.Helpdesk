@@ -25,7 +25,6 @@ using MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.GetById;
 // template:begin child
 using MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.RemoveComment;
 // template:end child
-using MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.Update;
 using MMCA.Helpdesk.Tickets.Domain.Tickets;
 using MMCA.Helpdesk.Tickets.Shared.Tickets;
 
@@ -47,7 +46,7 @@ public sealed class TicketsController(
     IEntityQueryService<Ticket, TicketDTO, TicketIdentifierType> queryService,
     IQueryHandler<GetTicketByIdQuery, Result<TicketDTO>> getByIdHandler,
     ICommandHandler<TicketCreateRequest, Result<TicketDTO>> createHandler,
-    ICommandHandler<UpdateTicketCommand, Result<TicketDTO>> updateHandler,
+    ICommandHandler<UpdateEntityCommand<Ticket, TicketUpdateRequest, TicketIdentifierType>, Result<TicketDTO>> updateHandler,
     // template:begin status
     ICommandHandler<ChangeTicketStatusCommand, Result<TicketDTO>> changeStatusHandler,
     // template:end status
@@ -103,6 +102,11 @@ public sealed class TicketsController(
     /// Updates a ticket's editable details. <c>[SupportsIfMatch]</c> lets the caller state the
     /// concurrency token as an <c>If-Match</c> header (the <c>ETag</c> the read returned) instead of
     /// in the body, in which case a stale token answers 412 rather than 409 (ADR-035).
+    /// <para>
+    /// The command is the framework's generic <c>UpdateEntityCommand</c>, constructed here rather
+    /// than mapped: it carries the request whole, so the action names no ticket field and the HTTP
+    /// contract (route, body, status codes) is unchanged.
+    /// </para>
     /// </summary>
     [HttpPut("{id}")]
     [SupportsIfMatch]
@@ -117,7 +121,7 @@ public sealed class TicketsController(
         ArgumentNullException.ThrowIfNull(request);
 
         var result = await updateHandler.HandleAsync(
-            new UpdateTicketCommand(id, request.Title, request.Description) { RowVersion = request.RowVersion },
+            new UpdateEntityCommand<Ticket, TicketUpdateRequest, TicketIdentifierType>(id, request, request.RowVersion),
             cancellationToken).ConfigureAwait(false);
         return result.IsFailure ? HandleFailure(result.Errors) : Ok(result.Value);
     }

@@ -740,25 +740,12 @@ $optionalAxisLines = @(
         Hits = 1
     },
     @{
+        # The update slice is the framework's generic write side: the applier is the only file left
+        # that names a ticket field, because the command carries the request whole and the controller
+        # hands it over untouched.
         Scope = 'both'
-        Path = 'Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/Tickets/UseCases/Update/UpdateTicketCommand.cs'
-        Anchor = 'public sealed record UpdateTicketCommand\(TicketIdentifierType TicketId, string Title, string Description\)'
-        Description = ', string Description'
-        Owner = ''
-        Hits = 1
-    },
-    @{
-        Scope = 'both'
-        Path = 'Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/Tickets/UseCases/Update/UpdateTicketHandler.cs'
-        Anchor = 'ticket\.UpdateDetails\(command\.Title, command\.Description\);'
-        Description = ', command\.Description'
-        Owner = ''
-        Hits = 1
-    },
-    @{
-        Scope = 'both'
-        Path = 'Source/Modules/Tickets/MMCA.Helpdesk.Tickets.API/Controllers/TicketsController.cs'
-        Anchor = 'new UpdateTicketCommand\(id, request\.Title, request\.Description\) \{ RowVersion = request\.RowVersion \},'
+        Path = 'Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/Tickets/UseCases/Update/TicketUpdateApplier.cs'
+        Anchor = 'return Task\.FromResult\(entity\.UpdateDetails\(request\.Title, request\.Description\)\);'
         Description = ', request\.Description'
         Owner = ''
         Hits = 1
@@ -789,27 +776,11 @@ $optionalAxisLines = @(
     },
     @{
         Scope = 'both'
-        Path = 'Tests/Modules/Tickets/MMCA.Helpdesk.Tickets.Application.Tests/Caching/TicketCacheInvalidationTests.cs'
-        Anchor = 'new UpdateTicketCommand\(TicketId, "[^"]*", "Returns a 500\."\)'
-        Description = ', "Returns a 500\."'
-        Owner = ''
-        Hits = 3
-    },
-    @{
-        Scope = 'both'
         Path = 'Tests/Modules/Tickets/MMCA.Helpdesk.Tickets.Application.Tests/Concurrency/TicketConcurrencyTokenTests.cs'
         Anchor = 'Ticket\.Create\(id: null, "Cannot log in", "The login page returns a 500\.", requesterUserId: 42\)'
         Description = ', "The login page returns a 500\."'
         Owner = ', requesterUserId: 42'
         Hits = 1
-    },
-    @{
-        Scope = 'both'
-        Path = 'Tests/Modules/Tickets/MMCA.Helpdesk.Tickets.Application.Tests/Concurrency/TicketConcurrencyTokenTests.cs'
-        Anchor = 'new UpdateTicketCommand\(TicketId, "[^"]*", "Returns a 500\."\)'
-        Description = ', "Returns a 500\."'
-        Owner = ''
-        Hits = 2
     },
     @{
         Scope = 'both'
