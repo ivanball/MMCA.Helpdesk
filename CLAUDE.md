@@ -42,8 +42,11 @@ rather than to a generated app and laying `build/templates/overlay/` on top. Con
   gate: run `pwsh build/templates/smoke.ps1` before touching anything under `build/templates/`,
   `templates/`, or `.template.config/`. It runs three full generate + restore + Release build + test
   cases: two module shapes (all axes off with a `--title` rename; fully default) and one SOLUTION
-  shape (`--database sqlite --no-aspire`). Only the first goes on to add a second module through
-  `build/add-module.ps1` and scaffold slices.
+  shape (`--database sqlite --no-aspire`). Two of the three go on to add a second module through
+  `build/add-module.ps1`, for different reasons: the first proves the WIRE-UPS (every edit, the child
+  rename, the module-only axes, the slices, the refused rerun), and the sqlite case proves the ENGINE
+  reaches the second module (thin on purpose: no slices, no child rename). Only the first scaffolds
+  slices.
 - **One thing the scaffold deliberately does not hand over**: using-directive and alias order, because
   a rename invalidates it and no fixed order is right for every generated name (SA1210 and SA1211 are
   relaxed in the staged `.editorconfig` only, along with IDE0021 for the shape flags). It is documented
@@ -91,9 +94,27 @@ rather than to a generated app and laying `build/templates/overlay/` on top. Con
     `appsettings.standalone.json`, and `README.standalone.md`, all shipped by the overlay and renamed
     into place by `sources.modifiers` (`rename` plus a matching `exclude` on the other polarity).
     `stage.ps1` guards that both declarations exist for each.
-  Neither axis reaches `mmca-module` or the slice templates: they declare no such symbol, so
-  `Convert-TemplateMarkers -StripLabels` removes those markers there and keeps the SQL Server content.
-  A generated module is therefore always SQL-Server-shaped, which is a known gap for a sqlite app.
+  The two axes reach different templates. `--no-aspire` is mmca-app's alone (only the app owns an
+  orchestration project), so the `aspire` / `aspireSqlServer` markers are STRIPPED in the module and
+  slice trees via `Convert-TemplateMarkers -StripLabels $moduleStripLabels`. `--database` reaches
+  **`mmca-module` too**: a module's EF configurations inherit an engine-specific base and its
+  migrations project references an engine-specific provider, so a SQL-Server-shaped module dropped
+  into a sqlite app does not compile. `templates/mmca-module/.template.config/template.json` therefore
+  declares the same `database` / `useSqlite` / `engineName` / `engineNameUpper` symbols in its own
+  right (a condition on a symbol a template does not declare is silently false, which is why
+  `stage.ps1` asserts all five declarations), its `sqlserver` markers are converted rather than
+  stripped, and its printed wire-up instructions come in two `manualInstructions` entries, the sqlite
+  one conditioned on `useSqlite`. The slice templates carry no engine coupling at all.
+- **A generated module is never the solution's `Default` data source, and mmca-module's staged
+  design-time factory is rewritten to say so** (`$moduleOnlyRewrites` in `stage.ps1`). The seed's
+  factory names the same connection top level and under its own logical name, which makes the resolver
+  collapse it onto `Default` and scaffold the Default-source-only framework tables (`ScheduledJobs`)
+  into its migrations: right for the FIRST module, wrong for every later one. EF refuses to migrate a
+  database whose model has pending changes, so a second module scaffolded that way stops the host at
+  startup. The module-only copy declares its own source and no top-level connection. Its other half is
+  in `build/add-module.ps1`: the orchestration host's data-source call is inserted **above** the
+  existing one (`Add-BeforeAnchor`), because every such call also rewrites the top-level connection
+  string and the last one wins, so the first module has to keep the `Default` role.
 - **XML comments cannot contain a double hyphen**, so an option name written as `--no-aspire` inside a
   `.props` / `.csproj` / `.slnx` comment makes the whole file invalid XML. MSBuild does not fail on an
   unparsable OPTIONAL import, it skips it, which is how the overlay's `local.props` sat broken (every

@@ -9,17 +9,29 @@ because a template has no way to reach into files it did not generate. This scri
     pwsh build/add-module.ps1 -Name Orders -Aggregate Order
 
 Everything it needs it discovers at run time from the tree it is standing in: the solution file,
-the app's root namespace, the module that is already here, and the host / test projects it has
-to patch. Nothing about this app is baked into it, which is why it is shipped verbatim (the
-scaffold copies it with no token replacement at all) and why it starts by refusing to run from
-anywhere but the solution root.
+the app's root namespace, the module that is already here, the relational engine this solution
+runs on, and the host / test projects it has to patch. Nothing about this app is baked into it,
+which is why it is shipped verbatim (the scaffold copies it with no token replacement at all) and
+why it starts by refusing to run from anywhere but the solution root.
+
+HOW THE ENGINE IS DETECTED. A module is not engine-neutral: its EF configurations inherit an
+engine-specific configuration base and its migrations project references an engine-specific
+provider package, so a module built for the wrong engine does not merely look wrong, it does not
+compile in the solution it was added to. The engine is read from the API host's own
+appsettings.json, from the key spelling inside its top-level ConnectionStrings section
+(SQLServerConnectionString or SqliteConnectionString). That file was picked over the alternatives
+because it is the file this script also WRITES: detecting from the same place the new data source
+is written into is what makes the two impossible to disagree. The existing migrations project
+folder (<App>.Migrations.<Engine>.<Module>) is then cross-checked against it, and a disagreement
+stops the run rather than adding a project half the solution cannot use. Pass -Database to
+override both, which is the answer for a solution that has since grown a second engine.
 
 What it does, in order. Every step is anchored on something the scaffold generated, and a missing
 anchor stops the run with the manual edit to make instead, so a half-wired solution is never the
 outcome of a silent skip:
 
-  0. preflight: one solution file here, the module name is free, the SDK is on PATH
-  1. dotnet new mmca-module, with the shape flags passed through
+  0. preflight: one solution file here, the engine, the module name is free, the SDK is on PATH
+  1. dotnet new mmca-module, with the engine and the shape flags passed through
   2. add the eight new projects to the solution
   3. web host project references (the module API and its migrations project)
   4. architecture-test project references (all five layers)
@@ -27,8 +39,8 @@ outcome of a silent skip:
   6. the architecture map: five lines, one per layer
   7. the web host's AddErrorResources call
   8. the frozen wire contract: the new module's integration event joins ExpectedContract
-  9. the orchestration host, when the solution has one: the module's own database resource and its
-     data-source routing
+  9. the orchestration host, when the solution has one: the module's own database and its
+     data-source routing (a server database resource, or a second file for SQLite)
  10. the web host's appsettings.json: enable the module, one data source per module, pin the outbox
  11. the module's first migration (skip with -SkipMigration)
 
@@ -69,10 +81,18 @@ as --title, and named the same way here so the mapping is one to one.
 Names the creation integration event's verb, past tense PascalCase (Created, Placed, Booked).
 Passed as --event-verb.
 
+.PARAMETER Database
+Overrides the engine this solution is read to be running on: sqlserver or sqlite. Leave it off and
+the engine is detected (see HOW THE ENGINE IS DETECTED above), which is right for every solution
+the scaffold produced. Pass it when a solution has grown a second engine and the detection can no
+longer answer for the module you are adding. Passed to the template as --database.
+
 .PARAMETER SkipMigration
 Do not run `dotnet ef migrations add`. The command is printed instead. The script also degrades to
 printing it on its own when the dotnet-ef tool is not installed, so pass this only when you want to
-create the migration later on purpose.
+create the migration later on purpose. On SQLite that is a decision worth making deliberately: a
+SQLite data source that names a migrations assembly is MIGRATED at startup rather than created
+outright, so until the migration exists the host starts against an empty database.
 
 .EXAMPLE
 pwsh build/add-module.ps1 -Name Orders -Aggregate Order -Child Item
@@ -110,6 +130,9 @@ param(
 
     [ValidatePattern('^[A-Za-z][A-Za-z0-9]*$')]
     [string] $EventVerb,
+
+    [ValidateSet('sqlserver', 'sqlite')]
+    [string] $Database,
 
     [switch] $SkipMigration
 )
@@ -240,6 +263,60 @@ $Manual
     Write-Applied $Description
 }
 
+# The mirror of Add-AfterAnchor, and it exists for exactly one step: the orchestration host's
+# data-source routing, where the order of the chained calls is SEMANTIC rather than cosmetic. Every
+# data-source call also rewrites the host's top-level connection string, so the last one in the chain
+# decides which module is the solution's Default source. That has to stay the FIRST module: the
+# top-level connection in appsettings names its database, the outbox is pinned to it, and its
+# migrations are the ones scaffolded with the Default-source-only framework tables in them. Appending
+# would silently hand the role to whichever module was added most recently, whose migrations do not
+# carry those tables, and EF refuses to migrate a database whose model has pending changes.
+function Add-BeforeAnchor {
+    param(
+        [string] $Path,
+        [string] $Anchor,
+        [string[]] $Insert,
+        [string] $AlreadyApplied,
+        [string] $Description,
+        [string] $Manual
+    )
+
+    if (-not (Test-Path $Path)) {
+        throw "$Description : no file at $Path. Do this by hand instead:`n$Manual"
+    }
+
+    $document = Get-TextDocument $Path
+
+    if ($AlreadyApplied -and (($document.Lines -join "`n") -match $AlreadyApplied)) {
+        Write-Skipped $Description
+        return
+    }
+
+    # FIRST match, not last: inserting above the earliest call is what leaves every earlier module's
+    # call after this one, and the very first module's call last of all.
+    $at = -1
+    for ($i = 0; $i -lt $document.Lines.Count; $i++) {
+        if ($document.Lines[$i] -match $Anchor) { $at = $i; break }
+    }
+
+    if ($at -lt 0) {
+        throw @"
+$Description : no line matching /$Anchor/ in $Path.
+The scaffold's shape moved, or this file was already reworked by hand, so the edit cannot be placed
+safely. Nothing was written. Make it yourself:
+
+$Manual
+"@
+    }
+
+    $base = [regex]::Match($document.Lines[$at], '^[ \t]*').Value
+    $indented = @($Insert | ForEach-Object { if ($_) { $base + $_ } else { '' } })
+
+    $document.Lines.InsertRange($at, [string[]] $indented)
+    Save-TextDocument $document
+    Write-Applied $Description
+}
+
 # ---- appsettings.json ---------------------------------------------------------------------------
 # Brace counting rather than a JSON parse. It is safe HERE and only here: this file is generated,
 # two levels deep, and none of its string values contain a brace. It is what lets the edits land as
@@ -348,20 +425,6 @@ if ($existingModules.Count -eq 0) {
     throw "Source/Modules is empty, so there is no existing module to anchor the wire-up edits on. Add the first module with the mmca-app scaffold, not with this script."
 }
 
-if ($existingModules -contains $Name) {
-    throw @"
-Source/Modules/$Name already exists. Nothing was written.
-Generating over files you may have edited is not a decision this script gets to make for you.
-
-Pick another name, or, to start this module over, delete these three trees and rerun:
-    Source/Modules/$Name
-    Tests/Modules/$Name
-    Source/Hosting/$app.Migrations.SqlServer.$Name
-The wire-up edits themselves need no undoing: every step below detects its own work and skips it,
-so a rerun after a failure part way through picks up exactly where it stopped.
-"@
-}
-
 # The module that was here first. It owns every anchor this script edits beside, and it is the one
 # the outbox gets pinned to in step 9.
 $firstModule = $existingModules[0]
@@ -431,6 +494,96 @@ if ($mapCandidates.Count -ne 1) {
 }
 $archMap = $mapCandidates[0].FullName
 
+# ---- which engine this solution runs on ----------------------------------------------------------
+# Two spellings, because the framework uses two and both are real. The first names the migrations
+# project (its folder, its assembly, its namespace) and the provider package; the second names the
+# DbContext, the entity-configuration base and every settings key. SQLite happens to spell them the
+# same, which is precisely why they are carried as two values rather than derived from one another.
+$engineSpellings = @{
+    'sqlserver' = @{ Name = 'SqlServer'; Upper = 'SQLServer' }
+    'sqlite'    = @{ Name = 'Sqlite';    Upper = 'Sqlite' }
+}
+
+# Read from the top-level ConnectionStrings section rather than from anywhere in the file: a
+# per-tenant override further up carries the same key spelling, and a nested hit would answer for a
+# section this script does not route. Ordinal comparison, so the shorter key cannot match inside the
+# longer one.
+$settingsProbe = Get-TextDocument $webSettings
+$probeRange = Get-JsonObjectRange -Document $settingsProbe -Key 'ConnectionStrings'
+$probeLines = $settingsProbe.Lines[$probeRange.Open..$probeRange.Close]
+
+$detectedEngines = @($engineSpellings.Keys | Sort-Object | Where-Object {
+    $key = '"' + $engineSpellings[$_].Upper + 'ConnectionString"'
+    @($probeLines | Where-Object { $_.Contains($key) }).Count -gt 0
+})
+
+if ($Database) {
+    $engineChoice = $Database
+} elseif ($detectedEngines.Count -eq 1) {
+    $engineChoice = $detectedEngines[0]
+} else {
+    throw @"
+Could not tell which relational engine this solution runs on. The top-level ConnectionStrings
+section of $webHostName/appsettings.json names $($detectedEngines.Count) engine connection string
+$(if ($detectedEngines) { "($($detectedEngines -join ', '))" } else { '(none)' }), and exactly one is
+needed to decide which configuration base the new module's EF configurations inherit and which
+provider its migrations project references. Nothing was written.
+
+Say it explicitly and rerun:
+
+    pwsh build/add-module.ps1 -Name $Name -Aggregate $Aggregate -Database sqlserver
+    pwsh build/add-module.ps1 -Name $Name -Aggregate $Aggregate -Database sqlite
+"@
+}
+
+$engineName = $engineSpellings[$engineChoice].Name
+$engineUpper = $engineSpellings[$engineChoice].Upper
+$dbContextName = "${engineUpper}DbContext"
+$connectionKey = "${engineUpper}ConnectionString"
+$migrationsAssemblyKey = "${engineUpper}MigrationsAssembly"
+
+# Cross-check against what is on disk. The settings file and the migrations projects have to agree:
+# adding a Sqlite-shaped module to a solution whose every other migrations project is SQL Server
+# leaves a project referencing a provider package the solution does not pin, and an aggregate whose
+# configuration inherits a base its host never registered. Neither is a build this script should
+# start. An explicit -Database is the adopter saying they know; it warns instead.
+$existingMigrationDirs = @(
+    if (Test-Path $hostingRoot) {
+        Get-ChildItem -Path $hostingRoot -Directory | Where-Object { $_.Name -like "$app.Migrations.*" }
+    })
+$agreeingMigrationDirs = @($existingMigrationDirs | Where-Object { $_.Name -like "$app.Migrations.$engineName.*" })
+
+if ($existingMigrationDirs.Count -gt 0 -and $agreeingMigrationDirs.Count -eq 0) {
+    $mismatch = @"
+This solution's settings say $engineChoice, but none of its $($existingMigrationDirs.Count) migrations project(s) is
+named for that engine:
+  $(($existingMigrationDirs | ForEach-Object { $_.Name }) -join "`n  ")
+A module generated for the wrong engine inherits a configuration base and references a provider
+package the rest of the solution does not use, so it will not build here.
+"@
+    if ($Database) {
+        Write-Warning $mismatch
+    } else {
+        throw "$mismatch`nFix the settings file, or say which engine you meant with -Database sqlserver / -Database sqlite. Nothing was written."
+    }
+}
+
+$migrationsProject = "Source/Hosting/$app.Migrations.$engineName.$Name"
+
+if ($existingModules -contains $Name) {
+    throw @"
+Source/Modules/$Name already exists. Nothing was written.
+Generating over files you may have edited is not a decision this script gets to make for you.
+
+Pick another name, or, to start this module over, delete these three trees and rerun:
+    Source/Modules/$Name
+    Tests/Modules/$Name
+    $migrationsProject
+The wire-up edits themselves need no undoing: every step below detects its own work and skips it,
+so a rerun after a failure part way through picks up exactly where it stopped.
+"@
+}
+
 if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
     throw "The dotnet SDK is not on PATH. Install .NET 10 and rerun; every step below shells out to it."
 }
@@ -449,6 +602,7 @@ if (Get-Command git -ErrorAction SilentlyContinue) {
 
 Write-Host "  solution      $($solution.Name)"
 Write-Host "  app namespace $app (short name $appShort)"
+Write-Host "  engine        $engineChoice $(if ($Database) { '(you passed -Database)' } else { "(read from $webHostName/appsettings.json)" })"
 Write-Host "  existing      $($existingModules -join ', ')"
 Write-Host "  adding        $Name (aggregate $Aggregate)"
 Write-Host "  web host      $webHostName"
@@ -468,7 +622,10 @@ The mmca-module template is not installed, so there is nothing to generate. Inst
 "@
 }
 
-$templateArgs = @('-n', $Name, '--app', $app, '--aggregate', $Aggregate)
+# The engine goes first and always, not only when it is the non-default one: this script's whole
+# claim is that the module it generates matches the solution it lands in, and a flag that is only
+# sometimes passed makes that claim depend on the template's default staying what it is today.
+$templateArgs = @('-n', $Name, '--app', $app, '--aggregate', $Aggregate, '--database', $engineChoice)
 if ($Child) { $templateArgs += @('--child', $Child) }
 if ($Title) { $templateArgs += @('--title', $Title) }
 if ($EventVerb) { $templateArgs += @('--event-verb', $EventVerb) }
@@ -485,9 +642,7 @@ $moduleRoot = Join-Path $modulesRoot $Name
 if (-not (Test-Path $moduleRoot)) {
     throw "dotnet new mmca-module reported success but produced no Source/Modules/$Name. Nothing was wired."
 }
-Write-Applied "generated Source/Modules/$Name, Tests/Modules/$Name and Source/Hosting/$app.Migrations.SqlServer.$Name"
-
-$migrationsProject = "Source/Hosting/$app.Migrations.SqlServer.$Name"
+Write-Applied "generated Source/Modules/$Name, Tests/Modules/$Name and $migrationsProject"
 
 # ---- 2. solution --------------------------------------------------------------------------------
 Write-Step 'Add the projects to the solution'
@@ -525,12 +680,12 @@ Add-AfterAnchor `
     -Path $webCsproj `
     -Anchor '<ProjectReference\s+Include="[^"]*[\\/]Modules[\\/][^"]*\.API\.csproj"' `
     -Insert @(
-        "<ProjectReference Include=`"..\..\Hosting\$app.Migrations.SqlServer.$Name\$app.Migrations.SqlServer.$Name.csproj`" />"
+        "<ProjectReference Include=`"..\..\Hosting\$app.Migrations.$engineName.$Name\$app.Migrations.$engineName.$Name.csproj`" />"
         "<ProjectReference Include=`"..\..\Modules\$Name\$app.$Name.API\$app.$Name.API.csproj`" />"
     ) `
     -AlreadyApplied ([regex]::Escape("$app.$Name.API.csproj")) `
     -Description "$webHostName.csproj references $app.$Name.API and its migrations project" `
-    -Manual "Add to $webHostName.csproj, in the ItemGroup that already holds the ProjectReference elements:`n    <ProjectReference Include=`"..\..\Hosting\$app.Migrations.SqlServer.$Name\$app.Migrations.SqlServer.$Name.csproj`" />`n    <ProjectReference Include=`"..\..\Modules\$Name\$app.$Name.API\$app.$Name.API.csproj`" />"
+    -Manual "Add to $webHostName.csproj, in the ItemGroup that already holds the ProjectReference elements:`n    <ProjectReference Include=`"..\..\Hosting\$app.Migrations.$engineName.$Name\$app.Migrations.$engineName.$Name.csproj`" />`n    <ProjectReference Include=`"..\..\Modules\$Name\$app.$Name.API\$app.$Name.API.csproj`" />"
 
 # ---- 4. architecture-test project references ----------------------------------------------------
 Write-Step 'Architecture-test project references'
@@ -665,8 +820,24 @@ Write-Step 'Orchestration host database resource'
 # One database per module, not one per solution. Each module database carries its own outbox and
 # inbox tables, so two modules migrated into one database collide on them, and per-module databases
 # are what keeps extracting a module into its own service a hosting change rather than a rewrite.
+#
+# The shape of that declaration is where the two engines genuinely differ rather than merely spell
+# things differently. A server database is a RESOURCE the orchestrator creates and the host waits
+# for, so it takes two edits: declare it, then route it. A SQLite database is a file the provider
+# opens in process, so there is no resource, nothing to wait for, and one edit: the routing call
+# carries the path itself.
+$moduleDbFile = "${appShortLower}_$nameLower.db"
+
 if (-not $appHostProgram) {
     Write-Skipped 'this solution has no orchestration project, so there is nothing to declare here (the DataSources entry below is what routes the module)'
+} elseif ($engineChoice -eq 'sqlite') {
+    Add-BeforeAnchor `
+        -Path $appHostProgram `
+        -Anchor '\.WithSqliteDataSource\(' `
+        -Insert @(".WithSqliteDataSource(`"$Name`", Path.Combine(builder.AppHostDirectory, `"$moduleDbFile`"))") `
+        -AlreadyApplied ([regex]::Escape("WithSqliteDataSource(`"$Name`"")) `
+        -Description "the orchestration host routes the $Name data source to its own database file" `
+        -Manual "Chain onto the web project in the orchestration host's Program.cs, ABOVE the existing call (the last one wins the Default source, and that has to stay the first module):`n    .WithSqliteDataSource(`"$Name`", Path.Combine(builder.AppHostDirectory, `"$moduleDbFile`"))"
 } else {
     Add-AfterAnchor `
         -Path $appHostProgram `
@@ -677,14 +848,15 @@ if (-not $appHostProgram) {
         -Manual "Add to the orchestration host's Program.cs, beside the existing AddDatabase call:`n    var ${nameLower}Db = sql.AddDatabase(`"$appShortLower-$nameLower`", `"${appShort}_$Name`");"
 
     # Chained onto the web project builder, so it is inserted WITHOUT a terminator: the statement it
-    # joins ends further down the chain.
-    Add-AfterAnchor `
+    # joins ends further down the chain. Above the existing call rather than below it, for the reason
+    # Add-BeforeAnchor exists: the last data-source call in the chain wins the Default source.
+    Add-BeforeAnchor `
         -Path $appHostProgram `
         -Anchor '\.WithSQLServerDataSource\(' `
         -Insert @(".WithSQLServerDataSource(${nameLower}Db, `"$Name`")") `
         -AlreadyApplied ([regex]::Escape("WithSQLServerDataSource(${nameLower}Db")) `
         -Description "the orchestration host routes the $Name data source to the web host" `
-        -Manual "Chain onto the web project in the orchestration host's Program.cs, after the existing call:`n    .WithSQLServerDataSource(${nameLower}Db, `"$Name`")"
+        -Manual "Chain onto the web project in the orchestration host's Program.cs, ABOVE the existing call (the last one wins the Default source, and that has to stay the first module):`n    .WithSQLServerDataSource(${nameLower}Db, `"$Name`")"
 }
 
 # ---- 10. web host configuration ------------------------------------------------------------------
@@ -707,45 +879,53 @@ if (($settings.Lines -join "`n") -match ('"' + [regex]::Escape($Name) + '"\s*:\s
 }
 
 # The top-level connection string stays (it is the Default fallback that startup validation and the
-# health checks use) but its migrations-assembly pin must GO. Under Aspire every
-# WithSQLServerDataSource call also rewrites the top-level connection string and the last one wins,
-# so one module always collapses onto the Default source; a top-level pin naming the OTHER module's
-# assembly then fails startup with a conflicting-value error.
+# health checks use) but its migrations-assembly pin must GO. Under Aspire every data-source call
+# also rewrites the top-level connection string and the last one wins, so one module always collapses
+# onto the Default source; a top-level pin naming the OTHER module's assembly then fails startup with
+# a conflicting-value error. That is true of both engines: WithSqliteDataSource writes
+# ConnectionStrings__SqliteConnectionString for exactly the same reason its SQL Server counterpart does.
 $connectionRange = Get-JsonObjectRange -Document $settings -Key 'ConnectionStrings'
 $connectionLine = $null
 $pinLine = -1
 for ($i = $connectionRange.Open + 1; $i -lt $connectionRange.Close; $i++) {
-    if ($settings.Lines[$i] -match '"SQLServerMigrationsAssembly"') { $pinLine = $i }
-    if ($settings.Lines[$i] -match '"SQLServerConnectionString"\s*:\s*"([^"]*)"') {
+    if ($settings.Lines[$i] -match ('"' + $migrationsAssemblyKey + '"')) { $pinLine = $i }
+    if ($settings.Lines[$i] -match ('"' + $connectionKey + '"\s*:\s*"([^"]*)"')) {
         $connectionLine = $Matches[1]
     }
 }
 
 if (-not $connectionLine) {
-    throw "appsettings.json has no top-level SQLServerConnectionString. Add the DataSources section by hand (dotnet new mmca-module prints the shape)."
+    throw "appsettings.json has no top-level $connectionKey, which is the $engineChoice connection this solution was detected as running on. Add the DataSources section by hand (dotnet new mmca-module prints the shape)."
 }
 
 if ($pinLine -lt 0) {
-    Write-Skipped 'appsettings.json has no top-level SQLServerMigrationsAssembly pin'
+    Write-Skipped "appsettings.json has no top-level $migrationsAssemblyKey pin"
 } else {
     $settings.Lines.RemoveAt($pinLine)
     # Whatever is now last in ConnectionStrings must lose the comma it carried as a non-last member.
     $last = $connectionRange.Close - 2
     while ($last -gt $connectionRange.Open -and -not $settings.Lines[$last].Trim()) { $last-- }
     $settings.Lines[$last] = $settings.Lines[$last].TrimEnd().TrimEnd(',')
-    Write-Applied 'appsettings.json drops the top-level SQLServerMigrationsAssembly pin'
+    Write-Applied "appsettings.json drops the top-level $migrationsAssemblyKey pin"
 }
 
-# Each module's connection string is the existing one with its database name swapped, so an adopter
-# who already pointed the default at a real server keeps that server for every module.
+# Each module's connection string is the existing one with only its database NAMED differently, so an
+# adopter who already pointed the default at a real server (or at a directory of their own) keeps
+# every other part of it for every module. Which part names the database is the engine's one real
+# difference here: a server connection carries Database=, a file connection carries Data Source=.
 function New-DataSourceLines {
     param([string] $Module, [string] $Indent)
 
-    $connection = [regex]::Replace($connectionLine, '(?i)(Database=)[^;]*', "`${1}${appShort}_$Module")
+    $connection = if ($engineChoice -eq 'sqlite') {
+        [regex]::Replace($connectionLine, '(?i)(Data Source=)[^;]*', "`${1}${appShortLower}_$($Module.ToLowerInvariant()).db")
+    } else {
+        [regex]::Replace($connectionLine, '(?i)(Database=)[^;]*', "`${1}${appShort}_$Module")
+    }
+
     return @(
         "$Indent`"$Module`": {"
-        "$Indent  `"SQLServerConnectionString`": `"$connection`","
-        "$Indent  `"SQLServerMigrationsAssembly`": `"$app.Migrations.SqlServer.$Module`""
+        "$Indent  `"$connectionKey`": `"$connection`","
+        "$Indent  `"$migrationsAssemblyKey`": `"$app.Migrations.$engineName.$Module`""
         "$Indent}"
     )
 }
@@ -776,8 +956,9 @@ if ($null -eq $dataSources) {
 }
 
 # IEventBus writes handler-published integration events to ONE configured outbox source per host. It
-# defaults to Default, and Default is whichever module's WithSQLServerDataSource call ran last, so
-# leaving it implicit means the outbox silently moves the day those calls are reordered.
+# defaults to Default, and Default is whichever module's data-source call ran last (both engines
+# rewrite the top-level connection string), so leaving it implicit means the outbox silently moves
+# the day those calls are reordered.
 if ($null -ne (Get-JsonObjectRange -Document $settings -Key 'Outbox' -Optional)) {
     Write-Skipped 'appsettings.json already pins the outbox source'
 } else {
@@ -794,7 +975,18 @@ Save-TextDocument $settings
 # ---- 11. first migration ------------------------------------------------------------------------
 Write-Step 'First migration'
 
-$migrationCommand = "dotnet ef migrations add InitialCreate --project $migrationsProject --startup-project $migrationsProject --context SQLServerDbContext"
+$migrationCommand = "dotnet ef migrations add InitialCreate --project $migrationsProject --startup-project $migrationsProject --context $dbContextName"
+
+# On SQL Server the first migration can wait: the host creates and migrates the database at startup
+# whatever the migrations assembly holds. On SQLite it cannot. A SQLite data source that names a
+# migrations assembly is MIGRATED at startup rather than created outright, and an empty migrations
+# assembly migrates nothing, so the host comes up against a database with no tables in it and the
+# first query is what reports the problem. Said out loud wherever this step does not actually run.
+$sqliteMigrationIsRequired = @"
+This is a SQLite solution, so the migration above is required BEFORE the next run of the API host,
+not something to get to later: the host migrates a SQLite source that names a migrations assembly
+instead of creating it outright, and an empty migrations assembly leaves the database empty.
+"@
 
 $existingMigrations = @(Get-ChildItem -Path (Join-Path $root "$migrationsProject/Migrations") -File -Filter '*.cs' -ErrorAction SilentlyContinue)
 
@@ -803,6 +995,7 @@ if ($existingMigrations.Count -gt 0) {
 } elseif ($SkipMigration) {
     Write-Host "  -SkipMigration: create it yourself with" -ForegroundColor Yellow
     Write-Host "    $migrationCommand"
+    if ($engineChoice -eq 'sqlite') { Write-Warning $sqliteMigrationIsRequired }
 } else {
     # The design-time factory opens no connection for `migrations add`, so this needs no database.
     # It DOES need the dotnet-ef tool, which is not part of the SDK. Missing it is not a reason to
@@ -812,6 +1005,7 @@ if ($existingMigrations.Count -gt 0) {
         Write-Warning "The dotnet-ef tool is not installed, so the first migration was not created. Install it and run the command below:"
         Write-Host "    dotnet tool install --global dotnet-ef"
         Write-Host "    $migrationCommand"
+        if ($engineChoice -eq 'sqlite') { Write-Warning $sqliteMigrationIsRequired }
     } else {
         # Restore first. The eight projects added above have never been restored, and dotnet ef does
         # not restore: it reads the project's MSBuild metadata, which without an assets file fails
@@ -820,7 +1014,7 @@ if ($existingMigrations.Count -gt 0) {
         Invoke-Native 'dotnet restore' { dotnet restore $solution.FullName | Out-Null }
 
         Invoke-Native 'dotnet ef migrations add InitialCreate' {
-            dotnet ef migrations add InitialCreate --project $migrationsProject --startup-project $migrationsProject --context SQLServerDbContext
+            dotnet ef migrations add InitialCreate --project $migrationsProject --startup-project $migrationsProject --context $dbContextName
         }
         Write-Applied "created the InitialCreate migration in $migrationsProject"
     }
@@ -838,6 +1032,10 @@ Write-Host "Next:"
 Write-Host "  dotnet build $($solution.Name)"
 Write-Host "  dotnet test --solution $($solution.Name)"
 Write-Host "  git diff        # the existing files edited above; this is the review"
+if ($engineChoice -eq 'sqlite') {
+    Write-Host "  the module's database is its own file, $moduleDbFile, created by the migration above"
+    Write-Host "  the next run of the API host applies it; every later migration applies the same way"
+}
 Write-Host ""
 Write-Host "Two things this deliberately did NOT do:"
 Write-Host "  1. UI pages. The scaffold's Blazor host still shows only the first module. Copy a page"

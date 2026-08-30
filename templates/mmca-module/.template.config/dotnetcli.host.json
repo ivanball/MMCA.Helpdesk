@@ -9,10 +9,12 @@
     "flat": { "longName": "flat", "shortName": "" },
     "noStatus": { "longName": "no-status", "shortName": "" },
     "noDescription": { "longName": "no-description", "shortName": "" },
-    "noOwner": { "longName": "no-owner", "shortName": "" }
+    "noOwner": { "longName": "no-owner", "shortName": "" },
+    "database": { "longName": "database", "shortName": "" }
   },
   "usageExamples": [
     "-n Billing --app Contoso.Support --aggregate Invoice",
+    "-n Notes --app Contoso.Notes --aggregate Note --database sqlite",
     "-n Shipping --app Contoso.Support --aggregate Shipment --child Line",
     "-n Shipping --app Contoso.Support --aggregate Shipment --title Reference --event-verb Dispatched",
     "-n Shipping --app Contoso.Support --aggregate Shipment --flat --no-status",
