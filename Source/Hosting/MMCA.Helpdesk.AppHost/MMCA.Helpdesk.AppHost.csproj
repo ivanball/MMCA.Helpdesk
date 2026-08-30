@@ -13,7 +13,9 @@
 
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.AppHost" />
+    <!-- template:begin sqlserver -->
     <PackageReference Include="Aspire.Hosting.SqlServer" />
+    <!-- template:end sqlserver -->
   </ItemGroup>
 
   <ItemGroup>

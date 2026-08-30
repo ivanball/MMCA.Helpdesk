@@ -40,12 +40,24 @@ rather than to a generated app and laying `build/templates/overlay/` on top. Con
   released version, and local mode can pass where package-mode Release fails on an analyzer
   (workspace memory `feedback_localprops_masks_ci_analyzers`). The `template-smoke` job is the real
   gate: run `pwsh build/templates/smoke.ps1` before touching anything under `build/templates/`,
-  `templates/`, or `.template.config/`.
-- **Two things the scaffold deliberately does not hand over**, both because a rename invalidates
-  them and no fixed value is right for every generated name: using-directive and alias order (SA1210
-  and SA1211 are relaxed in the staged `.editorconfig` only) and the `IntegrationEventContractTests` subclass (an
-  inherited wire-contract freeze guarantees nothing; adopters freeze their own). Both are documented
-  in the generated README.
+  `templates/`, or `.template.config/`. It runs three full generate + restore + Release build + test
+  cases: two module shapes (all axes off with a `--title` rename; fully default) and one SOLUTION
+  shape (`--database sqlite --no-aspire`). Only the first goes on to add a second module through
+  `build/add-module.ps1` and scaffold slices.
+- **One thing the scaffold deliberately does not hand over**: using-directive and alias order, because
+  a rename invalidates it and no fixed order is right for every generated name (SA1210 and SA1211 are
+  relaxed in the staged `.editorconfig` only, along with IDE0021 for the shape flags). It is documented
+  in the generated README. There is deliberately **no `dotnet format` post-action**: dotnet new's
+  run-script post action (`3A7C4B45-1F5D-4A30-959A-51B88E82B5D2`) needs `--allow-scripts yes` and
+  otherwise PROMPTS, which would hang `smoke.ps1` and every adopter's own automation, and it would
+  also run before the app has been built. The `.editorconfig` delta plus the README command is the
+  supported answer.
+- **The `IntegrationEventContractTests` subclass DOES ship**, and used to not. `IntegrationEventContractTestsBase`
+  compares each event's members as an unordered set, so the aggregate's own Id moving position is no
+  longer a difference, and everything else in the literal is an ordinary symbol substitution. The one
+  member a flag can remove (`RequesterUserId`) is handled by `$optionalAxisLines` like any other
+  comma-separated list. `build/add-module.ps1` appends the new module's event to `ExpectedContract`
+  as its 8th wire-up, so a second module does not turn the adopter's next test run red.
 - **The optional axes live in the seed as ordinary comments.** `--flat` (no child collection),
   `--no-status` (no status axis), `--no-description` (no long-text property), `--no-owner` (no
   owning-user property), and `--child <Name>` (rename the child concept) are shaped two
@@ -59,6 +71,34 @@ rather than to a generated app and laying `build/templates/overlay/` on top. Con
   `stage.ps1` converts them to dotnet-new directives in the STAGED copies and throws on an
   unbalanced or unknown-label marker. **Never put a raw `//#if` in the seed**, and keep a region's
   trailing blank line INSIDE it (a marker followed by a blank line is SA1512).
+- **Two SOLUTION axes sit beside the four module ones**, and they behave differently. `--database
+  sqlserver|sqlite` and `--no-aspire` use the same marker mechanism (labels `sqlserver`, `sqlite`,
+  `aspire`, `aspireSqlServer`, the last being `!(noAspire || useSqlite)` so one line can carry both),
+  plus three things the module axes never needed:
+  - **`--database` is a SWAP, not a removal**, and the seed can only hold one branch of a swap. So the
+    seed keeps the SQL Server code inside a `sqlserver` region, and `stage.ps1`'s `$engineAlternatives`
+    table **injects** the SQLite branch as a sibling `sqlite` region at staging time (three entries
+    today: the AppHost block, the health-check call, the design-time connection string). Nothing else
+    is engine-specific in code, because two derived symbols do the rest by substring: `engineName`
+    rewrites `SqlServer` (both provider package ids, the migrations project's folder / namespace /
+    assembly, and `CreateSqlServer`) and `engineNameUpper` rewrites `SQLServer` (the design-time
+    factory's file and class, `SQLServerDbContext`, `EntityTypeConfigurationSQLServer`, and the
+    `SQLServerConnectionString` / `SQLServerMigrationsAssembly` settings).
+  - **`.slnx` carries markers** (added to `$markerStyles` with the XML comment form), which is how
+    `--no-aspire` drops the AppHost's `<Project>` line. Verified: the solution parsers keep comments.
+  - **Three whole files are variants, not regions**, because `.json` and `.md` differ structurally
+    rather than by a line: the API host's `appsettings.sqlite.json`, the UI host's
+    `appsettings.standalone.json`, and `README.standalone.md`, all shipped by the overlay and renamed
+    into place by `sources.modifiers` (`rename` plus a matching `exclude` on the other polarity).
+    `stage.ps1` guards that both declarations exist for each.
+  Neither axis reaches `mmca-module` or the slice templates: they declare no such symbol, so
+  `Convert-TemplateMarkers -StripLabels` removes those markers there and keeps the SQL Server content.
+  A generated module is therefore always SQL-Server-shaped, which is a known gap for a sqlite app.
+- **XML comments cannot contain a double hyphen**, so an option name written as `--no-aspire` inside a
+  `.props` / `.csproj` / `.slnx` comment makes the whole file invalid XML. MSBuild does not fail on an
+  unparsable OPTIONAL import, it skips it, which is how the overlay's `local.props` sat broken (every
+  `--local-mmca` app silently built in package mode) with a green smoke run. Spell option names without
+  their dashes in XML prose; `stage.ps1` guard 8 parses every staged XML file and throws.
 - **A comma-separated list cannot lose one element to a whole-line region.** C# forbids a trailing
   comma in an invocation, a parameter list, and a positional record, so `--no-description` /
   `--no-owner` cannot drop a middle or last argument with markers. The seed keeps those lists on ONE
@@ -107,7 +147,7 @@ needed. **Building in local-source mode requires `../MMCA.Common/Source` to exis
 
 ```bash
 dotnet build MMCA.Helpdesk.slnx                       # warning-free under all analyzers
-dotnet test  --solution MMCA.Helpdesk.slnx            # 100 tests (domain + application + architecture), NO database needed
+dotnet test  --solution MMCA.Helpdesk.slnx            # 112 tests (domain + application + architecture), NO database needed
 dotnet run --project Source/Hosting/MMCA.Helpdesk.AppHost   # interactive terminal ONLY, see caveat below
 ```
 

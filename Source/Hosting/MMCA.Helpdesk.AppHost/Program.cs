@@ -1,12 +1,14 @@
-// Aspire AppHost for the MMCA.Helpdesk monolith: a SQL Server container, one database, and the
-// single Web host. WithSQLServerDataSource injects both the routing key and ConnectionStrings__
-// SQLServerConnectionString; with one data source they collapse onto a single physical database,
-// so the app behaves as a classic single-DB monolith. The extraction phase (GETTING-STARTED.md
-// Phase 8) adds per-service databases, a broker, a gateway, and JWKS discovery here.
+// Aspire AppHost for the MMCA.Helpdesk monolith: one database, the Web API host, and the Blazor UI
+// host. With a single data source the logical and physical names collapse onto one database, so the
+// app behaves as a classic single-DB monolith. The extraction phase (GETTING-STARTED.md Phase 8)
+// adds per-service databases, a broker, a gateway, and JWKS discovery here.
 using MMCA.Common.Aspire.Hosting;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
+// template:begin sqlserver
+// A SQL Server container plus its databases. WithSQLServerDataSource injects both the routing key
+// and ConnectionStrings__SQLServerConnectionString, which is what makes the two names collapse.
 var sql = builder.AddSqlServer("sql")
     .WithLifetime(ContainerLifetime.Persistent);
 
@@ -37,6 +39,7 @@ var web = builder.AddProject<Projects.MMCA_Helpdesk_Web>("web")
     .WithHttpHealthCheck("/health/ready")
     .WithExternalHttpEndpoints();
 
+// template:end sqlserver
 // Blazor Server UI. Calls the API server-side via service discovery ("web"); WithReference injects
 // the endpoint the UI's typed HttpClient resolves. WaitFor(web) holds the UI back until the API's
 // health check above reports healthy, so the first page render cannot race a host that is still

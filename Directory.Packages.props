@@ -4,6 +4,13 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
+    <!-- The two engine provider pins. Both package ids carry the engine's name as a substring, and
+         scaffolding rewrites exactly that substring (the engineName symbol in
+         .template.config/template.json), so the sqlite database option lands on
+         AspNetCore.HealthChecks.Sqlite and Microsoft.EntityFrameworkCore.Sqlite at these same
+         versions. Keep the ids spelled so the substring stays intact, or the rename stops reaching
+         them.
+         XML comments cannot carry a double hyphen, so option names are spelled out in prose here. -->
     <PackageVersion Include="AspNetCore.HealthChecks.SqlServer" Version="9.0.0" />
     <PackageVersion Include="AwesomeAssertions" Version="9.6.0" />
     <PackageVersion Include="AspNet.Security.OAuth.GitHub" Version="10.0.0" />
@@ -33,11 +40,22 @@
     <PackageVersion Include="Deque.AxeCore.Playwright" Version="4.13.0" />
     <PackageVersion Include="Microsoft.Playwright" Version="1.62.0" />
     <PackageVersion Include="Testcontainers.MsSql" Version="4.14.0" />
-    <!-- Aspire -->
+    <!-- Aspire. Every comment about the orchestration project lives INSIDE its region, so a solution
+         generated without one is not handed prose about a project it does not have. -->
+    <!-- template:begin aspire -->
+    <!-- These three pins belong to the orchestration project alone, which the no-aspire option does
+         not generate. Aspire.StackExchange.* and the service-discovery/resilience pins below belong
+         to the service hosts and stay in every shape, because AddServiceDefaults() does. -->
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.5.3" />
     <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.5.3" />
     <PackageVersion Include="Aspire.Hosting.Redis" Version="13.5.3" />
+    <!-- template:end aspire -->
+    <!-- template:begin aspireSqlServer -->
+    <!-- The one engine-specific orchestration pin: SQLite has no container resource, so the sqlite
+         database option needs no hosting integration at all (WithSqliteDataSource only injects a
+         connection string). Its own region rather than a nested one: two axes, one line. -->
     <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.5.3" />
+    <!-- template:end aspireSqlServer -->
     <PackageVersion Include="Aspire.StackExchange.Redis.DistributedCaching" Version="13.5.3" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.9.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.9.0" />
@@ -51,22 +69,22 @@
     <PackageVersion Include="Grpc.AspNetCore.Server.Reflection" Version="2.83.0" />
     <PackageVersion Include="Grpc.Net.ClientFactory" Version="2.83.0" />
     <PackageVersion Include="Grpc.Tools" Version="2.82.0" />
-    <PackageVersion Include="MMCA.Common.Grpc" Version="1.169.0" />
+    <PackageVersion Include="MMCA.Common.Grpc" Version="1.170.0" />
     <!-- MMCA Common Packages -->
-    <PackageVersion Include="MMCA.Common.Shared" Version="1.169.0" />
-    <PackageVersion Include="MMCA.Common.Domain" Version="1.169.0" />
-    <PackageVersion Include="MMCA.Common.Application" Version="1.169.0" />
-    <PackageVersion Include="MMCA.Common.Infrastructure" Version="1.169.0" />
-    <PackageVersion Include="MMCA.Common.API" Version="1.169.0" />
-    <PackageVersion Include="MMCA.Common.Aspire" Version="1.169.0" />
-    <PackageVersion Include="MMCA.Common.Aspire.Hosting" Version="1.169.0" />
+    <PackageVersion Include="MMCA.Common.Shared" Version="1.170.0" />
+    <PackageVersion Include="MMCA.Common.Domain" Version="1.170.0" />
+    <PackageVersion Include="MMCA.Common.Application" Version="1.170.0" />
+    <PackageVersion Include="MMCA.Common.Infrastructure" Version="1.170.0" />
+    <PackageVersion Include="MMCA.Common.API" Version="1.170.0" />
+    <PackageVersion Include="MMCA.Common.Aspire" Version="1.170.0" />
+    <PackageVersion Include="MMCA.Common.Aspire.Hosting" Version="1.170.0" />
     <PackageVersion Include="Yarp.ReverseProxy" Version="2.3.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery.Yarp" Version="10.9.0" />
-    <PackageVersion Include="MMCA.Common.Testing" Version="1.169.0" />
-    <PackageVersion Include="MMCA.Common.Testing.E2E" Version="1.169.0" />
-    <PackageVersion Include="MMCA.Common.Testing.UI" Version="1.169.0" />
-    <PackageVersion Include="MMCA.Common.Testing.Architecture" Version="1.169.0" />
-    <PackageVersion Include="MMCA.Common.UI" Version="1.169.0" />
-    <PackageVersion Include="MMCA.Common.UI.Web" Version="1.169.0" />
+    <PackageVersion Include="MMCA.Common.Testing" Version="1.170.0" />
+    <PackageVersion Include="MMCA.Common.Testing.E2E" Version="1.170.0" />
+    <PackageVersion Include="MMCA.Common.Testing.UI" Version="1.170.0" />
+    <PackageVersion Include="MMCA.Common.Testing.Architecture" Version="1.170.0" />
+    <PackageVersion Include="MMCA.Common.UI" Version="1.170.0" />
+    <PackageVersion Include="MMCA.Common.UI.Web" Version="1.170.0" />
   </ItemGroup>
 </Project>
