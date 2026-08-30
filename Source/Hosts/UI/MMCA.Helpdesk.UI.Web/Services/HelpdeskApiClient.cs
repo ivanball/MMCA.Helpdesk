@@ -156,8 +156,8 @@ public sealed class HelpdeskApiClient(HttpClient httpClient)
                 return await ProblemDetailsResultReader.ReadAsync(response, cancellationToken).ConfigureAwait(false);
             },
             cancellationToken);
-    // template:end child
 
+    // template:end child
     /// <summary>
     /// Builds a conditional PUT: the caller's last-read concurrency token rendered as the weak
     /// entity tag the <c>If-Match</c> header carries (<see cref="ConcurrencyETag"/>). The header is
