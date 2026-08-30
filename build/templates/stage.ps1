@@ -438,15 +438,15 @@ $moduleOnlyRewrites = @(
 /// to apply.
 '@
         To = @'
-/// This declares the <c>Tickets</c> data source and deliberately NO top-level connection string. A
-/// module added to an existing solution is never that solution's <c>Default</c> source: the first
-/// module keeps that role, because the host's top-level connection names its database and, under an
-/// orchestrator, its data-source call is the one that runs last. Naming a top-level connection equal
-/// to the one below would make the resolver collapse this source onto <c>Default</c> and scaffold the
-/// Default-source-only framework tables (<c>ScheduledJobs</c>) into this module's migrations. They are
-/// not in the running model, and EF refuses to migrate a database whose model has pending changes, so
-/// the host would stop at startup rather than merely drift. Point <c>HELPDESK_TICKETS_SQL</c> at a
-/// real database to apply.
+/// This declares the <c>Tickets</c> data source plus a PLACEHOLDER top-level connection whose
+/// identity matches no real database. A module added to an existing solution is never that
+/// solution's <c>Default</c> source: the first module keeps that role. The placeholder matters
+/// because the resolver seeds <c>Default</c> from a factory's single named entry when no top-level
+/// connection exists (the same collapse a matching top-level value causes), which would scaffold the
+/// Default-source-only framework tables (<c>ScheduledJobs</c>) into this module's migrations. They
+/// are not in the running model, and EF refuses to migrate a database whose model has pending
+/// changes, so the host would stop at startup rather than merely drift. The placeholder is never
+/// used to connect. Point <c>HELPDESK_TICKETS_SQL</c> at a real database to apply.
 '@
     },
     @{
@@ -458,6 +458,11 @@ $moduleOnlyRewrites = @(
 '@
         To = @'
             options.DataSourceName = "Tickets";
+
+            // A deliberately unmatchable placeholder: with NO top-level connection the resolver seeds
+            // Default from this factory's single named entry, which would pull the Default-source-only
+            // framework tables (ScheduledJobs) into this module's migrations. Never used to connect.
+            options.ConnectionStrings = new ConnectionStringSettings { SQLServerConnectionString = "Server=localhost;Database=__AppDefaultPlaceholder" };
 '@
     }
 )
