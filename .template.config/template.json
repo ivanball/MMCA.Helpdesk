@@ -5,7 +5,7 @@
   "identity": "MMCA.Templates.App",
   "name": "MMCA modular monolith (DDD + CQRS + Aspire)",
   "shortName": "mmca-app",
-  "description": "A complete modular-monolith solution on the MMCA.Common framework: one business module across all five layers, a REST API host, a Blazor Server + MudBlazor UI host, an Aspire AppHost, a per-database migrations project, and domain + application + architecture-fitness test projects. Shape the sample module with --flat (no child collection), --no-status (no status axis), --no-description (no description property), --no-owner (no requester/owner property), and --child (rename the child entity); name its vocabulary with --title (the aggregate's main text property) and --event-verb (the creation integration event's verb). Build the monolith now, extract a module into its own service later.",
+  "description": "A complete modular-monolith solution on the MMCA.Common framework: one business module across all five layers, a REST API host, a Blazor Server + MudBlazor UI host, an Aspire AppHost, a per-database migrations project, and domain + application + architecture-fitness test projects. Shape the sample module with --flat (no child collection), --no-status (no status axis), --no-description (no description property), --no-owner (no requester/owner property), and --child (rename the child entity); name its vocabulary with --title (the aggregate's main text property) and --event-verb (the creation integration event's verb). Pick the shape of the solution itself with --database sqlserver|sqlite and --no-aspire, which compose: --database sqlite --no-aspire is a two-host app with a single database file and no container anywhere. Build the monolith now, extract a module into its own service later.",
   "tags": {
     "language": "C#",
     "type": "solution"
@@ -59,6 +59,30 @@
     "toPluralLower": {
       "identifier": "chain",
       "steps": [ "toPlural", "lowerCase" ]
+    },
+
+    "engineSqlServerPascal": {
+      "identifier": "replace",
+      "pattern": "^sqlserver$",
+      "replacement": "SqlServer"
+    },
+    "engineSqlitePascal": {
+      "identifier": "replace",
+      "pattern": "^sqlite$",
+      "replacement": "Sqlite"
+    },
+    "toEngineName": {
+      "identifier": "chain",
+      "steps": [ "engineSqlServerPascal", "engineSqlitePascal" ]
+    },
+    "engineSqlServerUpper": {
+      "identifier": "replace",
+      "pattern": "^sqlserver$",
+      "replacement": "SQLServer"
+    },
+    "toEngineNameUpper": {
+      "identifier": "chain",
+      "steps": [ "engineSqlServerUpper", "engineSqlitePascal" ]
     }
   },
 
@@ -218,6 +242,50 @@
       "description": "Generate the module WITHOUT the aggregate's owning-user property: no RequesterUserId property, no create-request field or validator rule, no member on the creation integration event, no EF index, no UI field or column, and no tests for it. Use it when the aggregate is not owned by a single user, or until you add an Identity module to resolve one."
     },
 
+    "database": {
+      "type": "parameter",
+      "datatype": "choice",
+      "defaultValue": "sqlserver",
+      "choices": [
+        {
+          "choice": "sqlserver",
+          "description": "SQL Server. The Aspire AppHost declares a container and a database resource, entity configurations inherit EntityTypeConfigurationSQLServer, and the migrations project targets Microsoft.EntityFrameworkCore.SqlServer."
+        },
+        {
+          "choice": "sqlite",
+          "description": "SQLite. A single file, no container and no server: entity configurations inherit EntityTypeConfigurationSqlite, the migrations project targets Microsoft.EntityFrameworkCore.Sqlite and is named .Migrations.Sqlite.<Module>, and the app is single-tenant (the database-per-tenant demo needs a second server-backed database)."
+        }
+      ],
+      "description": "Relational engine for the sample module. Both shapes are the same application code: the engine is a configuration-base choice plus a connection string, which is the whole point of the framework's data-source routing."
+    },
+    "useSqlite": {
+      "type": "computed",
+      "value": "(database == \"sqlite\")"
+    },
+    "engineName": {
+      "type": "derived",
+      "valueSource": "database",
+      "valueTransform": "toEngineName",
+      "replaces": "SqlServer",
+      "fileRename": "SqlServer",
+      "description": "Pascal spelling of the engine (SqlServer / Sqlite). It is what renames the migrations project (folder, csproj, namespace, assembly, and every reference to it), the two engine provider package ids, and the design-time helper call DesignTimeDbContextHelper.CreateSqlServer -> CreateSqlite. DERIVED from --database; there is no flag of its own."
+    },
+    "engineNameUpper": {
+      "type": "derived",
+      "valueSource": "database",
+      "valueTransform": "toEngineNameUpper",
+      "replaces": "SQLServer",
+      "fileRename": "SQLServer",
+      "description": "The framework's OTHER spelling of the same engine (SQLServer / Sqlite), which is the one its public types and settings use. It renames the design-time factory (file and class), SQLServerDbContext -> SqliteDbContext, EntityTypeConfigurationSQLServer -> EntityTypeConfigurationSqlite, and the SQLServerConnectionString / SQLServerMigrationsAssembly settings properties. Two symbols rather than one because the two spellings are both real: renaming either alone leaves half the tree pointing at the other engine."
+    },
+
+    "noAspire": {
+      "type": "parameter",
+      "datatype": "bool",
+      "defaultValue": "false",
+      "description": "Generate the solution WITHOUT the Aspire AppHost: no orchestration project, no Aspire.Hosting.* pins, and the UI host reaches the API through a fixed localhost address instead of service discovery. The hosts keep AddServiceDefaults() (telemetry, health endpoints, resilience) either way, so adding an AppHost later is additive. Run the two hosts yourself: dotnet run the API host, then the UI host."
+    },
+
     "frameworkVersion": {
       "type": "parameter",
       "datatype": "text",
@@ -288,10 +356,46 @@
           ]
         },
         {
-          "comment": "The seed's migrations describe the FULL sample schema (child table, status column, description column, requester column and its index). Any shape flag makes them wrong on arrival, so they are dropped and the adopter runs 'dotnet ef migrations add InitialCreate' against the shape they asked for. Migrations/.editorconfig still ships: dotnet ef never recreates it.",
-          "condition": "(flat || noStatus || noOwner || noDescription)",
+          "comment": "The seed's migrations describe the FULL sample schema (child table, status column, description column, requester column and its index) against SQL Server. Any shape flag makes them wrong on arrival, and --database sqlite makes them wrong for a second reason (they are SQL Server DDL, and their model snapshot names SQLServerDbContext), so they are dropped and the adopter runs 'dotnet ef migrations add InitialCreate' against the shape they asked for. Migrations/.editorconfig still ships: dotnet ef never recreates it.",
+          "condition": "(flat || noStatus || noOwner || noDescription || useSqlite)",
           "exclude": [
             "Source/Hosting/MMCA.Helpdesk.Migrations.SqlServer.Tickets/Migrations/*.cs"
+          ]
+        },
+        {
+          "comment": "--database sqlite: the API host's appsettings.json differs structurally rather than by one value (a different connection-string key, a different migrations-assembly key, a DataSources entry, and no database-per-tenant override), and .json carries no marker regions in this seed. The sqlite copy ships beside it from build/templates/overlay and is renamed into place; the SQL Server copy comes out. Paths here are SOURCE paths, matched before any rename.",
+          "condition": "(useSqlite)",
+          "exclude": [
+            "Source/Hosts/MMCA.Helpdesk.Web/appsettings.json"
+          ],
+          "rename": {
+            "Source/Hosts/MMCA.Helpdesk.Web/appsettings.sqlite.json": "Source/Hosts/MMCA.Helpdesk.Web/appsettings.json"
+          }
+        },
+        {
+          "condition": "(!useSqlite)",
+          "exclude": [
+            "Source/Hosts/MMCA.Helpdesk.Web/appsettings.sqlite.json"
+          ]
+        },
+        {
+          "comment": "--no-aspire: the orchestration project, and the two files that assume it. The UI host resolves the API as 'https+http://web' through Aspire service discovery; standalone it needs the API host's own dev address, which is fixed in that host's launchSettings.json. The README is the other one: it is prose about running the app, and prose has no conditional form.",
+          "condition": "(noAspire)",
+          "exclude": [
+            "Source/Hosting/MMCA.Helpdesk.AppHost/**",
+            "Source/Hosts/UI/MMCA.Helpdesk.UI.Web/appsettings.json",
+            "README.md"
+          ],
+          "rename": {
+            "Source/Hosts/UI/MMCA.Helpdesk.UI.Web/appsettings.standalone.json": "Source/Hosts/UI/MMCA.Helpdesk.UI.Web/appsettings.json",
+            "README.standalone.md": "README.md"
+          }
+        },
+        {
+          "condition": "(!noAspire)",
+          "exclude": [
+            "Source/Hosts/UI/MMCA.Helpdesk.UI.Web/appsettings.standalone.json",
+            "README.standalone.md"
           ]
         }
       ],

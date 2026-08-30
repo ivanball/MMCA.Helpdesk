@@ -77,29 +77,51 @@ Invoke-Step 'Install' {
 # Deliberately share no substring with the seed's own names: a rename that half-applies shows up as
 # a leftover Helpdesk or Ticket, which the token sweep below then fails on.
 #
-# The two cases are the two SHAPES, not two names, and there are deliberately only two: each one is a
-# full restore + Release build + test run, so the wall-clock cost of a third would buy less than
-# widening these. Contoso.Support is the "catalog product" shape, every axis the template can take
-# away taken away (no children, no lifecycle state, no owning user) plus the vocabulary rename that
-# has no flag of its own to hide behind (--title). Zeta.Warehouse stays fully default, which is what
-# makes the absence sweeps below non-vacuous: every presence branch and every default token has to
-# survive there. Running both is the only way a marker region that removes one line too many (or too
-# few) fails here rather than in an adopter's first build.
+# The three cases are three SHAPES, not three names, and each one is a full restore + Release build +
+# test run, so a fourth has to earn its wall clock (roughly four to five minutes apiece) against
+# widening the three that are here.
 #
-# --no-description and --event-verb are exercised on the MODULE added further down rather than here:
-# they are the same two mechanisms (a whole-axis removal and a free-text rename), mmca-module
-# declares the identical symbols, and proving them there costs one template instantiation instead of
-# a third app case.
+# Contoso.Support is the "catalog product" shape: every axis the template can take away taken away
+# (no children, no lifecycle state, no owning user) plus the vocabulary rename that has no flag of
+# its own to hide behind (--title). It is also the only case that goes on to add a second module and
+# scaffold slices, because those only need proving once.
+#
+# Zeta.Warehouse stays fully default, which is what makes the absence sweeps below non-vacuous:
+# every presence branch and every default token has to survive there. Running it beside Contoso is
+# the only way a marker region that removes one line too many (or too few) fails here rather than in
+# an adopter's first build.
+#
+# Nordic.Books is the SOLUTION shape rather than a module shape: --database sqlite --no-aspire, the
+# small-app floor. It earns a third full run because those two axes reach places no module axis
+# does: two package ids renamed by substring, a whole project excluded from the solution file, a
+# migrations project renamed folder-and-namespace, two whole-file variants swapped in by
+# sources.modifiers, and the framework's other spelling of the engine (SQLServerDbContext,
+# SQLServerConnectionString) rewritten across the design-time factory. Nothing about that is proved
+# by a shape flag. It keeps the module axes at their defaults on purpose, so a solution-axis
+# regression cannot hide behind a missing module axis.
+#
+# --no-description and --event-verb are exercised on the MODULE added further down rather than in a
+# case of their own: they are the same two mechanisms (a whole-axis removal and a free-text rename),
+# mmca-module declares the identical symbols, and proving them there costs one template
+# instantiation instead of a fourth app case.
 $cases = @(
     @{
         Name = 'Contoso.Support'; Module = 'Billing'; Aggregate = 'Invoice'
         Flat = $true; NoStatus = $true; NoOwner = $true; NoDescription = $false
         Title = 'Name'; EventVerb = ''
+        Database = ''; NoAspire = $false
     },
     @{
         Name = 'Zeta.Warehouse'; Module = 'Reservations'; Aggregate = 'Reservation'
         Flat = $false; NoStatus = $false; NoOwner = $false; NoDescription = $false
         Title = ''; EventVerb = ''
+        Database = ''; NoAspire = $false
+    },
+    @{
+        Name = 'Nordic.Books'; Module = 'Ledgers'; Aggregate = 'Ledger'
+        Flat = $false; NoStatus = $false; NoOwner = $false; NoDescription = $false
+        Title = ''; EventVerb = ''
+        Database = 'sqlite'; NoAspire = $true
     }
 )
 
@@ -209,6 +231,8 @@ foreach ($case in $cases) {
     if ($case.NoDescription) { $shapeFlags += '--no-description' }
     if ($case.Title) { $shapeFlags += @('--title', $case.Title) }
     if ($case.EventVerb) { $shapeFlags += @('--event-verb', $case.EventVerb) }
+    if ($case.Database) { $shapeFlags += @('--database', $case.Database) }
+    if ($case.NoAspire) { $shapeFlags += '--no-aspire' }
     $shape = if ($shapeFlags) { $shapeFlags -join ' ' } else { 'default shape' }
 
     # Generate straight into WorkPath: preferNameDirectory already creates the <AppName> folder, so
@@ -256,6 +280,11 @@ Residual seed tokens survived the rename in $($offenders.Count) file(s):
             if ($case.NoDescription) { $shapePatterns += 'Description', 'description' }
             if ($case.Title) { $shapePatterns += 'Title', 'title' }
             if ($case.EventVerb) { $shapePatterns += 'Opened', 'opened' }
+            # The solution axes remove code the same way the module axes do, so they answer the same
+            # question. Both engine spellings, because the two are separate symbols and a rename that
+            # applies one and not the other leaves a solution pointing at two engines at once.
+            if ($case.Database -eq 'sqlite') { $shapePatterns += 'SqlServer', 'SQLServer' }
+            if ($case.NoAspire) { $shapePatterns += 'AppHost' }
 
             $offenders = @(Find-TokenResidue -Roots @($appRoot) -Patterns $shapePatterns -Base $appRoot)
 
@@ -284,6 +313,12 @@ Generated with $shape but $($offenders.Count) file(s) still carry a removed axis
         if (-not $case.NoDescription) { $expected += 'Description' }
         if (-not $case.Title) { $expected += 'Title' }
         if (-not $case.EventVerb) { $expected += 'Opened' }
+        # The mirror of the two solution-axis sweeps above, and the reason they are not vacuous: a
+        # sqlite app must actually SAY Sqlite somewhere (the engine rename produced something, rather
+        # than the SQL Server code simply going missing), and a SQL Server app must still name the
+        # engine at all.
+        if ($case.Database -eq 'sqlite') { $expected += 'Sqlite' } else { $expected += 'SQLServer' }
+        if (-not $case.NoAspire) { $expected += 'AppHost' }
 
         $missing = @($expected | Where-Object {
             -not @(Find-TokenResidue -Roots @($appRoot) -Patterns @($_) -Base $appRoot)
@@ -576,7 +611,15 @@ but $($offenders.Count) file(s) still carry a removed axis or an un-renamed word
         Assert-Match $appHost ([regex]::Escape("var ${newModuleLower}Db = sql.AddDatabase(`"$shortLower-$newModuleLower`", `"${short}_$newModule`");")) 'AppHost database resource'
         Assert-Match $appHost ([regex]::Escape(".WithSQLServerDataSource(${newModuleLower}Db, `"$newModule`")")) 'AppHost data-source routing'
 
-        Write-Host "  solution, both csproj files, the alias link, the map, Program.cs and the AppHost"
+        # 8. the frozen wire contract. The new module ships an integration event, and the solution's
+        # contract test compares the LIVE set of events against a committed literal, so a module
+        # added without this line turns the adopter's next test run red in a file they did not
+        # write. Asserted on the member list too: the module is added --no-owner, so the owning-user
+        # member must NOT be in it.
+        $contract = "Tests/Architecture/$appName.Architecture.Tests/ArchitectureTests.cs"
+        Assert-Match $contract ([regex]::Escape("$appName.$newModule.Shared.$newModule.IntegrationEvents.$newAggregate${newEventVerb}IntegrationEvent { ${newAggregate}Id:Int32 }")) 'frozen wire-contract entry'
+
+        Write-Host "  solution, both csproj files, the alias link, the map, Program.cs, the AppHost and the wire contract"
     }
 
     # appsettings.json gets its own step because the script does not merely ADD to it: this is the

@@ -1,27 +1,35 @@
 # MMCA.Helpdesk
 
 A modular monolith on the [MMCA.Common](https://www.nuget.org/packages?q=MMCA.Common) framework:
-.NET 10, DDD, Clean Architecture, and CQRS, scaffolded with `dotnet new mmca-app`.
+.NET 10, DDD, Clean Architecture, and CQRS, scaffolded with `dotnet new mmca-app --no-aspire`.
 
 One business module (**Tickets**) is wired end to end through all five layers, behind a REST API
-host and a Blazor Server + MudBlazor UI host, orchestrated by Aspire. The framework's promise is
-that you build this monolith now and extract a module into its own service later, without a rewrite.
+host and a Blazor Server + MudBlazor UI host. There is no orchestration project: you start the two
+hosts yourself. The framework's promise is that you build this monolith now and extract a module
+into its own service later, without a rewrite.
 
 ## Build, test, run
 
 ```bash
 dotnet build MMCA.Helpdesk.slnx                 # warning-free: five analyzers at error severity
 dotnet test  --solution MMCA.Helpdesk.slnx      # domain + application + architecture, NO database needed
-dotnet run --project Source/Hosting/MMCA.Helpdesk.AppHost
+
+dotnet run --project Source/Hosts/MMCA.Helpdesk.Web        # the API, on https://localhost:60801
+dotnet run --project Source/Hosts/UI/MMCA.Helpdesk.UI.Web  # the Blazor UI, in a second terminal
 ```
 
-Run the AppHost from a **real, interactive terminal**. Launched from a background or headless shell
-it stalls at control-plane init: no dashboard, no browser, and it looks like a hang.
+Start the API host first: it migrates the database at startup, and the UI's first page render calls
+it. The UI reads the API address from `Api:BaseAddress` in its own `appsettings.json`, fixed at the
+API host's development URL from `Source/Hosts/MMCA.Helpdesk.Web/Properties/launchSettings.json`.
+Change one and change the other.
 
-The dashboard lists `web` (the API) and `ui` (Blazor), plus a `sql` container when the solution was
-scaffolded against SQL Server (SQLite is an in-process file and has no resource of its own). Open
-**`ui`** to use the app. The API serves `GET/POST /Tickets`, `/health`, and `/alive`; it has no page
-at `/`, so the API root returns 404 by design.
+The API serves `GET/POST /Tickets`, `/health`, and `/alive`; it has no page at `/`, so the API root
+returns 404 by design.
+
+Both hosts still call `AddServiceDefaults()` and `MapDefaultEndpoints()`, so OpenTelemetry, the
+health endpoints, service discovery and the HTTP resilience pipeline are all present. Adding an
+Aspire AppHost later is therefore additive: a new project that references these two, plus
+`WithReference` in place of the fixed address here.
 
 To run a single test class or method, target the project and pass a Microsoft Testing Platform
 filter after `--`. These solutions run on MTP, not VSTest, so a bare `--filter` silently matches
@@ -44,7 +52,7 @@ Source/
   Modules/Tickets/           Shared, Domain, Application, Infrastructure, API
   Hosts/MMCA.Helpdesk.Web    the monolith REST API host
   Hosts/UI/MMCA.Helpdesk.UI.Web   Blazor Server + MudBlazor
-  Hosting/                   Aspire AppHost + one migrations project per (future) service database
+  Hosting/                   one migrations project per (future) service database
 Tests/
   Modules/Tickets/           domain + application tests
   Architecture/              the fitness functions, parameterized by HelpdeskArchitectureMap
@@ -55,14 +63,14 @@ Tests/
 - **`AddApplicationDecorators()` must be the last DI call** in `Source/Hosts/MMCA.Helpdesk.Web/Program.cs`.
   Decorators wrap handlers that already exist, and the module handlers are registered by
   `ModuleLoader`. Move it earlier and the pipeline silently stops wrapping them.
-- **On SQL Server the AppHost waits on `sql`, not on the database resource.** The host creates the
-  database via EF `Migrate` at startup, so `WaitFor(db)` deadlocks: the database is never healthy
-  until it exists, and the only thing that creates it is the host doing the waiting. A SQLite
-  solution waits on nothing, because there is no server to come up.
+- **The API host creates its database at startup**, via EF `Migrate` (`ApplicationSettings:DatabaseInitStrategy`).
+  Nothing else does, so the UI host must not be the first thing you start.
+- **The UI's `Api:BaseAddress` is a fixed address, not service discovery.** It is the one piece of
+  configuration that knows where the other host lives; a port change in `launchSettings.json` has to
+  be mirrored there or every call fails with a connection refusal (which the typed client turns into
+  a `Result` failure, not an exception, so the page shows an error rather than crashing).
 - **Every layer assembly must be registered in `HelpdeskArchitectureMap`.** Add a module or a layer
   and forget its `Module(...)` line, and the layering and isolation rules silently stop covering it.
-- **The AppHost needs its `Properties/launchSettings.json`.** Without it the Aspire dashboard
-  endpoints are never configured and F5 appears to hang.
 - **Every `MMCA.Common.*` version moves together.** There is no phased rollout and no per-package
   skew; `FrameworkVersionConsistencyTests` fails the build if a sweep is half finished.
 
@@ -115,9 +123,10 @@ pwsh build/add-module.ps1 -Name Billing -Aggregate Invoice
 That scaffolds the module across all five layers, adds its test and migrations projects, and then
 performs every wire-up `dotnet new` cannot reach: the solution entries, the host and
 architecture-test project references, the identifier-alias link, the architecture-map lines, the
-host's error-resource registration, the module's own Aspire database and its data-source routing,
-the `appsettings.json` normalization that a second module needs, and the module's first EF
-migration.
+host's error-resource registration, the wire-contract entry for the module's integration event, the
+`appsettings.json` normalization that a second module needs, and the module's first EF migration.
+The orchestration step it performs in an Aspire solution is skipped here, because this solution has
+no AppHost to edit: give the new module its own `DataSources` entry and it is done.
 
 Run it from the solution root. It refuses to run anywhere else, and everything else about this
 solution (its name, the module already here, its hosts and its test projects) it discovers at run
@@ -156,7 +165,7 @@ never generated, so there is nothing to delete afterwards.
 | `--child <Name>` | Renames the child concept. `--aggregate Order --child Item` gives you an `OrderItem` entity, `AddItem` / `EditItem` / `RemoveItem` slices, and `/items` routes. Ignored under `--flat`. |
 
 ```bash
-dotnet new mmca-app -n Contoso.Support --module Orders --aggregate Order --child Line
+dotnet new mmca-app -n Contoso.Support --module Orders --aggregate Order --child Line --no-aspire
 dotnet new mmca-app -n Contoso.Catalog --module Products --aggregate Product --flat --no-status --no-owner
 dotnet new mmca-module -n Shipping --app MMCA.Helpdesk --aggregate Shipment --flat --no-status
 ```
@@ -164,7 +173,7 @@ dotnet new mmca-module -n Shipping --app MMCA.Helpdesk --aggregate Shipment --fl
 ### Shaping the solution
 
 Two more `mmca-app` options decide the shape of the solution rather than of the module, and they
-compose with each other and with everything above.
+compose with each other and with everything above. This solution was generated with `--no-aspire`.
 
 | Option | Effect |
 |---|---|
@@ -188,10 +197,9 @@ for.
 
 `mmca-module` prints the six wire-ups it cannot perform for you (the solution entries, the host and
 architecture-test project references, the identifier-alias link, the architecture-map lines, the
-host's `AddErrorResources` call, and the module's own database: an AppHost database resource plus a
-`DataSources` entry per module and an explicit `Outbox` source, with the top-level
-migrations-assembly pin removed). Until they are done the module is invisible to the host and to the
-fitness rules.
+host's `AddErrorResources` call, and the module's own database: a `DataSources` entry per module and
+an explicit `Outbox` source, with the top-level migrations-assembly pin removed). Until they are
+done the module is invisible to the host and to the fitness rules.
 
 A single vertical slice, run from the module's `UseCases` folder:
 

@@ -132,16 +132,33 @@ function Copy-Tree {
 # they come in both polarities: 'childStatus' and 'statusOwner' need BOTH of their axes, while
 # 'statusOrOwner' needs EITHER (it wraps a UI block that would otherwise render empty once both of
 # the values inside it are gone).
+#
+# The last four are the SOLUTION axes rather than the module's: --database sqlserver|sqlite and
+# --no-aspire. They come in both polarities for the same reason the module axes do, and 'sqlite'
+# exists even though NO seed file carries that marker: the seed cannot hold two engines' code at
+# once, so the sqlite branches are INJECTED at staging time by Add-EngineAlternative below, which
+# writes them as ordinary 'sqlite' marker regions for this same pass to convert.
 $markerConditions = @{
-    'child'         = '!flat'
-    'status'        = '!noStatus'
-    'childStatus'   = '!(flat || noStatus)'
-    'description'   = '!noDescription'
-    'owner'         = '!noOwner'
-    'statusOwner'   = '!(noStatus || noOwner)'
-    'statusOrOwner' = '!(noStatus && noOwner)'
-    'childOrOwner'  = '!(flat && noOwner)'
+    'child'           = '!flat'
+    'status'          = '!noStatus'
+    'childStatus'     = '!(flat || noStatus)'
+    'description'     = '!noDescription'
+    'owner'           = '!noOwner'
+    'statusOwner'     = '!(noStatus || noOwner)'
+    'statusOrOwner'   = '!(noStatus && noOwner)'
+    'childOrOwner'    = '!(flat && noOwner)'
+    'sqlserver'       = '!useSqlite'
+    'sqlite'          = 'useSqlite'
+    'aspire'          = '!noAspire'
+    'aspireSqlServer' = '!(noAspire || useSqlite)'
 }
+
+# The engine and host axes exist in mmca-app only: mmca-module and the two slice templates declare
+# neither symbol, and a condition on an undeclared symbol is silently false. So in those trees the
+# markers are STRIPPED (the content stays, the marker lines go), which is the same treatment the
+# slices already give the module axes, and it is what keeps a generated module SQL-Server-shaped
+# whichever engine the app around it uses.
+$solutionAxisLabels = @('sqlserver', 'sqlite', 'aspire', 'aspireSqlServer')
 
 # dotnet new picks the conditional syntax from the file extension, and it is not one syntax. C files
 # take line comments, XML/resx take comment elements, and .razor takes a razor-comment form whose
@@ -157,6 +174,10 @@ $markerStyles = @{
     '.props'   = @{ If = '<!--#if ({0})-->'; EndIf = '<!--#endif-->' }
     '.targets' = @{ If = '<!--#if ({0})-->'; EndIf = '<!--#endif-->' }
     '.config'  = @{ If = '<!--#if ({0})-->'; EndIf = '<!--#endif-->' }
+    # .slnx is XML and the solution parsers keep comments, which is what lets --no-aspire drop the
+    # AppHost's <Project> line the same way every other XML file drops a region. Verified by building
+    # the seed's own .slnx with the marker comments in it.
+    '.slnx'    = @{ If = '<!--#if ({0})-->'; EndIf = '<!--#endif-->' }
 }
 
 # One pattern, three comment shapes. .NET allows the same group name on alternate branches, so 'kind'
@@ -167,12 +188,14 @@ $markerPattern = '^(?<indent>[ \t]*)(?://+\s*template:(?<kind>begin|end)\s+(?<la
 function Convert-TemplateMarkers {
     param(
         [string] $Root,
-        [string] $TemplateName
+        [string] $TemplateName,
+        [string[]] $StripLabels = @()
     )
 
     $perAxis = @{}
     $regions = 0
     $touched = 0
+    $stripped = 0
 
     foreach ($file in Get-ChildItem -Path $Root -Recurse -File -Force) {
         $text = Get-Content $file.FullName -Raw
@@ -186,6 +209,7 @@ function Convert-TemplateMarkers {
         $newline = if ($text.Contains("`r`n")) { "`r`n" } else { "`n" }
         $lines = $text -split "`r?`n"
         $stack = [System.Collections.Generic.Stack[string]]::new()
+        $dropped = [System.Collections.Generic.HashSet[int]]::new()
 
         for ($i = 0; $i -lt $lines.Count; $i++) {
             $match = [regex]::Match($lines[$i], $markerPattern)
@@ -201,12 +225,22 @@ function Convert-TemplateMarkers {
                 throw "${TemplateName}: $($file.FullName) line $($i + 1) uses the unknown marker axis '$label'. Known axes: $($markerConditions.Keys -join ', ')."
             }
 
+            # A stripped axis keeps its CONTENT and loses only the two marker lines, so the balance
+            # check above still runs over it: an unbalanced region is a seed bug in every template,
+            # not only in the ones that declare the symbol.
+            $strip = $StripLabels -contains $label
+
             if ($match.Groups['kind'].Value -eq 'begin') {
                 $stack.Push($label)
-                $lines[$i] = $match.Groups['indent'].Value + ($style.If -f $markerConditions[$label])
-                $regions++
-                if (-not $perAxis.ContainsKey($label)) { $perAxis[$label] = 0 }
-                $perAxis[$label]++
+                if ($strip) {
+                    [void] $dropped.Add($i)
+                    $stripped++
+                } else {
+                    $lines[$i] = $match.Groups['indent'].Value + ($style.If -f $markerConditions[$label])
+                    $regions++
+                    if (-not $perAxis.ContainsKey($label)) { $perAxis[$label] = 0 }
+                    $perAxis[$label]++
+                }
             } else {
                 if ($stack.Count -eq 0) {
                     throw "${TemplateName}: $($file.FullName) line $($i + 1) closes a '$label' region that was never opened."
@@ -215,7 +249,12 @@ function Convert-TemplateMarkers {
                 if ($open -ne $label) {
                     throw "${TemplateName}: $($file.FullName) line $($i + 1) closes '$label' while '$open' is still open. Marker regions must nest."
                 }
-                $lines[$i] = $match.Groups['indent'].Value + $style.EndIf
+                if ($strip) {
+                    [void] $dropped.Add($i)
+                    $stripped++
+                } else {
+                    $lines[$i] = $match.Groups['indent'].Value + $style.EndIf
+                }
             }
         }
 
@@ -223,12 +262,118 @@ function Convert-TemplateMarkers {
             throw "${TemplateName}: $($file.FullName) ends with $($stack.Count) unclosed marker region(s): $($stack -join ', ')."
         }
 
-        Set-Content -Path $file.FullName -Value ($lines -join $newline) -NoNewline
+        $kept = @(for ($i = 0; $i -lt $lines.Count; $i++) { if (-not $dropped.Contains($i)) { $lines[$i] } })
+        Set-Content -Path $file.FullName -Value ($kept -join $newline) -NoNewline
         $touched++
     }
 
     $breakdown = ($perAxis.Keys | Sort-Object | ForEach-Object { "$_=$($perAxis[$_])" }) -join ', '
     Write-Host "$TemplateName marker regions converted: $regions across $touched file(s) ($breakdown)"
+    if ($stripped -gt 0) {
+        Write-Host "${TemplateName}: $stripped marker line(s) stripped for axes this template does not declare ($($StripLabels -join ', '))"
+    }
+}
+
+# ---- the second branch of an either/or axis ------------------------------------------------------
+# --database is the first axis that is not a REMOVAL. Every other one takes code away, which a marker
+# region expresses directly; this one swaps one spelling for another, and the seed can only hold one
+# of the two: it is a real solution whose CI has to build, and a commented-out second branch would
+# both fail S125 (commented-out code) and rot unread.
+#
+# So the seed keeps the SQL Server branch as ordinary code inside a 'sqlserver' marker region, and the
+# SQLite branch lives HERE, in the staging script, injected as a sibling 'sqlite' region right after
+# the region it alternates with. Convert-TemplateMarkers then converts both in the same pass, and the
+# generated app gets exactly one of them. dotnet new's symbol replacement runs over the injected lines
+# like any other staged text, so they may (and do) name the seed's own tokens.
+#
+# The anchor is the region's END marker rather than a line of code: a body that gets reflowed does not
+# move it, while removing or renaming the region does, and that is precisely when this table is wrong.
+function Add-EngineAlternative {
+    param(
+        [string] $Path,
+        [string] $Marker,
+        [string[]] $Lines,
+        [string] $TemplateName
+    )
+
+    $text = Get-Content $Path -Raw
+    $newline = if ($text.Contains("`r`n")) { "`r`n" } else { "`n" }
+    $sourceLines = $text -split "`r?`n"
+
+    $endPattern = "^[ \t]*(?://+|<!--)\s*template:end\s+$([regex]::Escape($Marker))\b"
+    $anchors = @(0..($sourceLines.Count - 1) | Where-Object { $sourceLines[$_] -match $endPattern })
+
+    if ($anchors.Count -ne 1) {
+        throw "${TemplateName}: expected exactly one 'template:end $Marker' line in $Path, found $($anchors.Count). The region this engine alternative attaches to moved or was renamed; update `$engineAlternatives in stage.ps1 rather than shipping a template whose sqlite shape still emits SQL Server code."
+    }
+
+    $at = $anchors[0]
+    $comment = if ($sourceLines[$at] -match '<!--') { '<!--{0}-->' } else { '// {0}' }
+    $indent = [regex]::Match($sourceLines[$at], '^[ \t]*').Value
+
+    $injected = @($indent + ($comment -f 'template:begin sqlite')) + $Lines + @($indent + ($comment -f 'template:end sqlite'))
+    $out = @($sourceLines[0..$at]) + $injected + @($sourceLines[($at + 1)..($sourceLines.Count - 1)])
+
+    Set-Content -Path $Path -Value ($out -join $newline) -NoNewline
+}
+
+# Every entry is mmca-app only: mmca-module and the slices declare no engine symbol and have their
+# 'sqlserver' markers stripped instead.
+$engineAlternatives = @(
+    @{
+        Path = 'Source/Hosts/MMCA.Helpdesk.Web/Program.cs'
+        Marker = 'sqlserver'
+        Lines = @(
+            'builder.AddInfrastructureHealthChecks(requireDatabase: true);'
+            ''
+        )
+    },
+    @{
+        Path = 'Source/Hosting/MMCA.Helpdesk.Migrations.SqlServer.Tickets/DesignTimeSQLServerDbContextFactory.cs'
+        Marker = 'sqlserver'
+        Lines = @(
+            '            var connectionString = Environment.GetEnvironmentVariable("HELPDESK_TICKETS_SQL")'
+            '                ?? "Data Source=helpdesk.db";'
+            ''
+        )
+    },
+    @{
+        Path = 'Source/Hosting/MMCA.Helpdesk.AppHost/Program.cs'
+        Marker = 'sqlserver'
+        Lines = @(
+            '// SQLite is an in-process file: there is no container to declare and nothing to wait for, so'
+            '// WithSqliteDataSource only injects the connection string the API host opens at startup. One'
+            '// file, one tenant: routing a second tenant onto its own database needs a second file and its'
+            '// own per-tenant override, which this shape leaves to you.'
+            'var web = builder.AddProject<Projects.MMCA_Helpdesk_Web>("web")'
+            '    .WithSqliteDataSource("Tickets", Path.Combine(builder.AppHostDirectory, "helpdesk.db"))'
+            '    // Declares the readiness probe as this resource''s health check, which is what makes the'
+            '    // WaitFor(web) below mean "wait until the API is HEALTHY" instead of "wait until its'
+            '    // process started". MapDefaultEndpoints() serves /health/ready from the same'
+            '    // MMCA.Common.Aspire pipeline the deployed readiness probe uses.'
+            '    .WithHttpHealthCheck("/health/ready")'
+            '    .WithExternalHttpEndpoints();'
+            ''
+        )
+    }
+)
+
+function Add-EngineAlternatives {
+    param(
+        [string] $Root,
+        [string] $TemplateName
+    )
+
+    foreach ($alternative in $engineAlternatives) {
+        $full = Join-Path $Root $alternative.Path
+        if (-not (Test-Path $full)) {
+            throw "${TemplateName}: stage.ps1 declares an engine alternative for $($alternative.Path), which is not in staging. The file moved; update `$engineAlternatives."
+        }
+
+        Add-EngineAlternative -Path $full -Marker $alternative.Marker -Lines $alternative.Lines -TemplateName $TemplateName
+    }
+
+    Write-Host "${TemplateName}: $($engineAlternatives.Count) sqlite alternative(s) injected beside their SQL Server regions"
 }
 
 function Remove-TemplateMarkers {
@@ -550,6 +695,19 @@ $optionalAxisLines = @(
         Hits = 1
     },
     @{
+        # The frozen wire contract. Everything else in the literal is an ordinary symbol
+        # substitution, and the base compares members as an unordered set, so this one member is the
+        # only part of it any flag can change. Scope 'app' because mmca-module ships no
+        # ArchitectureTests.cs: a generated module's event joins the app's existing literal, which is
+        # what build/add-module.ps1 appends to.
+        Scope = 'app'
+        Path = 'Tests/Architecture/MMCA.Helpdesk.Architecture.Tests/ArchitectureTests.cs'
+        Anchor = '"MMCA\.Helpdesk\.Tickets\.Shared\.Tickets\.IntegrationEvents\.TicketOpenedIntegrationEvent \{ RequesterUserId:Int32, TicketId:Int32 \}",'
+        Description = ''
+        Owner = 'RequesterUserId:Int32, '
+        Hits = 1
+    },
+    @{
         Scope = 'app'
         Path = 'Source/Hosts/UI/MMCA.Helpdesk.UI.Web/Services/HelpdeskApiClient.cs'
         Anchor = 'public Task<Result<TicketDTO>> CreateTicketAsync\(string title, string description, int requesterUserId, CancellationToken cancellationToken = default\)'
@@ -701,7 +859,23 @@ Get-ChildItem -Path $appOverlay -Recurse -File -Force | ForEach-Object {
 }
 
 # Every overlay file must land, or a generated app quietly loses a capability rather than failing.
-foreach ($expected in @('README.md', '.gitignore', 'local.props', '.github/workflows/ci.yml', 'build/add-module.ps1')) {
+$overlayExpectations = @(
+    'README.md'
+    '.gitignore'
+    'local.props'
+    '.github/workflows/ci.yml'
+    'build/add-module.ps1'
+    # The three whole-file variants. Neither .json nor .md carries marker regions in this seed (the
+    # sqlite appsettings differs structurally rather than by a line, and prose has no conditional
+    # form), so each ships beside its default and template.json renames it into place under the flag
+    # that asks for it. A variant that fails to land is silent: the default file stays and the
+    # generated app is quietly wired for the shape the adopter did not ask for.
+    'README.standalone.md'
+    'Source/Hosts/MMCA.Helpdesk.Web/appsettings.sqlite.json'
+    'Source/Hosts/UI/MMCA.Helpdesk.UI.Web/appsettings.standalone.json'
+)
+
+foreach ($expected in $overlayExpectations) {
     if (-not (Test-Path (Join-Path $appStaging $expected))) {
         throw "Overlay file '$expected' did not reach staging. Check build/templates/overlay/mmca-app/ and whether a .gitignore is hiding it from the repo."
     }
@@ -794,6 +968,13 @@ if ($declaredVersion -ne $frameworkVersion) {
 # that one, and an expression body compiles for no other. The seed keeps the block and its full
 # strictness; only generated apps see this relaxed, and the note below says how to put it back.
 #
+# There is deliberately no post-action that runs `dotnet format` for the adopter. dotnet new's
+# run-script post action (actionId 3A7C4B45-1F5D-4A30-959A-51B88E82B5D2) is gated on --allow-scripts,
+# whose DEFAULT is Prompt: declaring one would make every non-interactive `dotnet new mmca-app` stop
+# and ask, including this pack's own smoke run and any adopter's scripted scaffold. It would also run
+# before the app has ever been restored or built, which is not a state `dotnet format analyzers` can
+# work from. The delta below plus the command in the generated README is the supported answer.
+#
 # This is appended to the STAGED copy, never to the seed's own .editorconfig: that file stays the
 # single source of the shared analyzer baseline that compare-analyzer-config.ps1 enforces across the
 # four repos. Three rules are relaxed (the delta ADDS entries; none of the three appears among the
@@ -879,19 +1060,18 @@ Either rewrite those lines here or drop the copyOnly modifier from .template.con
 "@
 }
 
-# ---- derived: drop the inherited wire-contract freeze -------------------------------------------
-# IntegrationEventContractTestsBase compares a checked-in literal against the actual events with
-# their members sorted alphabetically. "{ RequesterUserId, TicketId }" is correct for Ticket and
-# wrong for Invoice, because the aggregate's own Id property moves position: no single literal is
-# right for every name the scaffold can be given.
+# ---- the wire-contract freeze SHIPS, and is guarded rather than deleted -------------------------
+# It used to be deleted here, on the grounds that no single frozen literal is right for every name
+# the scaffold can be given. Two things changed. IntegrationEventContractTestsBase now compares each
+# event's members as a SET rather than a sequence, so the aggregate's own Id moving position is no
+# longer a difference; and every other part of the literal (the namespace, the event type name) is
+# an ordinary symbol substitution that the template already performs everywhere else. What is left
+# is the one member the shape flags can remove, RequesterUserId, and that is a comma-separated list
+# like any other: $optionalAxisLines rewrites it.
 #
-# Removing the subclass is also the correct answer on its own terms. A frozen wire contract
-# inherited from someone else's sample module guarantees nothing. The adopter freezes theirs, once,
-# against their own events; the generated README carries the class to paste and the command that
-# prints the value. The seed keeps its own frozen contract, green and unchanged.
-#
-# Deleted rather than commented out: S125 (commented-out code) is a warning, and
-# TreatWarningsAsErrors makes that a build error.
+# So the generated app arrives with its OWN contract already frozen, under its own names, green on
+# the first test run. The guard below is what keeps that true: a class the staging pass cannot find
+# is a template about to ship an unfrozen wire contract with a README that says it is frozen.
 $archTests = Join-Path $appStaging 'Tests/Architecture/MMCA.Helpdesk.Architecture.Tests/ArchitectureTests.cs'
 if (-not (Test-Path $archTests)) {
     throw "Expected $archTests in staging. The architecture-fitness map moved; update stage.ps1."
@@ -902,12 +1082,11 @@ $contractClass = '(?ms)public sealed class IntegrationEventContractTests\s*:\s*I
 $matchCount = ([regex]::Matches($archSource, $contractClass)).Count
 
 if ($matchCount -ne 1) {
-    throw "Expected exactly one IntegrationEventContractTests class in ArchitectureTests.cs, found $matchCount. Update the pattern in stage.ps1 rather than shipping a template whose first test run is red."
+    throw "Expected exactly one IntegrationEventContractTests class in ArchitectureTests.cs, found $matchCount. The generated app's README promises a wire contract that is frozen on arrival; update the pattern in stage.ps1 rather than shipping one that is not."
 }
 
-Set-Content -Path $archTests -Value ([regex]::Replace($archSource, $contractClass, '')) -NoNewline
-
 # ---- derived: the shape marker regions, the per-shape lines, and the eager-load fallback --------
+Add-EngineAlternatives -Root $appStaging -TemplateName 'mmca-app'
 Convert-TemplateMarkers -Root $appStaging -TemplateName 'mmca-app'
 Convert-OptionalAxisLines -Root $appStaging -TemplateName 'mmca-app'
 Protect-ResxSchemaToken -Root $appStaging -TemplateName 'mmca-app'
@@ -1041,7 +1220,7 @@ $moduleConfig = Join-Path $sliceRoot 'mmca-module/.template.config'
 if (-not (Test-Path $moduleConfig)) { throw "No .template.config for mmca-module at $moduleConfig" }
 Copy-Item -Path $moduleConfig -Destination (Join-Path $moduleStaging '.template.config') -Recurse -Force
 
-Convert-TemplateMarkers -Root $moduleStaging -TemplateName 'mmca-module'
+Convert-TemplateMarkers -Root $moduleStaging -TemplateName 'mmca-module' -StripLabels $solutionAxisLabels
 Convert-OptionalAxisLines -Root $moduleStaging -TemplateName 'mmca-module'
 Protect-ResxSchemaToken -Root $moduleStaging -TemplateName 'mmca-module'
 
@@ -1267,5 +1446,77 @@ if ($appTemplateJson -notmatch "(?s)`"copyOnly`"\s*:\s*\[[^\]]*$([regex]::Escape
     throw "mmca-app's template.json no longer declares $wireUpLeaf under a copyOnly modifier. Without it --title / --event-verb / --child rewrite the very flag names the script passes through to dotnet new, and every generated app ships a wire-up script that cannot run."
 }
 
-Write-Host "Guards passed: no surviving markers, no 'comment' / 'title' / 'opened' prose hazards, copyOnly declared for .editorconfig, both razor wrappers and $wireUpLeaf, and $wireUpLeaf names no seed noun."
+# 7. The whole-file variants. Each one only reaches a generated app through a rename declared in
+#    template.json, and a rename that is missing fails in the quietest way this template has: the
+#    variant lands under its own name, the DEFAULT file lands too, and the app is wired for the shape
+#    the adopter did not ask for while still building and testing green. So the declarations are
+#    asserted here rather than trusted.
+$variantRenames = @(
+    @{ From = 'Source/Hosts/MMCA.Helpdesk.Web/appsettings.sqlite.json';            To = 'Source/Hosts/MMCA.Helpdesk.Web/appsettings.json' }
+    @{ From = 'Source/Hosts/UI/MMCA.Helpdesk.UI.Web/appsettings.standalone.json';  To = 'Source/Hosts/UI/MMCA.Helpdesk.UI.Web/appsettings.json' }
+    @{ From = 'README.standalone.md';                                              To = 'README.md' }
+)
+
+foreach ($variant in $variantRenames) {
+    $declaration = '"' + [regex]::Escape($variant.From) + '"\s*:\s*"' + [regex]::Escape($variant.To) + '"'
+    if ($appTemplateJson -notmatch $declaration) {
+        throw "mmca-app's template.json declares no rename of $($variant.From) onto $($variant.To). Without it the variant ships beside the file it was meant to replace and the generated app keeps the default shape."
+    }
+
+    $excluded = '"' + [regex]::Escape($variant.From) + '"'
+    if ($appTemplateJson -notmatch $excluded) {
+        throw "mmca-app's template.json never excludes $($variant.From), so the shape that does NOT want it ships it as a stray file."
+    }
+}
+
+# 8. Every staged XML file has to PARSE. This guard exists because two files in this pack did not,
+#    for the same reason and with the same symptom: XML forbids a double hyphen inside a comment, so
+#    a comment naming an option ("--no-aspire", "--local-mmca") makes the whole file invalid. MSBuild
+#    does not fail on an unparsable optional import, it skips it, so the overlay's local.props sat
+#    broken with a green build and generated apps quietly ignored the flag that emitted it. Nothing
+#    else in the run can catch that: the template packs, the app generates, and the file is there.
+#    Marker conversion is safe under this rule (a condition carries no double hyphen), which is why
+#    the check runs on the STAGED trees and covers the seed's own files at the same time.
+$xmlExtensions = @('.props', '.targets', '.csproj', '.config', '.slnx', '.xml', '.resx')
+
+$malformedXml = @(
+    foreach ($root in $stagedRoots) {
+        Get-ChildItem -Path $root -Recurse -File -Force |
+            Where-Object { $xmlExtensions -contains $_.Extension.ToLowerInvariant() } |
+            ForEach-Object {
+                try {
+                    [xml] (Get-Content $_.FullName -Raw) | Out-Null
+                } catch {
+                    "$($_.FullName.Substring($OutputPath.Length).TrimStart('\', '/')): $($_.Exception.InnerException.Message ?? $_.Exception.Message)"
+                }
+            }
+    })
+
+if ($malformedXml) {
+    throw @"
+$($malformedXml.Count) staged XML file(s) do not parse, so MSBuild will skip or reject them:
+  $($malformedXml -join "`n  ")
+The usual cause is a double hyphen inside an XML comment (an option name written with its leading
+dashes). Spell the option without them.
+"@
+}
+
+# 9. The standalone README is the one variant whose content cannot be checked by building anything:
+#    it is prose handed to an adopter who has no AppHost. A copy that kept the orchestration
+#    instructions is worse than no README, because it tells them to run a project that is not there.
+$standaloneReadme = Join-Path $appStaging 'README.standalone.md'
+$standaloneLeaks = @(Select-String -Path $standaloneReadme -Pattern 'AppHost' -SimpleMatch -CaseSensitive |
+    Where-Object { $_.Line -notmatch 'no AppHost|Aspire AppHost later|there is no' } |
+    ForEach-Object { "line $($_.LineNumber): $($_.Line.Trim())" })
+
+if ($standaloneLeaks) {
+    throw @"
+README.standalone.md is the README of a solution generated WITHOUT an orchestration project, and it
+still instructs the reader to use one:
+  $($standaloneLeaks -join "`n  ")
+Reword those lines, or move them back into the default README.md.
+"@
+}
+
+Write-Host "Guards passed: no surviving markers, no 'comment' / 'title' / 'opened' prose hazards, copyOnly declared for .editorconfig, both razor wrappers and $wireUpLeaf, $wireUpLeaf names no seed noun, and all $($variantRenames.Count) whole-file variants are declared and renamed."
 Write-Host "Staging complete."

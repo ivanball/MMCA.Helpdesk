@@ -37,6 +37,14 @@
       "longName": "no-owner",
       "shortName": ""
     },
+    "database": {
+      "longName": "database",
+      "shortName": ""
+    },
+    "noAspire": {
+      "longName": "no-aspire",
+      "shortName": ""
+    },
     "frameworkVersion": {
       "longName": "framework-version",
       "shortName": "f"
@@ -57,6 +65,8 @@
     "-n Contoso.Support --module Orders --aggregate Order --flat --no-status",
     "-n Contoso.Support --module Products --aggregate Product --flat --no-status --no-owner",
     "-n Fabrikam.Desk --module Reservations --aggregate Reservation --framework-version 1.142.0",
+    "-n Contoso.Notes --module Notes --aggregate Note --database sqlite",
+    "-n Contoso.Notes --module Notes --aggregate Note --database sqlite --no-aspire --flat",
     "-n Contoso.Support --local-mmca"
   ]
 }

@@ -22,13 +22,15 @@ services.AddOptions<ApplicationSettings>()
 var applicationSettings = builder.Configuration.GetSection(ApplicationSettings.SectionName).Get<ApplicationSettings>()
     ?? throw new InvalidOperationException("ApplicationSettings section is not configured.");
 
-// SQL is REQUIRED: a host that cannot resolve its own connection string fails fast at startup
-// rather than reporting healthy and taking traffic it cannot serve. Redis/RabbitMQ checks come
-// along when configured but are tagged "optional" upstream, so they report on /health WITHOUT
+// The database is REQUIRED: a host that cannot resolve its own connection string fails fast at
+// startup rather than reporting healthy and taking traffic it cannot serve. Redis/RabbitMQ checks
+// come along when configured but are tagged "optional" upstream, so they report on /health WITHOUT
 // gating /health/ready: a dependency the app degrades gracefully without must never pull every
 // replica from rotation.
+// template:begin sqlserver
 builder.AddInfrastructureHealthChecks(requireSqlServer: true);
 
+// template:end sqlserver
 services.AddCommonCors(builder.Configuration);
 services.AddCommonApiVersioning();
 services.AddCommonRateLimiting();
@@ -101,7 +103,8 @@ moduleLoader.DiscoverAndRegister(services, builder.Configuration, applicationSet
 services.AddSingleton(moduleLoader);
 
 // In-process message bus in the monolith (no MessageBus:Provider configured). When a module is
-// extracted, the AppHost's WithBroker injects the provider and this same call wires the broker.
+// extracted, the provider and its connection string arrive as configuration (the orchestrator's
+// WithBroker call locally, deployment settings in the cloud) and this same call wires the broker.
 services.AddBrokerMessaging(builder.Configuration);
 
 services.AddApplicationDecorators();

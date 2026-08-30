@@ -9,7 +9,7 @@ because a template has no way to reach into files it did not generate. This scri
     pwsh build/add-module.ps1 -Name Orders -Aggregate Order
 
 Everything it needs it discovers at run time from the tree it is standing in: the solution file,
-the app's root namespace, the module that is already here, and the four host / test projects it has
+the app's root namespace, the module that is already here, and the host / test projects it has
 to patch. Nothing about this app is baked into it, which is why it is shipped verbatim (the
 scaffold copies it with no token replacement at all) and why it starts by refusing to run from
 anywhere but the solution root.
@@ -26,9 +26,11 @@ outcome of a silent skip:
   5. Directory.Build.props: the identifier-alias link
   6. the architecture map: five lines, one per layer
   7. the web host's AddErrorResources call
-  8. the AppHost: the module's own database resource and its data-source routing
-  9. the web host's appsettings.json: enable the module, one data source per module, pin the outbox
- 10. the module's first migration (skip with -SkipMigration)
+  8. the frozen wire contract: the new module's integration event joins ExpectedContract
+  9. the orchestration host, when the solution has one: the module's own database resource and its
+     data-source routing
+ 10. the web host's appsettings.json: enable the module, one data source per module, pin the outbox
+ 11. the module's first migration (skip with -SkipMigration)
 
 Every step also detects work it already did and skips it with a note, so a run that died at step 7
 can be fixed and rerun. Starting over with a name that is already under Source/Modules is refused
@@ -369,14 +371,25 @@ $hostingRoot = Join-Path $root 'Source/Hosting'
 $archRoot = Join-Path $root 'Tests/Architecture'
 
 function Find-SingleDirectory {
-    param([string] $Parent, [string] $Pattern, [string] $What)
+    param(
+        [string] $Parent,
+        [string] $Pattern,
+        [string] $What,
+        # Zero hits is a legitimate answer for a project the solution may simply not have. Only the
+        # orchestration project is optional today: a solution scaffolded without one has no
+        # orchestrator directory at all, and refusing to run there would make this script useless in
+        # exactly the shape it is most useful in.
+        [switch] $Optional
+    )
 
     if (-not (Test-Path $Parent)) {
+        if ($Optional) { return $null }
         throw "No $Parent folder. Cannot locate the $What project; wire the module up by hand (see the instructions dotnet new mmca-module prints)."
     }
     # Depth one on purpose: the UI host lives one level further down under Hosts/UI, and matching it
     # here would make the web host ambiguous.
     $hits = @(Get-ChildItem -Path $Parent -Directory | Where-Object { $_.Name -like $Pattern })
+    if ($Optional -and $hits.Count -eq 0) { return $null }
     if ($hits.Count -ne 1) {
         throw "Found $($hits.Count) directories matching '$Pattern' under $Parent, expected exactly one ($What). Wire the module up by hand."
     }
@@ -384,7 +397,7 @@ function Find-SingleDirectory {
 }
 
 $webHostDir = Find-SingleDirectory -Parent $hostsRoot -Pattern '*.Web' -What 'web API host'
-$appHostDir = Find-SingleDirectory -Parent $hostingRoot -Pattern '*AppHost*' -What 'Aspire AppHost'
+$appHostDir = Find-SingleDirectory -Parent $hostingRoot -Pattern '*AppHost*' -What 'orchestration host' -Optional
 $archTestsDir = Find-SingleDirectory -Parent $archRoot -Pattern '*.Architecture.Tests' -What 'architecture-fitness test'
 
 $webHostName = [IO.Path]::GetFileName($webHostDir)
@@ -393,11 +406,14 @@ $archTestsName = [IO.Path]::GetFileName($archTestsDir)
 $webCsproj = Join-Path $webHostDir "$webHostName.csproj"
 $webProgram = Join-Path $webHostDir 'Program.cs'
 $webSettings = Join-Path $webHostDir 'appsettings.json'
-$appHostProgram = Join-Path $appHostDir 'Program.cs'
+$appHostProgram = if ($appHostDir) { Join-Path $appHostDir 'Program.cs' } else { $null }
 $archCsproj = Join-Path $archTestsDir "$archTestsName.csproj"
 $buildProps = Join-Path $root 'Directory.Build.props'
 
-foreach ($required in @($webCsproj, $webProgram, $webSettings, $appHostProgram, $archCsproj, $buildProps)) {
+$requiredFiles = @($webCsproj, $webProgram, $webSettings, $archCsproj, $buildProps)
+if ($appHostProgram) { $requiredFiles += $appHostProgram }
+
+foreach ($required in $requiredFiles) {
     if (-not (Test-Path $required)) {
         throw "Expected $required. The scaffold's layout moved; wire the module up by hand (dotnet new mmca-module prints every step)."
     }
@@ -436,7 +452,7 @@ Write-Host "  app namespace $app (short name $appShort)"
 Write-Host "  existing      $($existingModules -join ', ')"
 Write-Host "  adding        $Name (aggregate $Aggregate)"
 Write-Host "  web host      $webHostName"
-Write-Host "  app host      $([IO.Path]::GetFileName($appHostDir))"
+Write-Host "  app host      $(if ($appHostDir) { [IO.Path]::GetFileName($appHostDir) } else { 'none (this solution has no orchestration project)' })"
 Write-Host "  arch tests    $archTestsName"
 Write-Host "  arch map      $([IO.Path]::GetFileName($archMap))"
 
@@ -610,31 +626,68 @@ Add-AfterAnchor `
     -Description "Program.cs calls AddErrorResources<${Name}ErrorResources>()" `
     -Manual "Add `"services.AddErrorResources<${Name}ErrorResources>();`" beside the existing AddErrorResources call in $webHostName/Program.cs."
 
-# ---- 8. AppHost: the module's own database ------------------------------------------------------
-Write-Step 'AppHost database resource'
+# ---- 8. the frozen integration-event wire contract -----------------------------------------------
+Write-Step 'Integration-event wire contract'
+
+# The new module ships a creation integration event, and the solution's contract test compares the
+# LIVE set of events against a committed literal. A new event that is not in that literal is a
+# failing test in a file the adopter did not write, on their next test run, so the literal moves with
+# the module. Skipped rather than fatal when the class is not there: an adopter is free to delete it.
+$contractFiles = @(Get-ChildItem -Path $archTestsDir -Recurse -File -Filter '*.cs' |
+    Where-Object { (Get-Content $_.FullName -Raw) -match 'IntegrationEventContractTestsBase' })
+
+if ($contractFiles.Count -ne 1) {
+    Write-Skipped "no single IntegrationEventContractTests class under $archTestsName (found $($contractFiles.Count)); nothing to freeze"
+} else {
+    # The event's own members, in the shape the base prints them. The identifier is always there; the
+    # owning user is the one member a shape flag removes, and the base compares members as a set, so
+    # the order here only has to be readable.
+    $contractMembers = @()
+    if (-not $NoOwner) { $contractMembers += 'RequesterUserId:Int32' }
+    $contractMembers += "${Aggregate}Id:Int32"
+
+    $verb = if ($EventVerb) { $EventVerb } else { 'Opened' }
+    $eventType = "$app.$Name.Shared.$Name.IntegrationEvents.$Aggregate${verb}IntegrationEvent"
+    $contractLine = "`"$eventType { $($contractMembers -join ', ') }`","
+
+    Add-AfterAnchor `
+        -Path $contractFiles[0].FullName `
+        -Anchor 'IntegrationEvent \{[^}]*\}",$' `
+        -Insert @($contractLine) `
+        -AlreadyApplied ([regex]::Escape($eventType)) `
+        -Description "$($contractFiles[0].Name) freezes $Aggregate${verb}IntegrationEvent" `
+        -Manual "Add to ExpectedContract in $($contractFiles[0].Name):`n        $contractLine"
+}
+
+# ---- 9. the orchestration host: the module's own database ----------------------------------------
+Write-Step 'Orchestration host database resource'
 
 # One database per module, not one per solution. Each module database carries its own outbox and
 # inbox tables, so two modules migrated into one database collide on them, and per-module databases
 # are what keeps extracting a module into its own service a hosting change rather than a rewrite.
-Add-AfterAnchor `
-    -Path $appHostProgram `
-    -Anchor '^\s*var\s+\w+\s*=\s*sql\.AddDatabase\(' `
-    -Insert @("var ${nameLower}Db = sql.AddDatabase(`"$appShortLower-$nameLower`", `"${appShort}_$Name`");") `
-    -AlreadyApplied ([regex]::Escape("${nameLower}Db = sql.AddDatabase(")) `
-    -Description "AppHost declares the $Name database" `
-    -Manual "Add to the AppHost Program.cs, beside the existing AddDatabase call:`n    var ${nameLower}Db = sql.AddDatabase(`"$appShortLower-$nameLower`", `"${appShort}_$Name`");"
+if (-not $appHostProgram) {
+    Write-Skipped 'this solution has no orchestration project, so there is nothing to declare here (the DataSources entry below is what routes the module)'
+} else {
+    Add-AfterAnchor `
+        -Path $appHostProgram `
+        -Anchor '^\s*var\s+\w+\s*=\s*sql\.AddDatabase\(' `
+        -Insert @("var ${nameLower}Db = sql.AddDatabase(`"$appShortLower-$nameLower`", `"${appShort}_$Name`");") `
+        -AlreadyApplied ([regex]::Escape("${nameLower}Db = sql.AddDatabase(")) `
+        -Description "the orchestration host declares the $Name database" `
+        -Manual "Add to the orchestration host's Program.cs, beside the existing AddDatabase call:`n    var ${nameLower}Db = sql.AddDatabase(`"$appShortLower-$nameLower`", `"${appShort}_$Name`");"
 
-# Chained onto the web project builder, so it is inserted WITHOUT a terminator: the statement it
-# joins ends further down the chain.
-Add-AfterAnchor `
-    -Path $appHostProgram `
-    -Anchor '\.WithSQLServerDataSource\(' `
-    -Insert @(".WithSQLServerDataSource(${nameLower}Db, `"$Name`")") `
-    -AlreadyApplied ([regex]::Escape("WithSQLServerDataSource(${nameLower}Db")) `
-    -Description "AppHost routes the $Name data source to the web host" `
-    -Manual "Chain onto the web project in the AppHost Program.cs, after the existing call:`n    .WithSQLServerDataSource(${nameLower}Db, `"$Name`")"
+    # Chained onto the web project builder, so it is inserted WITHOUT a terminator: the statement it
+    # joins ends further down the chain.
+    Add-AfterAnchor `
+        -Path $appHostProgram `
+        -Anchor '\.WithSQLServerDataSource\(' `
+        -Insert @(".WithSQLServerDataSource(${nameLower}Db, `"$Name`")") `
+        -AlreadyApplied ([regex]::Escape("WithSQLServerDataSource(${nameLower}Db")) `
+        -Description "the orchestration host routes the $Name data source to the web host" `
+        -Manual "Chain onto the web project in the orchestration host's Program.cs, after the existing call:`n    .WithSQLServerDataSource(${nameLower}Db, `"$Name`")"
+}
 
-# ---- 9. web host configuration ------------------------------------------------------------------
+# ---- 10. web host configuration ------------------------------------------------------------------
 Write-Step 'Web host appsettings.json'
 
 # The first-run normalization. A single-module solution needs no DataSources section at all: one
@@ -738,7 +791,7 @@ if ($null -ne (Get-JsonObjectRange -Document $settings -Key 'Outbox' -Optional))
 
 Save-TextDocument $settings
 
-# ---- 10. first migration ------------------------------------------------------------------------
+# ---- 11. first migration ------------------------------------------------------------------------
 Write-Step 'First migration'
 
 $migrationCommand = "dotnet ef migrations add InitialCreate --project $migrationsProject --startup-project $migrationsProject --context SQLServerDbContext"
@@ -773,7 +826,7 @@ if ($existingMigrations.Count -gt 0) {
     }
 }
 
-# ---- 11. summary --------------------------------------------------------------------------------
+# ---- 12. summary --------------------------------------------------------------------------------
 Write-Host ""
 Write-Host "=== $Name is wired in ===" -ForegroundColor Green
 
@@ -784,11 +837,9 @@ Write-Host ""
 Write-Host "Next:"
 Write-Host "  dotnet build $($solution.Name)"
 Write-Host "  dotnet test --solution $($solution.Name)"
-Write-Host "  git diff        # six existing files were edited; this is the review"
+Write-Host "  git diff        # the existing files edited above; this is the review"
 Write-Host ""
 Write-Host "Two things this deliberately did NOT do:"
 Write-Host "  1. UI pages. The scaffold's Blazor host still shows only the first module. Copy a page"
 Write-Host "     from it and point it at the new module's endpoints when you want one."
-Write-Host "  2. The wire-contract freeze. If you added the IntegrationEventContractTests subclass"
-Write-Host "     from the README, its frozen list does not know about this module's events yet: run"
-Write-Host "     that test once and paste the value the failure prints."
+Write-Host "  2. Localization resources for those pages, for the same reason."

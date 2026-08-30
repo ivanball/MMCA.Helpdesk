@@ -20,7 +20,9 @@
     <Project Path="Source/Hosts/UI/MMCA.Helpdesk.UI.Web/MMCA.Helpdesk.UI.Web.csproj" />
   </Folder>
   <Folder Name="/Source/Hosting/">
+    <!-- template:begin aspire -->
     <Project Path="Source/Hosting/MMCA.Helpdesk.AppHost/MMCA.Helpdesk.AppHost.csproj" />
+    <!-- template:end aspire -->
     <Project Path="Source/Hosting/MMCA.Helpdesk.Migrations.SqlServer.Tickets/MMCA.Helpdesk.Migrations.SqlServer.Tickets.csproj" />
   </Folder>
   <Folder Name="/Tests/">
