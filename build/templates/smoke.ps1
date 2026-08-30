@@ -100,6 +100,14 @@ Invoke-Step 'Install' {
 # by a shape flag. It keeps the module axes at their defaults on purpose, so a solution-axis
 # regression cannot hide behind a missing module axis.
 #
+# TWO of the three cases go on to add a second module, for two different reasons, and neither
+# subsumes the other. Contoso.Support proves the WIRE-UPS (every edit add-module.ps1 makes, the
+# child rename, the module-only axes, the slices, the refused rerun) on the default engine.
+# Nordic.Books proves the ENGINE reaches the second module at all: --database is declared twice, once
+# per template.json, staged by two separate passes, so a module added into a sqlite solution can come
+# out SQL-Server-shaped with every one of Contoso's assertions still green. Its run is deliberately
+# thin (no slices, no child rename, no rerun check) to keep the third case's wall clock down.
+#
 # --no-description and --event-verb are exercised on the MODULE added further down rather than in a
 # case of their own: they are the same two mechanisms (a whole-axis removal and a free-text rename),
 # mmca-module declares the identical symbols, and proving them there costs one template
@@ -351,6 +359,133 @@ identical to the shape sweep above. This is the check that tells them apart.
     if (-not $SkipTests) {
         Invoke-Step "Test $appName" {
             dotnet test --solution $slnx -c Release --no-build --minimum-expected-tests 1
+        }
+    }
+
+    # ---- the sqlite case adds its second module, and only checks that it is a SQLITE one ---------
+    # Everything about HOW add-module.ps1 wires a module up is proved on the first case below. What
+    # cannot be proved there is that the engine survives the hop into mmca-module: the app template
+    # and the module template declare --database separately, and a module generated for the wrong
+    # engine still generates, still gets added to the solution, and then fails to compile on a
+    # configuration base and a provider package this solution does not have.
+    if ($case.Database -eq 'sqlite') {
+        $secondModule = 'Journals'
+        $secondAggregate = 'Journal'
+        $bookShort = $appName.Split('.')[-1]
+        $bookShortLower = $bookShort.ToLowerInvariant()
+        $secondModuleLower = $secondModule.ToLowerInvariant()
+
+        $sqliteAddModule = Join-Path $appRoot 'build/add-module.ps1'
+        if (-not (Test-Path $sqliteAddModule)) {
+            throw "The generated app ships no build/add-module.ps1. The overlay file did not reach the package; check build/templates/stage.ps1 and the Content glob in MMCA.Templates.csproj."
+        }
+
+        dotnet ef --version 2>&1 | Out-Null
+        $sqliteHasDotnetEf = $LASTEXITCODE -eq 0
+        $global:LASTEXITCODE = 0
+
+        Invoke-Step "Add module $secondModule to $appName via build/add-module.ps1 (engine detected, not passed)" {
+            Push-Location $appRoot
+            try {
+                # No -Database on purpose: detection is the thing under test. Passing it would prove
+                # only that the script honors a flag it was handed.
+                pwsh -NoProfile -File $sqliteAddModule -Name $secondModule -Aggregate $secondAggregate
+                if ($LASTEXITCODE -ne 0) { throw "build/add-module.ps1 failed with exit code $LASTEXITCODE" }
+            } finally {
+                Pop-Location
+            }
+        }
+
+        Invoke-Step "Second module $secondModule is sqlite-shaped" {
+            $sqliteMigrations = Join-Path $appRoot "Source/Hosting/$appName.Migrations.Sqlite.$secondModule"
+            if (-not (Test-Path $sqliteMigrations)) {
+                throw "add-module.ps1 produced no $appName.Migrations.Sqlite.$secondModule. The engine did not reach mmca-module."
+            }
+            if (Test-Path (Join-Path $appRoot "Source/Hosting/$appName.Migrations.SqlServer.$secondModule")) {
+                throw "add-module.ps1 produced a SQL Server migrations project inside a sqlite solution."
+            }
+            # The design-time factory is renamed by the OTHER engine symbol, so its file name is what
+            # tells a half-applied rename from a clean one.
+            if (-not (Test-Path (Join-Path $sqliteMigrations 'DesignTimeSqliteDbContextFactory.cs'))) {
+                throw "No DesignTimeSqliteDbContextFactory.cs under ${sqliteMigrations}: engineNameUpper did not rename the design-time factory."
+            }
+
+            # The migrations project is swept file by file rather than as a tree, because by this
+            # point add-module.ps1 has run `dotnet ef migrations add` in it and EF's own output
+            # carries a SqlServer:Include annotation from a framework index. That is generated code
+            # from the provider, not template output, and the two files below are the whole of what
+            # the template actually wrote there.
+            $offenders = @(Find-TokenResidue -Roots @(
+                Join-Path $appRoot "Source/Modules/$secondModule"
+                Join-Path $appRoot "Tests/Modules/$secondModule"
+                Join-Path $sqliteMigrations "$appName.Migrations.Sqlite.$secondModule.csproj"
+                Join-Path $sqliteMigrations 'DesignTimeSqliteDbContextFactory.cs'
+            ) -Patterns @('SqlServer', 'SQLServer') -Base $appRoot)
+
+            if ($offenders) {
+                throw @"
+$secondModule was added to a sqlite solution but $($offenders.Count) of its file(s) still name SQL Server:
+  $($offenders -join "`n  ")
+"@
+            }
+
+            Write-Host "  .Migrations.Sqlite.$secondModule, a Sqlite design-time factory, no engine residue"
+        }
+
+        Invoke-Step "appsettings.json routes $secondModule to its own database file" {
+            $settingsPath = Join-Path $appRoot "Source/Hosts/$appName.Web/appsettings.json"
+            $settings = Get-Content $settingsPath -Raw | ConvertFrom-Json
+
+            if (-not $settings.Modules.PSObject.Properties[$secondModule]) { throw "Modules has no $secondModule entry." }
+
+            # The sqlite scaffold already ships a DataSources section (its single module is routed
+            # there from the start), so this is the append branch rather than the normalization one.
+            foreach ($module in @($case.Module, $secondModule)) {
+                $entry = $settings.DataSources.PSObject.Properties[$module]
+                if (-not $entry) { throw "DataSources has no $module entry." }
+                if ($entry.Value.PSObject.Properties['SQLServerConnectionString']) {
+                    throw "DataSources.$module carries a SQL Server connection string in a sqlite solution."
+                }
+                if ($entry.Value.SqliteMigrationsAssembly -ne "$appName.Migrations.Sqlite.$module") {
+                    throw "DataSources.$module pins '$($entry.Value.SqliteMigrationsAssembly)', expected $appName.Migrations.Sqlite.$module."
+                }
+            }
+
+            # One file per module: two modules sharing one file collide on their outbox tables.
+            $secondConnection = $settings.DataSources.$secondModule.SqliteConnectionString
+            if ($secondConnection -notmatch [regex]::Escape("Data Source=${bookShortLower}_$secondModuleLower.db")) {
+                throw "DataSources.$secondModule points at '$secondConnection', expected its own ${bookShortLower}_$secondModuleLower.db file."
+            }
+            if ($secondConnection -eq $settings.DataSources.$($case.Module).SqliteConnectionString) {
+                throw "Both modules point at the same SQLite file, so their outbox tables would collide."
+            }
+
+            if (-not $settings.PSObject.Properties['Outbox']) { throw "No top-level Outbox section." }
+            if ($settings.Outbox.DatabaseName -ne $case.Module) {
+                throw "Outbox is pinned to '$($settings.Outbox.DatabaseName)', expected the first module $($case.Module)."
+            }
+
+            Write-Host "  2 sqlite DataSources entries on separate files, outbox pinned to $($case.Module)"
+        }
+
+        Invoke-Step "First migration for $secondModule" {
+            $created = @(Get-ChildItem -Path (Join-Path $appRoot "Source/Hosting/$appName.Migrations.Sqlite.$secondModule/Migrations") -File -Filter '*.cs' -ErrorAction SilentlyContinue)
+            if ($sqliteHasDotnetEf) {
+                if ($created.Count -eq 0) {
+                    throw "dotnet-ef is installed but add-module.ps1 created no migration for $secondModule. Its --context has to name the sqlite DbContext."
+                }
+                Write-Host "  $($created.Count) file(s) created against SqliteDbContext"
+            } else {
+                Write-Host "  skipped: dotnet-ef is not installed, and the script printed the command instead"
+            }
+        }
+
+        Invoke-Step "Rebuild $appName with two sqlite modules" { dotnet build $slnx -c Release }
+
+        if (-not $SkipTests) {
+            Invoke-Step "Test $appName with two sqlite modules" {
+                dotnet test --solution $slnx -c Release --no-build --minimum-expected-tests 1
+            }
         }
     }
 

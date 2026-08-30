@@ -153,12 +153,21 @@ $markerConditions = @{
     'aspireSqlServer' = '!(noAspire || useSqlite)'
 }
 
-# The engine and host axes exist in mmca-app only: mmca-module and the two slice templates declare
-# neither symbol, and a condition on an undeclared symbol is silently false. So in those trees the
-# markers are STRIPPED (the content stays, the marker lines go), which is the same treatment the
-# slices already give the module axes, and it is what keeps a generated module SQL-Server-shaped
-# whichever engine the app around it uses.
-$solutionAxisLabels = @('sqlserver', 'sqlite', 'aspire', 'aspireSqlServer')
+# The two solution axes reach different templates, so the strip lists are not one list.
+#
+# The HOST axis (aspire / aspireSqlServer) is mmca-app's alone: only the app owns an orchestration
+# project and the pins that go with it. mmca-module and the slices declare no noAspire symbol, and a
+# condition on an undeclared symbol is silently false, so there those markers are STRIPPED (the
+# content stays, the two marker lines go).
+#
+# The ENGINE axis is mmca-app's AND mmca-module's. A module's EF configurations inherit an
+# engine-specific base and its migrations project references an engine-specific provider, so a
+# SQL-Server-shaped module dropped into a sqlite app does not merely look wrong: it names a
+# configuration base and a package that app does not have. mmca-module therefore declares --database
+# with the same two derived symbols, and its 'sqlserver' / 'sqlite' markers are CONVERTED rather than
+# stripped. The slices carry neither axis (one use case is engine-neutral) and drop every marker they
+# meet through Remove-TemplateMarkers rather than through this list.
+$moduleStripLabels = @('aspire', 'aspireSqlServer')
 
 # dotnet new picks the conditional syntax from the file extension, and it is not one syntax. C files
 # take line comments, XML/resx take comment elements, and .razor takes a razor-comment form whose
@@ -317,10 +326,13 @@ function Add-EngineAlternative {
     Set-Content -Path $Path -Value ($out -join $newline) -NoNewline
 }
 
-# Every entry is mmca-app only: mmca-module and the slices declare no engine symbol and have their
-# 'sqlserver' markers stripped instead.
+# Scope is which templates stage the file, exactly as in $optionalAxisLines below. Two of the three
+# entries are host files that only mmca-app carries; the design-time factory is 'both', because
+# mmca-module stages the migrations project too and a generated module has to be able to land in a
+# sqlite app.
 $engineAlternatives = @(
     @{
+        Scope = 'app'
         Path = 'Source/Hosts/MMCA.Helpdesk.Web/Program.cs'
         Marker = 'sqlserver'
         Lines = @(
@@ -328,7 +340,14 @@ $engineAlternatives = @(
             ''
         )
     },
+    # The same file, staged by both templates, with a different default file name in each. mmca-app
+    # generates the FIRST module, whose database file is the one the app's own appsettings names
+    # (<app-short>.db); mmca-module generates a LATER one, and every module owns its own database, so
+    # its file has to be the per-module one build/add-module.ps1 writes into DataSources
+    # (<app-short>_<module>.db). One shared entry would hand every added module the first module's
+    # file and collide their outbox tables on the first migration.
     @{
+        Scope = 'app'
         Path = 'Source/Hosting/MMCA.Helpdesk.Migrations.SqlServer.Tickets/DesignTimeSQLServerDbContextFactory.cs'
         Marker = 'sqlserver'
         Lines = @(
@@ -338,6 +357,17 @@ $engineAlternatives = @(
         )
     },
     @{
+        Scope = 'module'
+        Path = 'Source/Hosting/MMCA.Helpdesk.Migrations.SqlServer.Tickets/DesignTimeSQLServerDbContextFactory.cs'
+        Marker = 'sqlserver'
+        Lines = @(
+            '            var connectionString = Environment.GetEnvironmentVariable("HELPDESK_TICKETS_SQL")'
+            '                ?? "Data Source=helpdesk_tickets.db";'
+            ''
+        )
+    },
+    @{
+        Scope = 'app'
         Path = 'Source/Hosting/MMCA.Helpdesk.AppHost/Program.cs'
         Marker = 'sqlserver'
         Lines = @(
@@ -364,16 +394,111 @@ function Add-EngineAlternatives {
         [string] $TemplateName
     )
 
+    $scope = if ($TemplateName -eq 'mmca-app') { 'app' } else { 'module' }
+    $injected = 0
+
     foreach ($alternative in $engineAlternatives) {
+        if ($alternative.Scope -ne 'both' -and $alternative.Scope -ne $scope) { continue }
+
         $full = Join-Path $Root $alternative.Path
         if (-not (Test-Path $full)) {
-            throw "${TemplateName}: stage.ps1 declares an engine alternative for $($alternative.Path), which is not in staging. The file moved; update `$engineAlternatives."
+            throw "${TemplateName}: stage.ps1 declares an engine alternative for $($alternative.Path), which is not in staging. Either the file moved (update `$engineAlternatives) or its Scope is wrong."
         }
 
         Add-EngineAlternative -Path $full -Marker $alternative.Marker -Lines $alternative.Lines -TemplateName $TemplateName
+        $injected++
     }
 
-    Write-Host "${TemplateName}: $($engineAlternatives.Count) sqlite alternative(s) injected beside their SQL Server regions"
+    if ($injected -eq 0) {
+        throw "${TemplateName}: no engine alternative is scoped to this template, so its sqlite shape would emit SQL Server code. Check the Scope values in `$engineAlternatives."
+    }
+
+    Write-Host "${TemplateName}: $injected sqlite alternative(s) injected beside their SQL Server regions"
+}
+
+# ---- rewrites that apply to mmca-module only -----------------------------------------------------
+# mmca-app generates the FIRST module of a solution and mmca-module generates a LATER one, and on one
+# point those are not the same thing at all: the first module is the solution's Default data source
+# and a later one never is. Default is decided by the host's top-level connection string, which names
+# the first module's database, and under an orchestrator by whichever data-source call runs last,
+# which build/add-module.ps1 keeps as the first module's for exactly this reason.
+#
+# It matters because the framework puts its Default-source-only tables (ScheduledJobs) in the model of
+# whichever source IS Default. The seed's design-time factory names the same connection twice, top
+# level and under its own logical name, so the resolver collapses it onto Default and the scaffolded
+# model carries those tables: correct for the first module, and wrong for every later one. EF refuses
+# to migrate a database whose model has pending changes, so a second module scaffolded that way does
+# not produce a subtly different schema, it stops the host from starting.
+#
+# The seed cannot hold both shapes (it IS a one-module app, and its factory has to stay right), so the
+# module-only shape is applied HERE, to the staged copy, the same way the engine alternatives are. An
+# anchor that no longer matches exactly once throws rather than shipping a module template whose first
+# migration is unusable.
+$moduleOnlyRewrites = @(
+    @{
+        Path = 'Source/Hosting/MMCA.Helpdesk.Migrations.SqlServer.Tickets/DesignTimeSQLServerDbContextFactory.cs'
+        Description = 'the design-time remark about collapsing onto the Default source'
+        From = @'
+/// The top-level connection string and the <c>Tickets</c> entry carry the SAME value on purpose. That
+/// is exactly what the host injects for the <c>Tickets</c> data source at run time, and the resolver
+/// collapses a logical name onto <c>Default</c> when the two connections match.
+/// The scaffolded model therefore matches the running one, which matters for the framework tables that
+/// are Default-source-only (<c>ScheduledJobs</c>). Point <c>HELPDESK_TICKETS_SQL</c> at a real database
+/// to apply.
+'@
+        To = @'
+/// This declares the <c>Tickets</c> data source and deliberately NO top-level connection string. A
+/// module added to an existing solution is never that solution's <c>Default</c> source: the first
+/// module keeps that role, because the host's top-level connection names its database and, under an
+/// orchestrator, its data-source call is the one that runs last. Naming a top-level connection equal
+/// to the one below would make the resolver collapse this source onto <c>Default</c> and scaffold the
+/// Default-source-only framework tables (<c>ScheduledJobs</c>) into this module's migrations. They are
+/// not in the running model, and EF refuses to migrate a database whose model has pending changes, so
+/// the host would stop at startup rather than merely drift. Point <c>HELPDESK_TICKETS_SQL</c> at a
+/// real database to apply.
+'@
+    },
+    @{
+        Path = 'Source/Hosting/MMCA.Helpdesk.Migrations.SqlServer.Tickets/DesignTimeSQLServerDbContextFactory.cs'
+        Description = 'the top-level connection string a later module must not claim'
+        From = @'
+            options.DataSourceName = "Tickets";
+            options.ConnectionStrings = new ConnectionStringSettings { SQLServerConnectionString = connectionString };
+'@
+        To = @'
+            options.DataSourceName = "Tickets";
+'@
+    }
+)
+
+function Convert-ModuleOnlyShapes {
+    param(
+        [string] $Root,
+        [string] $TemplateName
+    )
+
+    foreach ($rewrite in $moduleOnlyRewrites) {
+        $full = Join-Path $Root $rewrite.Path
+        if (-not (Test-Path $full)) {
+            throw "${TemplateName}: stage.ps1 declares a module-only rewrite for $($rewrite.Path), which is not in staging. The file moved; update `$moduleOnlyRewrites."
+        }
+
+        $text = Get-Content $full -Raw
+        # Line endings are the staged file's, whatever they are, so the here-strings above (which the
+        # PowerShell parser normalises) cannot introduce a second style into one file.
+        $newline = if ($text.Contains("`r`n")) { "`r`n" } else { "`n" }
+        $from = ($rewrite.From -split "`r?`n") -join $newline
+        $to = ($rewrite.To -split "`r?`n") -join $newline
+
+        $occurrences = ([regex]::Matches($text, [regex]::Escape($from))).Count
+        if ($occurrences -ne 1) {
+            throw "${TemplateName}: expected exactly one occurrence of $($rewrite.Description) in $($rewrite.Path), found $occurrences. The seed's design-time factory was reworded; update `$moduleOnlyRewrites in stage.ps1 rather than shipping a module template whose first migration scaffolds the Default source's tables."
+        }
+
+        Set-Content -Path $full -Value $text.Replace($from, $to) -NoNewline
+    }
+
+    Write-Host "${TemplateName}: $($moduleOnlyRewrites.Count) later-module rewrite(s) applied (this module is not the solution's Default data source)"
 }
 
 function Remove-TemplateMarkers {
@@ -1220,7 +1345,30 @@ $moduleConfig = Join-Path $sliceRoot 'mmca-module/.template.config'
 if (-not (Test-Path $moduleConfig)) { throw "No .template.config for mmca-module at $moduleConfig" }
 Copy-Item -Path $moduleConfig -Destination (Join-Path $moduleStaging '.template.config') -Recurse -Force
 
-Convert-TemplateMarkers -Root $moduleStaging -TemplateName 'mmca-module' -StripLabels $solutionAxisLabels
+# The engine axis is DECLARED in two template.json files, once per template, and a condition on a
+# symbol a template does not declare is silently false rather than an error. So a mmca-module that
+# lost the declaration would keep converting its 'sqlite' markers, evaluate every one of them to
+# false, and ship a module that is SQL-Server-shaped whatever --database says: it would generate, it
+# would be added to the solution, and it would fail to compile inside a sqlite app on a configuration
+# base that app does not reference. Asserted here rather than trusted, the same way mmca-app's
+# copyOnly and whole-file-variant declarations are.
+$moduleTemplateJson = Get-Content (Join-Path $moduleStaging '.template.config/template.json') -Raw
+
+foreach ($declaration in @(
+    @{ Pattern = '(?s)"database"\s*:\s*\{[^}]*"datatype"\s*:\s*"choice"'; What = 'the --database choice parameter' }
+    @{ Pattern = '(?s)"useSqlite"\s*:\s*\{[^}]*"value"\s*:\s*"\(database == \\"sqlite\\"\)"'; What = 'the useSqlite computed symbol the markers condition on' }
+    @{ Pattern = '(?s)"engineName"\s*:\s*\{[^}]*"replaces"\s*:\s*"SqlServer"'; What = 'the engineName rename (migrations project, provider package, CreateSqlServer)' }
+    @{ Pattern = '(?s)"engineNameUpper"\s*:\s*\{[^}]*"replaces"\s*:\s*"SQLServer"'; What = 'the engineNameUpper rename (design-time factory, DbContext, configuration base, settings keys)' }
+    @{ Pattern = '"condition"\s*:\s*"\(useSqlite\)"'; What = 'the sqlite branch of the printed wire-up instructions' }
+)) {
+    if ($moduleTemplateJson -notmatch $declaration.Pattern) {
+        throw "mmca-module's template.json no longer declares $($declaration.What). Without it a module generated for a sqlite app comes out SQL-Server-shaped, which does not compile there. Restore it in templates/mmca-module/.template.config/template.json."
+    }
+}
+
+Add-EngineAlternatives -Root $moduleStaging -TemplateName 'mmca-module'
+Convert-ModuleOnlyShapes -Root $moduleStaging -TemplateName 'mmca-module'
+Convert-TemplateMarkers -Root $moduleStaging -TemplateName 'mmca-module' -StripLabels $moduleStripLabels
 Convert-OptionalAxisLines -Root $moduleStaging -TemplateName 'mmca-module'
 Protect-ResxSchemaToken -Root $moduleStaging -TemplateName 'mmca-module'
 

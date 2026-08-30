@@ -15,6 +15,8 @@ dotnet test  --solution MMCA.Helpdesk.slnx      # domain + application + archite
 dotnet run --project Source/Hosting/MMCA.Helpdesk.AppHost
 ```
 
+Check your migrations before that third line runs for the first time: see the next section.
+
 Run the AppHost from a **real, interactive terminal**. Launched from a background or headless shell
 it stalls at control-plane init: no dashboard, no browser, and it looks like a hang.
 
@@ -22,6 +24,29 @@ The dashboard lists `web` (the API) and `ui` (Blazor), plus a `sql` container wh
 scaffolded against SQL Server (SQLite is an in-process file and has no resource of its own). Open
 **`ui`** to use the app. The API serves `GET/POST /Tickets`, `/health`, and `/alive`; it has no page
 at `/`, so the API root returns 404 by design.
+
+### Before the first run: your own first migration
+
+Look inside `Source/Hosting/MMCA.Helpdesk.Migrations.SqlServer.Tickets/Migrations/`. If the only
+file there is `.editorconfig`, this solution was scaffolded with a shape flag or with `--database
+sqlite`, and the sample migrations were deliberately dropped: they describe a schema you did not
+ask for. Create your own **before** the first run:
+
+```bash
+dotnet ef migrations add InitialCreate \
+  --project Source/Hosting/MMCA.Helpdesk.Migrations.SqlServer.Tickets \
+  --startup-project Source/Hosting/MMCA.Helpdesk.Migrations.SqlServer.Tickets \
+  --context SQLServerDbContext
+```
+
+This is required rather than tidy-up. The API host **migrates** its data sources at startup, it does
+not create them outright, so a migrations assembly with nothing in it leaves you with an empty
+database and a first request that fails on a missing table. Once the migration exists, every later
+one applies the same way: add it and restart the host.
+
+`dotnet ef` is a global tool rather than part of the SDK. Install it with `dotnet tool install
+--global dotnet-ef` if the command is not found. The design-time factory in that project opens no
+connection for `migrations add`, so this needs no running database.
 
 To run a single test class or method, target the project and pass a Microsoft Testing Platform
 filter after `--`. These solutions run on MTP, not VSTest, so a bare `--filter` silently matches
@@ -178,13 +203,14 @@ dotnet new mmca-app -n Contoso.Notes --module Notes --aggregate Note --database 
 That is the smallest shape the template produces: two hosts, one module, one `notes.db` file, and
 `dotnet run` on each host. `--database sqlite` also drops the sample migrations for the same reason
 the shape flags do (they are SQL Server DDL), so run `dotnet ef migrations add InitialCreate`
-against the project the scaffold generated.
+against the project the scaffold generated, before the first run rather than after it (see Before
+the first run above).
 
 Two things worth knowing. The plural forms are derived by a simple English pluralizer (`Line` ->
 `Lines`, `Entry` -> `Entries`, `Box` -> `Boxes`), so an irregular noun needs one rename by hand. And
 passing any of the four shape flags to `mmca-app` drops the sample migrations, because they describe
 the full shape: run `dotnet ef migrations add InitialCreate` against the shape you actually asked
-for.
+for, before the first run.
 
 `mmca-module` prints the six wire-ups it cannot perform for you (the solution entries, the host and
 architecture-test project references, the identifier-alias link, the architecture-map lines, the
