@@ -5,6 +5,7 @@ using MMCA.Common.Application.Modules;
 using MMCA.Common.Application.Settings;
 using MMCA.Common.Aspire;
 using MMCA.Common.Infrastructure;
+using MMCA.Helpdesk.Tickets.API;
 using MMCA.Helpdesk.Tickets.API.Resources;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -27,10 +28,8 @@ var applicationSettings = builder.Configuration.GetSection(ApplicationSettings.S
 // come along when configured but are tagged "optional" upstream, so they report on /health WITHOUT
 // gating /health/ready: a dependency the app degrades gracefully without must never pull every
 // replica from rotation.
-// template:begin sqlserver
-builder.AddInfrastructureHealthChecks(requireSqlServer: true);
+builder.AddInfrastructureHealthChecks(requireDatabase: true);
 
-// template:end sqlserver
 services.AddCommonCors(builder.Configuration);
 services.AddCommonApiVersioning();
 services.AddCommonRateLimiting();
@@ -99,7 +98,18 @@ var moduleLoader = new ModuleLoader
 {
     Logger = loggerFactory.CreateLogger<ModuleLoader>(),
 };
-moduleLoader.DiscoverAndRegister(services, builder.Configuration, applicationSettings, modulesSettings, builder.Environment.EnvironmentName);
+// The host names the module assemblies discovery scans, one marker type per module. Naming them is
+// what makes discovery deterministic: a referenced assembly no code path has touched yet is not
+// loaded, so it would be silently absent from any ambient scan.
+moduleLoader.DiscoverAndRegister(
+    services,
+    builder.Configuration,
+    applicationSettings,
+    modulesSettings,
+    builder.Environment.EnvironmentName,
+    [
+        typeof(TicketsModule).Assembly,
+    ]);
 services.AddSingleton(moduleLoader);
 
 // In-process message bus in the monolith (no MessageBus:Provider configured). When a module is

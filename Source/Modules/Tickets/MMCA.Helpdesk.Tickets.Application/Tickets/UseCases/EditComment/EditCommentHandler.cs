@@ -25,10 +25,10 @@ public sealed class EditCommentHandler(IUnitOfWork unitOfWork)
 
     /// <summary>
     /// ADR-035: the concurrency token belongs to the aggregate ROOT, so a comment edit conditioned on
-    /// a stale ticket version fails the save (mapped to 409). Null skips the check.
+    /// a stale ticket version fails the save, which <c>[SupportsIfMatch]</c> answers as a 412.
     /// </summary>
     /// <param name="command">The command being handled.</param>
-    /// <returns>The client's last-observed row version, or null to skip the check.</returns>
+    /// <returns>The client's last-observed row version.</returns>
     protected override byte[]? RowVersion(EditCommentCommand command) => command.RowVersion;
 
     /// <inheritdoc />

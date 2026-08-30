@@ -37,7 +37,7 @@ outcome of a silent skip:
   4. architecture-test project references (all five layers)
   5. Directory.Build.props: the identifier-alias link
   6. the architecture map: five lines, one per layer
-  7. the web host's AddErrorResources call
+  7. the web host: the module assembly discovery scans, and its AddErrorResources call
   8. the frozen wire contract: the new module's integration event joins ExpectedContract
   9. the orchestration host, when the solution has one: the module's own database and its
      data-source routing (a server database resource, or a second file for SQLite)
@@ -759,12 +759,30 @@ Add-AfterAnchor `
     -Description "$([IO.Path]::GetFileName($archMap)) registers the five $Name layer assemblies" `
     -Manual "Add to $([IO.Path]::GetFileName($archMap)), inside the layer list:`n        $(($mapLines | Where-Object { $_ }) -join "`n        ")"
 
-# ---- 7. host error resources --------------------------------------------------------------------
-Write-Step 'Host error resources'
+# ---- 7. host registrations ----------------------------------------------------------------------
+Write-Step 'Host registrations'
 
-# The module's own IModule is discovered by ModuleLoader, so this is the ONE registration the host
-# still owns: it contributes the module's error-code translations to the edge localizer, which is
-# what turns a domain error code into a localized ProblemDetails message.
+# The host names the assemblies discovery scans, so a new module's assembly has to join that list:
+# an assembly no code path has touched yet is not loaded, and would be silently absent from any
+# ambient scan. Without this line the module compiles, ships, and registers nothing.
+Add-AfterAnchor `
+    -Path $webProgram `
+    -Anchor '^\s*using\s+[^;]*\.API;' `
+    -Insert @("using $app.$Name.API;") `
+    -AlreadyApplied ([regex]::Escape("using $app.$Name.API;")) `
+    -Description "Program.cs imports $app.$Name.API" `
+    -Manual "Add `"using $app.$Name.API;`" to the top of $webHostName/Program.cs."
+
+Add-AfterAnchor `
+    -Path $webProgram `
+    -Anchor '^\s*typeof\([A-Za-z0-9_.]+Module\)\.Assembly,' `
+    -Insert @("typeof(${Name}Module).Assembly,") `
+    -AlreadyApplied ([regex]::Escape("typeof(${Name}Module).Assembly,")) `
+    -Description "Program.cs adds ${Name}Module's assembly to module discovery" `
+    -Manual "Add `"typeof(${Name}Module).Assembly,`" to the assembly list passed to DiscoverAndRegister in $webHostName/Program.cs."
+
+# The second registration the host owns: the module's error-code translations reach the edge
+# localizer, which is what turns a domain error code into a localized ProblemDetails message.
 Add-AfterAnchor `
     -Path $webProgram `
     -Anchor '^using\s+[^;]*\.API\.Resources;' `

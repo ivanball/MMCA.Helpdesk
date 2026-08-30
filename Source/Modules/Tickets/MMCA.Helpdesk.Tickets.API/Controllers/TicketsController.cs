@@ -99,9 +99,10 @@ public sealed class TicketsController(
     }
 
     /// <summary>
-    /// Updates a ticket's editable details. <c>[SupportsIfMatch]</c> lets the caller state the
-    /// concurrency token as an <c>If-Match</c> header (the <c>ETag</c> the read returned) instead of
-    /// in the body, in which case a stale token answers 412 rather than 409 (ADR-035).
+    /// Updates a ticket's editable details. <c>[SupportsIfMatch]</c> makes the write conditional:
+    /// the caller states the concurrency token as an <c>If-Match</c> header (the <c>ETag</c> the
+    /// read returned), a missing header answers 428 before the action runs, and a stale token
+    /// answers 412 (ADR-035). The body never carries the token.
     /// <para>
     /// The command is the framework's generic <c>UpdateEntityCommand</c>, constructed here rather
     /// than mapped: it carries the request whole, so the action names no ticket field and the HTTP
@@ -113,6 +114,8 @@ public sealed class TicketsController(
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
+    [ProducesResponseType(StatusCodes.Status428PreconditionRequired)]
     public async Task<ActionResult<TicketDTO>> UpdateAsync(
         TicketIdentifierType id,
         TicketUpdateRequest request,
@@ -121,21 +124,26 @@ public sealed class TicketsController(
         ArgumentNullException.ThrowIfNull(request);
 
         var result = await updateHandler.HandleAsync(
-            new UpdateEntityCommand<Ticket, TicketUpdateRequest, TicketIdentifierType>(id, request, request.RowVersion),
+            new UpdateEntityCommand<Ticket, TicketUpdateRequest, TicketIdentifierType>(
+                id,
+                request,
+                SupportsIfMatchAttribute.RequiredToken(HttpContext)),
             cancellationToken).ConfigureAwait(false);
         return result.IsFailure ? HandleFailure(result.Errors) : Ok(result.Value);
     }
 
     // template:begin status
     /// <summary>
-    /// Changes a ticket's status. Conditional-write capable through <c>If-Match</c>, same contract
-    /// as the details update (ADR-035).
+    /// Changes a ticket's status. A conditional write through <c>If-Match</c>, same contract as the
+    /// details update (ADR-035).
     /// </summary>
     [HttpPut("{id}/status")]
     [SupportsIfMatch]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
+    [ProducesResponseType(StatusCodes.Status428PreconditionRequired)]
     public async Task<ActionResult<TicketDTO>> ChangeStatusAsync(
         TicketIdentifierType id,
         ChangeTicketStatusRequest request,
@@ -144,7 +152,10 @@ public sealed class TicketsController(
         ArgumentNullException.ThrowIfNull(request);
 
         var result = await changeStatusHandler.HandleAsync(
-            new ChangeTicketStatusCommand(id, request.Status) { RowVersion = request.RowVersion },
+            new ChangeTicketStatusCommand(id, request.Status)
+            {
+                RowVersion = SupportsIfMatchAttribute.RequiredToken(HttpContext),
+            },
             cancellationToken).ConfigureAwait(false);
         return result.IsFailure ? HandleFailure(result.Errors) : Ok(result.Value);
     }
@@ -191,14 +202,16 @@ public sealed class TicketsController(
     }
 
     /// <summary>
-    /// Edits the body of an existing comment. Conditional-write capable through <c>If-Match</c>,
-    /// carrying the owning ticket's token (ADR-035).
+    /// Edits the body of an existing comment. A conditional write through <c>If-Match</c>, stating
+    /// the owning ticket's token (ADR-035).
     /// </summary>
     [HttpPut("{id}/comments/{commentId}")]
     [SupportsIfMatch]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
+    [ProducesResponseType(StatusCodes.Status428PreconditionRequired)]
     public async Task<IActionResult> EditCommentAsync(
         TicketIdentifierType id,
         TicketCommentIdentifierType commentId,
@@ -208,7 +221,10 @@ public sealed class TicketsController(
         ArgumentNullException.ThrowIfNull(request);
 
         var result = await editCommentHandler.HandleAsync(
-            new EditCommentCommand(id, commentId, request.Body) { RowVersion = request.RowVersion },
+            new EditCommentCommand(id, commentId, request.Body)
+            {
+                RowVersion = SupportsIfMatchAttribute.RequiredToken(HttpContext),
+            },
             cancellationToken).ConfigureAwait(false);
         return result.IsFailure ? HandleFailure(result.Errors) : NoContent();
     }

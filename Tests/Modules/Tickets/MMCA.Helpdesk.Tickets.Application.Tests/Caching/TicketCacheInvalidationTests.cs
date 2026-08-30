@@ -1,4 +1,5 @@
 using AwesomeAssertions;
+using Microsoft.Extensions.Logging.Abstractions;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.UseCases;
 using MMCA.Common.Application.UseCases.Decorators;
@@ -39,6 +40,12 @@ public class TicketCacheInvalidationTests
     private const TicketIdentifierType TicketId = 7;
 
     /// <summary>
+    /// The concurrency token every conditional write states. Caching does not read it, but the
+    /// commands require it (ADR-035), so one value serves every command built here.
+    /// </summary>
+    private static readonly byte[] ClientToken = [1, 2, 3, 4];
+
+    /// <summary>
     /// The update command is the framework's generic one, and its default <c>CachePrefix</c> is the
     /// aggregate-prefix convention (<c>{entity full name}:</c>), which is what
     /// <see cref="TicketCacheKeys.Prefix"/> is derived from: the two agree with nothing to configure.
@@ -47,20 +54,44 @@ public class TicketCacheInvalidationTests
     /// <param name="title">The new title.</param>
     /// <returns>An update command for <see cref="TicketId"/>.</returns>
     private static UpdateEntityCommand<Ticket, TicketUpdateRequest, TicketIdentifierType> UpdateCommand(string title) =>
-        new(TicketId, new TicketUpdateRequest
-        {
-            Title = title,
-            // template:begin description
-            Description = "Returns a 500.",
-            // template:end description
-        });
+        new(
+            TicketId,
+            new TicketUpdateRequest
+            {
+                Title = title,
+                // template:begin description
+                Description = "Returns a 500.",
+                // template:end description
+            },
+            ClientToken);
+
+    /// <summary>
+    /// The framework's read decorator around a stub handler. Its logger is a constructor
+    /// requirement, and a test has nothing to say through it, so the null one serves every case.
+    /// </summary>
+    /// <param name="handler">The handler the decorator wraps.</param>
+    /// <param name="cache">The cache substrate under test.</param>
+    /// <returns>The decorator to exercise.</returns>
+    private static CachingQueryDecorator<GetTicketByIdQuery, Result<TicketDTO>> ReadDecorator(
+        IQueryHandler<GetTicketByIdQuery, Result<TicketDTO>> handler,
+        ICacheService cache) =>
+        new(handler, cache, NullLogger<CachingQueryDecorator<GetTicketByIdQuery, Result<TicketDTO>>>.Instance);
+
+    /// <summary>The framework's write decorator around a stub handler, logger included.</summary>
+    /// <param name="handler">The handler the decorator wraps.</param>
+    /// <param name="cache">The cache substrate under test.</param>
+    /// <returns>The decorator to exercise.</returns>
+    private static CachingCommandDecorator<UpdateEntityCommand<Ticket, TicketUpdateRequest, TicketIdentifierType>, Result<TicketDTO>> WriteDecorator(
+        ICommandHandler<UpdateEntityCommand<Ticket, TicketUpdateRequest, TicketIdentifierType>, Result<TicketDTO>> handler,
+        ICacheService cache) =>
+        new(handler, cache, NullLogger<CachingCommandDecorator<UpdateEntityCommand<Ticket, TicketUpdateRequest, TicketIdentifierType>, Result<TicketDTO>>>.Instance);
 
     [Fact]
     public async Task Read_IsServedFromTheCache_OnTheSecondCall()
     {
         var cache = new DictionaryCache();
         var handler = new CountingQueryHandler(TicketResult());
-        var read = new CachingQueryDecorator<GetTicketByIdQuery, Result<TicketDTO>>(handler, cache);
+        var read = ReadDecorator(handler, cache);
 
         var first = await read.HandleAsync(new GetTicketByIdQuery(TicketId));
         var second = await read.HandleAsync(new GetTicketByIdQuery(TicketId));
@@ -78,9 +109,8 @@ public class TicketCacheInvalidationTests
     {
         var cache = new DictionaryCache();
         var queryHandler = new CountingQueryHandler(TicketResult());
-        var read = new CachingQueryDecorator<GetTicketByIdQuery, Result<TicketDTO>>(queryHandler, cache);
-        var write = new CachingCommandDecorator<UpdateEntityCommand<Ticket, TicketUpdateRequest, TicketIdentifierType>, Result<TicketDTO>>(
-            new StubCommandHandler(TicketResult()), cache);
+        var read = ReadDecorator(queryHandler, cache);
+        var write = WriteDecorator(new StubCommandHandler(TicketResult()), cache);
 
         await read.HandleAsync(new GetTicketByIdQuery(TicketId));
         await read.HandleAsync(new GetTicketByIdQuery(TicketId));
@@ -102,9 +132,8 @@ public class TicketCacheInvalidationTests
     {
         var cache = new DictionaryCache();
         var queryHandler = new CountingQueryHandler(TicketResult());
-        var read = new CachingQueryDecorator<GetTicketByIdQuery, Result<TicketDTO>>(queryHandler, cache);
-        var write = new CachingCommandDecorator<UpdateEntityCommand<Ticket, TicketUpdateRequest, TicketIdentifierType>, Result<TicketDTO>>(
-            new StubCommandHandler(Result.Failure<TicketDTO>(Error.NotFound)), cache);
+        var read = ReadDecorator(queryHandler, cache);
+        var write = WriteDecorator(new StubCommandHandler(Result.Failure<TicketDTO>(Error.NotFound)), cache);
 
         await read.HandleAsync(new GetTicketByIdQuery(TicketId));
 
@@ -149,11 +178,11 @@ public class TicketCacheInvalidationTests
         UpdateCommand("Cannot log in"),
         new DeleteTicketCommand(TicketId),
         // template:begin status
-        new ChangeTicketStatusCommand(TicketId, TicketStatus.Closed),
+        new ChangeTicketStatusCommand(TicketId, TicketStatus.Closed) { RowVersion = ClientToken },
         // template:end status
         // template:begin child
         new AddCommentCommand(TicketId, "Looking into it.", AuthorUserId: 7),
-        new EditCommentCommand(TicketId, CommentId: 1, "Still looking into it."),
+        new EditCommentCommand(TicketId, CommentId: 1, "Still looking into it.") { RowVersion = ClientToken },
         new RemoveCommentCommand(TicketId, CommentId: 1),
         // template:end child
     ];
@@ -162,6 +191,7 @@ public class TicketCacheInvalidationTests
         Result.Success(new TicketDTO
         {
             Id = TicketId,
+            RowVersion = ClientToken,
             Title = "Cannot log in",
             // template:begin description
             Description = "The login page returns a 500.",

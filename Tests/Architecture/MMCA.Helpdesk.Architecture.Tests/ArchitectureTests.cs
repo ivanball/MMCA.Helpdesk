@@ -49,8 +49,10 @@ public sealed class FrameworkVersionConsistencyTests : FrameworkVersionConsisten
     protected override IArchitectureMap Map { get; } = new HelpdeskArchitectureMap();
 }
 
-// Gate the ADR-035 optimistic-concurrency round-trip: every *UpdateRequest must implement
-// IConcurrencyAware. Non-vacuous since TicketUpdateRequest adopted the extension point (drift plan H2).
+// Gate the ADR-035 optimistic-concurrency contract: no *UpdateRequest implements IConcurrencyAware.
+// The token a conditional update is checked against comes from the If-Match header, so one in the
+// body would give the same check a second, competing source. Non-vacuous: TicketUpdateRequest is the
+// request the rule inspects.
 public sealed class ConcurrencyConventionTests : ConcurrencyConventionTestsBase
 {
     protected override IArchitectureMap Map { get; } = new HelpdeskArchitectureMap();

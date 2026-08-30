@@ -174,6 +174,14 @@ else
 
     private async Task SaveDetailsAsync()
     {
+        // The write is conditional on the version this page loaded (ADR-035), so it needs the ticket
+        // in hand. The button only renders once it is there; the local makes that fact explicit.
+        var ticket = _ticket;
+        if (ticket is null)
+        {
+            return;
+        }
+
         // One accumulator per field rather than one boolean expression: each optional field of the
         // scaffold then occupies its own line, which is what lets a shape drop it whole.
         bool missingRequired = string.IsNullOrWhiteSpace(_title);
@@ -189,7 +197,7 @@ else
         _busy = true;
         try
         {
-            var result = await Api.UpdateTicketAsync(Id, _title, _description);
+            var result = await Api.UpdateTicketAsync(Id, _title, _description, ticket.RowVersion);
             if (result.IsSuccess)
             {
                 Toast.Success(L["Snackbar.Updated"]);
@@ -209,10 +217,16 @@ else
     @* template:begin status *@
     private async Task ChangeStatusAsync()
     {
+        var ticket = _ticket;
+        if (ticket is null)
+        {
+            return;
+        }
+
         _busy = true;
         try
         {
-            var result = await Api.ChangeStatusAsync(Id, _status);
+            var result = await Api.ChangeStatusAsync(Id, _status, ticket.RowVersion);
             if (result.IsSuccess)
             {
                 Toast.Success(L["Snackbar.StatusUpdated"]);
@@ -273,6 +287,14 @@ else
 
     private async Task SaveCommentAsync(int commentId)
     {
+        // The precondition is the OWNING ticket's version: concurrency is stamped on the aggregate
+        // root, which is what the ticket read returned.
+        var ticket = _ticket;
+        if (ticket is null)
+        {
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(_editCommentBody))
         {
             Toast.Warning(L["Snackbar.CommentEmpty"]);
@@ -282,7 +304,7 @@ else
         _busy = true;
         try
         {
-            var result = await Api.EditCommentAsync(Id, commentId, _editCommentBody);
+            var result = await Api.EditCommentAsync(Id, commentId, _editCommentBody, ticket.RowVersion);
             if (result.IsSuccess)
             {
                 _editingCommentId = null;
