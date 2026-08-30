@@ -1,19 +1,15 @@
-using MMCA.Common.Shared.DTOs;
-
 namespace MMCA.Helpdesk.Tickets.Shared.Tickets;
 
 /// <summary>
 /// Request body for updating a ticket's editable details (the ticket id comes from the route).
-/// Round-trips the optimistic-concurrency token per ADR-035: the client echoes the
-/// <see cref="RowVersion"/> it last read so a conflicting concurrent edit surfaces as 409 instead
-/// of silently last-write-winning. Named with the <c>*UpdateRequest</c> suffix so the shared
-/// <c>UpdateRequestsAreConcurrencyAware</c> fitness rule covers it.
+/// It carries no optimistic-concurrency token: the precondition travels in the <c>If-Match</c>
+/// header alone (ADR-035), where <c>[SupportsIfMatch]</c> reads it, so a request that states no
+/// precondition is refused with 428 instead of silently last-write-winning. The
+/// <c>*UpdateRequest</c> suffix is what puts this type under the shared
+/// <c>UpdateRequests_ShouldNotImplement_IConcurrencyAware</c> fitness rule.
 /// </summary>
-public sealed record class TicketUpdateRequest : IConcurrencyAware
+public sealed record class TicketUpdateRequest
 {
-    /// <inheritdoc />
-    public byte[]? RowVersion { get; init; }
-
     /// <summary>The new title.</summary>
     public required string Title { get; init; }
 

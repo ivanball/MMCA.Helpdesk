@@ -326,20 +326,11 @@ function Add-EngineAlternative {
     Set-Content -Path $Path -Value ($out -join $newline) -NoNewline
 }
 
-# Scope is which templates stage the file, exactly as in $optionalAxisLines below. Two of the three
-# entries are host files that only mmca-app carries; the design-time factory is 'both', because
+# Scope is which templates stage the file, exactly as in $optionalAxisLines below. The AppHost block
+# is a host file only mmca-app carries; the design-time factory appears under both scopes, because
 # mmca-module stages the migrations project too and a generated module has to be able to land in a
 # sqlite app.
 $engineAlternatives = @(
-    @{
-        Scope = 'app'
-        Path = 'Source/Hosts/MMCA.Helpdesk.Web/Program.cs'
-        Marker = 'sqlserver'
-        Lines = @(
-            'builder.AddInfrastructureHealthChecks(requireDatabase: true);'
-            ''
-        )
-    },
     # The same file, staged by both templates, with a different default file name in each. mmca-app
     # generates the FIRST module, whose database file is the one the app's own appsettings names
     # (<app-short>.db); mmca-module generates a LATER one, and every module owns its own database, so
@@ -822,7 +813,7 @@ $optionalAxisLines = @(
     @{
         Scope = 'app'
         Path = 'Source/Hosts/UI/MMCA.Helpdesk.UI.Web/Services/HelpdeskApiClient.cs'
-        Anchor = 'public Task<Result> UpdateTicketAsync\(int id, string title, string description, CancellationToken cancellationToken = default\)'
+        Anchor = 'public Task<Result> UpdateTicketAsync\(int id, string title, string description, byte\[\] rowVersion, CancellationToken cancellationToken = default\)'
         Description = 'string description, '
         Owner = ''
         Hits = 1
@@ -833,7 +824,7 @@ $optionalAxisLines = @(
         # Anchored on the whole PUT call, not on the anonymous object alone: the POST rewritten above
         # leaves a branch whose body IS "new { Title = title, Description = description }", so the
         # shorter pattern would match a line this pass had just emitted.
-        Anchor = '\.PutAsJsonAsync\(string\.Create\(CultureInfo\.InvariantCulture, \$"/Tickets/\{id\}"\), new \{ Title = title, Description = description \}, cancellationToken\)'
+        Anchor = 'ConditionalPut\(string\.Create\(CultureInfo\.InvariantCulture, \$"/Tickets/\{id\}"\), new \{ Title = title, Description = description \}, rowVersion\)'
         Description = ', Description = description'
         Owner = ''
         Hits = 1
@@ -849,7 +840,7 @@ $optionalAxisLines = @(
     @{
         Scope = 'app'
         Path = 'Source/Hosts/UI/MMCA.Helpdesk.UI.Web/Components/Pages/TicketDetail.razor'
-        Anchor = 'await Api\.UpdateTicketAsync\(Id, _title, _description\);'
+        Anchor = 'await Api\.UpdateTicketAsync\(Id, _title, _description, ticket\.RowVersion\);'
         Description = ', _description'
         Owner = ''
         Hits = 1

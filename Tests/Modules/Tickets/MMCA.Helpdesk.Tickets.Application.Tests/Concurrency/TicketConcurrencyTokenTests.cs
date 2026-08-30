@@ -17,11 +17,11 @@ using Moq;
 namespace MMCA.Helpdesk.Tickets.Application.Tests.Concurrency;
 
 /// <summary>
-/// ADR-035 round-trip: a write command carries the client's last-seen concurrency token, and the
-/// handler stamps it back as the tracked entity's ORIGINAL <c>RowVersion</c> before saving. That
-/// single call is what turns a concurrent edit into a 409 (or a 412 on the <c>If-Match</c> path)
-/// instead of a silent last-write-wins, and nothing at compile time requires a handler to make it:
-/// dropping the line loses the protection with no build error, which is what these tests catch.
+/// ADR-035 round-trip: a write command carries the client's last-seen concurrency token (read from
+/// the request's <c>If-Match</c> header), and the handler stamps it back as the tracked entity's
+/// ORIGINAL <c>RowVersion</c> before saving. That single call is what turns a concurrent edit into a
+/// 412 instead of a silent last-write-wins, and nothing at compile time requires a handler to make
+/// it: dropping the line loses the protection with no build error, which is what these tests catch.
 /// <para>
 /// Handlers are resolved from the module's own convention scan rather than constructed by hand, so
 /// the tests exercise the wiring the host actually uses and stay independent of handler
@@ -37,11 +37,11 @@ public class TicketConcurrencyTokenTests
     /// the shape flags reach a single object initializer rather than every call site.
     /// </summary>
     /// <param name="title">The new title.</param>
-    /// <param name="rowVersion">The client's last-seen concurrency token, or null to skip the check.</param>
+    /// <param name="rowVersion">The client's last-seen concurrency token.</param>
     /// <returns>An update command for <see cref="TicketId"/>.</returns>
     private static UpdateEntityCommand<Ticket, TicketUpdateRequest, TicketIdentifierType> UpdateCommand(
         string title,
-        byte[]? rowVersion = null) =>
+        byte[] rowVersion) =>
         new(
             TicketId,
             new TicketUpdateRequest
@@ -105,19 +105,6 @@ public class TicketConcurrencyTokenTests
     }
 
     // template:end child
-    [Fact]
-    public async Task AMissingToken_SkipsTheConflictCheck_RatherThanFailingTheWrite()
-    {
-        var ticket = NewTicket();
-        var repository = TicketRepositoryReturning(ticket);
-
-        var handler = ResolveHandler<ICommandHandler<UpdateEntityCommand<Ticket, TicketUpdateRequest, TicketIdentifierType>, Result<TicketDTO>>>(repository);
-        var result = await handler.HandleAsync(UpdateCommand("Still cannot log in"));
-
-        result.IsSuccess.Should().BeTrue("a legacy client that sends no token must still be able to write");
-        repository.Verify(r => r.SetOriginalRowVersion(ticket, null), Times.Once);
-    }
-
     private static Ticket NewTicket() =>
         Ticket.Create(id: null, "Cannot log in", "The login page returns a 500.", requesterUserId: 42).Value!;
 

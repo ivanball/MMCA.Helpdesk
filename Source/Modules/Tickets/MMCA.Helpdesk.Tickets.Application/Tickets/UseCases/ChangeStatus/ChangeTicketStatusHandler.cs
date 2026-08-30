@@ -32,11 +32,10 @@ public sealed class ChangeTicketStatusHandler(IUnitOfWork unitOfWork, TicketDTOM
 
     /// <summary>
     /// ADR-035: the base stamps the client's last-seen rowversion back as the original, so a
-    /// conflicting concurrent edit fails the save (DbUpdateExceptionHandler maps it to 409). Null
-    /// skips the check.
+    /// conflicting concurrent edit fails the save, which <c>[SupportsIfMatch]</c> answers as a 412.
     /// </summary>
     /// <param name="command">The command being handled.</param>
-    /// <returns>The client's last-observed row version, or null to skip the check.</returns>
+    /// <returns>The client's last-observed row version.</returns>
     protected override byte[]? RowVersion(ChangeTicketStatusCommand command) => command.RowVersion;
 
     /// <inheritdoc />

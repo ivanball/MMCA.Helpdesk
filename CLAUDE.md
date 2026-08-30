@@ -168,7 +168,7 @@ needed. **Building in local-source mode requires `../MMCA.Common/Source` to exis
 
 ```bash
 dotnet build MMCA.Helpdesk.slnx                       # warning-free under all analyzers
-dotnet test  --solution MMCA.Helpdesk.slnx            # 118 tests (domain + application + architecture), NO database needed
+dotnet test  --solution MMCA.Helpdesk.slnx            # 117 tests (domain + application + architecture), NO database needed
 dotnet run --project Source/Hosting/MMCA.Helpdesk.AppHost   # interactive terminal ONLY, see caveat below
 ```
 
