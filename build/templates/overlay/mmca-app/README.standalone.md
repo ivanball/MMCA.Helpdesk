@@ -88,6 +88,14 @@ Tests/
 - **`AddApplicationDecorators()` must be the last DI call** in `Source/Hosts/MMCA.Helpdesk.Web/Program.cs`.
   Decorators wrap handlers that already exist, and the module handlers are registered by
   `ModuleLoader`. Move it earlier and the pipeline silently stops wrapping them.
+- **`AddEntityCrud<...>()` must come AFTER the module's convention scan**, in
+  `Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/DependencyInjection.cs`. It registers the
+  framework's create, update and delete handlers with `TryAdd`, which is what lets the module keep a
+  verb it wrote itself; above the scan it would take those verbs instead, with no error. The line
+  beneath it is load-bearing for the same reason: the framework's automatic validator bridge only
+  sees commands declared in the module assembly, and `UpdateEntityCommand` is declared in
+  MMCA.Common, so the module registers the `CommandRequestValidator` bridge by hand or its
+  `*UpdateRequestValidator` silently stops running. `TicketsCrudRegistrationTests` pins both.
 - **The API host creates its database at startup**, via EF `Migrate` (`ApplicationSettings:DatabaseInitStrategy`).
   Nothing else does, so the UI host must not be the first thing you start.
 - **The UI's `Api:BaseAddress` is a fixed address, not service discovery.** It is the one piece of

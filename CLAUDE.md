@@ -168,7 +168,7 @@ needed. **Building in local-source mode requires `../MMCA.Common/Source` to exis
 
 ```bash
 dotnet build MMCA.Helpdesk.slnx                       # warning-free under all analyzers
-dotnet test  --solution MMCA.Helpdesk.slnx            # 112 tests (domain + application + architecture), NO database needed
+dotnet test  --solution MMCA.Helpdesk.slnx            # 118 tests (domain + application + architecture), NO database needed
 dotnet run --project Source/Hosting/MMCA.Helpdesk.AppHost   # interactive terminal ONLY, see caveat below
 ```
 
@@ -246,8 +246,19 @@ extracted, with no handler change (ADR-003 / ADR-008). Integration events carry 
 **Use cases / wiring:** handlers implement `ICommandHandler<,>` / `IQueryHandler<,>` and are
 **convention-scanned by Scrutor** via `ScanModuleApplicationServices<ClassReference>()` in the module's
 `Application/DependencyInjection.cs` (which uses the C# `extension(IServiceCollection)` syntax): you do
-not register each handler by hand. Read endpoints come from `EntityControllerBase`; writes inject
-handlers directly into `TicketsController`. Mapping is **manual via Mapperly** source-generators
+not register each handler by hand. The plain-CRUD write side is the framework's own: one
+`AddEntityCrud<Ticket, ...>()` call closes the generic create/update/delete handlers over the module's
+types, the mutation stays on the aggregate behind `TicketUpdateApplier` (an `IEntityUpdateApplier`,
+scanned like the create mapper), and the controller constructs `UpdateEntityCommand<...>` directly.
+**Three ordering facts are load-bearing and silent**: `AddEntityCrud` runs AFTER the scan (it uses
+`TryAdd`, so `CreateTicketHandler` keeps the create verb and `TicketUpdateHandler`, which exists only
+to eager-load the children the response carries, keeps the update verb); the `CommandRequestValidator`
+bridge for the closed framework command is registered by hand (the framework's automatic bridge only
+sees commands declared in the module assembly, so `TicketUpdateRequestValidator` would otherwise stop
+running); and `DeleteTicketHandler` stays hand-written with its own command, because it loads the
+children so `Delete()` can cascade and because it is the source of the `mmca-command` slice template.
+`TicketsCrudRegistrationTests` pins all of it. Read endpoints come from `EntityControllerBase`; writes
+inject handlers directly into `TicketsController`. Mapping is **manual via Mapperly** source-generators
 (`*DTOMapper`, `*RequestMapper`), not AutoMapper (ADR-001). Failures map to RFC 9457 ProblemDetails
 through `HandleFailure`.
 

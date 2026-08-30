@@ -225,6 +225,7 @@
             "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Shared/Tickets/AddCommentRequest.cs",
             "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Shared/Tickets/EditCommentRequest.cs",
             "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/Tickets/DTOs/TicketCommentDTOMapper.cs",
+            "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/Tickets/UseCases/Update/TicketUpdateHandler.cs",
             "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/Tickets/UseCases/AddComment/**",
             "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/Tickets/UseCases/EditComment/**",
             "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/Tickets/UseCases/RemoveComment/**",

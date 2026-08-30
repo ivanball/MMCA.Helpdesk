@@ -332,7 +332,7 @@
           "copyOnly": [ "build/add-module.ps1" ]
         },
         {
-          "comment": "--flat: the whole child (comment) axis, file by file. Partial-file removals are marker regions in the seed that stage.ps1 turns into conditional directives.",
+          "comment": "--flat: the whole child (comment) axis, file by file. Partial-file removals are marker regions in the seed that stage.ps1 turns into conditional directives. TicketUpdateHandler is on the list for a subtler reason: it exists only to eager-load the children the update response carries, so with no child collection the framework's own generic update handler, registered by AddEntityCrud, IS the whole update slice.",
           "condition": "(flat)",
           "exclude": [
             "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Domain/Tickets/TicketComment.cs",
@@ -340,6 +340,7 @@
             "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Shared/Tickets/AddCommentRequest.cs",
             "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Shared/Tickets/EditCommentRequest.cs",
             "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/Tickets/DTOs/TicketCommentDTOMapper.cs",
+            "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/Tickets/UseCases/Update/TicketUpdateHandler.cs",
             "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/Tickets/UseCases/AddComment/**",
             "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/Tickets/UseCases/EditComment/**",
             "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/Tickets/UseCases/RemoveComment/**",

@@ -5,11 +5,14 @@ using Microsoft.FeatureManagement;
 using MMCA.Common.Application;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Settings;
+using MMCA.Common.Application.UseCases;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth;
 using MMCA.Common.Testing;
+using MMCA.Helpdesk.Tickets.Application;
 using MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.GetById;
-using MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.Update;
+using MMCA.Helpdesk.Tickets.Domain.Tickets;
 using MMCA.Helpdesk.Tickets.Shared.Tickets;
 using Moq;
 
@@ -17,8 +20,9 @@ namespace MMCA.Helpdesk.Architecture.Tests;
 
 /// <summary>
 /// Runtime fitness function for the ADR-014 decorator pipeline, exercised against a real Tickets
-/// command/query pair (<see cref="UpdateTicketCommand"/> / <see cref="GetTicketByIdQuery"/>): it
-/// builds this seed's genuine registration sequence (the module handler scan first,
+/// command/query pair (the framework's generic update command over the Ticket aggregate, and
+/// <see cref="GetTicketByIdQuery"/>): it
+/// builds this seed's genuine registration sequence (the module registration first,
 /// <c>AddApplicationDecorators()</c> LAST, which is the one load-bearing ordering in the host) and
 /// asserts the resolved object graph nests the decorators in exactly the documented order.
 /// <para>
@@ -28,7 +32,11 @@ namespace MMCA.Helpdesk.Architecture.Tests;
 /// </para>
 /// </summary>
 public sealed class DecoratorPipelineOrderTests
-    : DecoratorPipelineOrderTestsBase<UpdateTicketCommand, Result<TicketDTO>, GetTicketByIdQuery, Result<TicketDTO>>
+    : DecoratorPipelineOrderTestsBase<
+        UpdateEntityCommand<Ticket, TicketUpdateRequest, TicketIdentifierType>,
+        Result<TicketDTO>,
+        GetTicketByIdQuery,
+        Result<TicketDTO>>
 {
     protected override void ConfigureServices(IServiceCollection services)
     {
@@ -44,11 +52,11 @@ public sealed class DecoratorPipelineOrderTests
         services.AddSingleton(Mock.Of<ICurrentUserService>());
         services.AddSingleton(Mock.Of<IPermissionRegistry>());
 
-        // The real registration sequence, mirroring the host: the Tickets module's convention scan
-        // first (it is what registers UpdateTicketHandler / GetTicketByIdHandler and the DTO
-        // mappers they depend on), decorators last.
+        // The real registration sequence, mirroring the host: the Tickets module's own registration
+        // first (its convention scan registers GetTicketByIdHandler, the update applier and the DTO
+        // mappers, and AddEntityCrud closes the generic write side over them), decorators last.
         services.AddApplication();
-        services.ScanModuleApplicationServices<MMCA.Helpdesk.Tickets.Application.ClassReference>();
+        services.AddModuleTicketsApplication(new ApplicationSettings());
         services.AddApplicationDecorators();
     }
 }
