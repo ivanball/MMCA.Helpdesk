@@ -1,3 +1,4 @@
+using MMCA.Common.Domain.Attributes;
 using MMCA.Common.Domain.DomainEvents;
 
 namespace MMCA.Helpdesk.Tickets.Shared.Tickets.IntegrationEvents;
@@ -12,5 +13,6 @@ namespace MMCA.Helpdesk.Tickets.Shared.Tickets.IntegrationEvents;
 /// template:begin owner
 /// <param name="RequesterUserId">The user who opened the ticket.</param>
 /// template:end owner
+[EventName("Tickets.TicketOpened.v1")]
 public sealed record class TicketOpenedIntegrationEvent(TicketIdentifierType TicketId, int RequesterUserId)
     : BaseIntegrationEvent;
