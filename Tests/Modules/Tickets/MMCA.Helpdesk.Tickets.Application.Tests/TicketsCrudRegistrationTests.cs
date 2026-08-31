@@ -49,13 +49,13 @@ public sealed class TicketsCrudRegistrationTests
             IEntityUpdateApplier<Ticket, TicketUpdateRequest, TicketIdentifierType>));
 
     /// <summary>
-    /// The framework's automatic bridge only sees commands declared in the module assembly, and the
-    /// generic update command is declared in MMCA.Common, so the module registers the bridge itself.
-    /// Without it the validating decorator would find no validator and
+    /// The module scan's bridge only sees commands declared in the module assembly, and the generic
+    /// update command is declared in MMCA.Common, so <c>AddEntityCrud</c> registers the bridge for
+    /// that closed command itself. Without it the validating decorator would find no validator and
     /// <see cref="TicketUpdateRequestValidator"/> would silently stop running.
     /// </summary>
     [Fact]
-    public void Module_Registers_TheUpdateRequestValidatorBridge() =>
+    public void AddEntityCrud_Registers_TheUpdateRequestValidatorBridge() =>
         Registrations.Should().Contain(d =>
             d.ServiceType == typeof(IValidator<UpdateEntityCommand<Ticket, TicketUpdateRequest, TicketIdentifierType>>)
             && d.ImplementationType != null

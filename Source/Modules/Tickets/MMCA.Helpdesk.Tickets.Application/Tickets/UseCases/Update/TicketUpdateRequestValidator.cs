@@ -13,9 +13,9 @@ namespace MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.Update;
 /// </summary>
 /// <remarks>
 /// The rules are written against the REQUEST rather than against a command, which is what lets the
-/// framework's generic <c>UpdateEntityCommand</c> carry them: the module's
-/// <c>Application/DependencyInjection.cs</c> registers the <c>CommandRequestValidator</c> bridge that
-/// unwraps the command and runs this validator on its payload.
+/// framework's generic <c>UpdateEntityCommand</c> carry them: <c>AddEntityCrud</c> registers the
+/// <c>CommandRequestValidator</c> bridge that unwraps the command and runs this validator on its
+/// payload.
 /// </remarks>
 public sealed class TicketUpdateRequestValidator : AbstractValidator<TicketUpdateRequest>
 {

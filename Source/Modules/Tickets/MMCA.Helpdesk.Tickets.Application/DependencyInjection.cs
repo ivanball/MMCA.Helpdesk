@@ -1,12 +1,9 @@
-using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MMCA.Common.Application;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Services;
 using MMCA.Common.Application.Settings;
-using MMCA.Common.Application.UseCases;
-using MMCA.Common.Application.Validation;
 using MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.Create;
 using MMCA.Helpdesk.Tickets.Domain.Tickets;
 using MMCA.Helpdesk.Tickets.Shared.Tickets;
@@ -49,17 +46,12 @@ public static class DependencyInjection
             // template:end child
             // Moving this call above the scan would hand those verbs to the plain generic handlers,
             // silently.
+            //
+            // The call also registers the CommandRequestValidator bridge for the closed
+            // UpdateEntityCommand<,,>, which is what keeps TicketUpdateRequestValidator running in the
+            // validating decorator: the scan's own bridge only sees commands declared in THIS
+            // assembly, and that command is declared in MMCA.Common.
             services.AddEntityCrud<Ticket, TicketDTO, TicketIdentifierType, TicketCreateRequest, TicketUpdateRequest>();
-
-            // The CommandRequestValidator bridge the scan builds only sees commands declared in THIS
-            // assembly, and UpdateEntityCommand<,,> is declared in MMCA.Common, so the closed command
-            // is invisible to it. Registering the bridge by hand is what keeps
-            // TicketUpdateRequestValidator running in the validating decorator, exactly as it did
-            // behind the hand-written update command. TryAdd matches the framework's own semantics:
-            // an explicit IValidator for the command would win.
-            services.TryAddTransient<
-                IValidator<UpdateEntityCommand<Ticket, TicketUpdateRequest, TicketIdentifierType>>,
-                CommandRequestValidator<UpdateEntityCommand<Ticket, TicketUpdateRequest, TicketIdentifierType>, TicketUpdateRequest>>();
 
             return services;
         }
