@@ -252,9 +252,10 @@ types, the mutation stays on the aggregate behind `TicketUpdateApplier` (an `IEn
 scanned like the create mapper), and the controller constructs `UpdateEntityCommand<...>` directly.
 **Three ordering facts are load-bearing and silent**: `AddEntityCrud` runs AFTER the scan (it uses
 `TryAdd`, so `CreateTicketHandler` keeps the create verb and `TicketUpdateHandler`, which exists only
-to eager-load the children the response carries, keeps the update verb); the `CommandRequestValidator`
-bridge for the closed framework command is registered by hand (the framework's automatic bridge only
-sees commands declared in the module assembly, so `TicketUpdateRequestValidator` would otherwise stop
+to eager-load the children the response carries, keeps the update verb); the same call also registers
+the `CommandRequestValidator` bridge for the closed framework command (since MMCA.Common v1.177.0, so
+the module registers nothing by hand: the scan's own bridge only sees commands declared in the module
+assembly, and without the framework's registration `TicketUpdateRequestValidator` would silently stop
 running); and `DeleteTicketHandler` stays hand-written with its own command, because it loads the
 children so `Delete()` can cascade and because it is the source of the `mmca-command` slice template.
 `TicketsCrudRegistrationTests` pins all of it. Read endpoints come from `EntityControllerBase`; writes
