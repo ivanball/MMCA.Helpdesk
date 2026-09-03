@@ -1,4 +1,4 @@
-using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Application.Interfaces.Mapping;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Helpdesk.Tickets.Domain.Tickets;
 

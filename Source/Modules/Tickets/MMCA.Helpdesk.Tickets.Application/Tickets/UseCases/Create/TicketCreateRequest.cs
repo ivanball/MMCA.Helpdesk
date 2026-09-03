@@ -1,5 +1,5 @@
-using MMCA.Common.Application.Interfaces;
-using MMCA.Common.Application.UseCases;
+using MMCA.Common.Application.Interfaces.Mapping;
+using MMCA.Common.Application.UseCases.Markers;
 
 namespace MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.Create;
 

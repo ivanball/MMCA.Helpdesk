@@ -1,4 +1,4 @@
-using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Application.Interfaces.Mapping;
 using MMCA.Helpdesk.Tickets.Domain.Tickets;
 using MMCA.Helpdesk.Tickets.Shared.Tickets;
 using Riok.Mapperly.Abstractions;

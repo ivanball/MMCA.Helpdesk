@@ -1,7 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MMCA.Common.Application;
-using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Application.Interfaces.Mapping;
+using MMCA.Common.Application.Interfaces.Navigation;
 using MMCA.Common.Application.Services;
 using MMCA.Common.Application.Settings;
 using MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.Create;

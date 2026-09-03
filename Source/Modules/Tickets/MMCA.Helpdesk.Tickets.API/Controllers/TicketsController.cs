@@ -7,8 +7,9 @@ using Microsoft.Extensions.Logging;
 using MMCA.Common.API.Concurrency;
 using MMCA.Common.API.Controllers;
 using MMCA.Common.API.Idempotency;
-using MMCA.Common.Application.Interfaces;
-using MMCA.Common.Application.UseCases;
+using MMCA.Common.Application.Interfaces.Mapping;
+using MMCA.Common.Application.UseCases.Contracts;
+using MMCA.Common.Application.UseCases.Crud;
 using MMCA.Common.Shared.Abstractions;
 // template:begin child
 using MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.AddComment;

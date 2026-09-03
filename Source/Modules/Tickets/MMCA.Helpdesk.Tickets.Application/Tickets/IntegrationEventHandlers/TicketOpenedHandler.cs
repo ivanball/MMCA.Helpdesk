@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Application.Interfaces.Events;
 using MMCA.Helpdesk.Tickets.Shared.Tickets.IntegrationEvents;
 
 namespace MMCA.Helpdesk.Tickets.Application.Tickets.IntegrationEventHandlers;

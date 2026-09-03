@@ -1,4 +1,4 @@
-using MMCA.Common.Application.UseCases;
+using MMCA.Common.Application.UseCases.Markers;
 using MMCA.Helpdesk.Tickets.Shared.Tickets;
 
 namespace MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.ChangeStatus;

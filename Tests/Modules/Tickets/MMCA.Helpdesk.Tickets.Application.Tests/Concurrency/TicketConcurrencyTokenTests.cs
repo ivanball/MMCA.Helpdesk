@@ -1,8 +1,9 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.Settings;
-using MMCA.Common.Application.UseCases;
+using MMCA.Common.Application.UseCases.Contracts;
+using MMCA.Common.Application.UseCases.Crud;
 using MMCA.Common.Shared.Abstractions;
 // template:begin status
 using MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.ChangeStatus;
