@@ -1,7 +1,8 @@
 using Microsoft.AspNetCore.Localization;
 using MMCA.Common.Aspire;
 using MMCA.Common.Shared.Globalization;
-using MMCA.Common.UI.Services;
+using MMCA.Common.UI.Services.Culture;
+using MMCA.Common.UI.Theme;
 using MMCA.Helpdesk.UI.Web.Components;
 using MMCA.Helpdesk.UI.Web.Services;
 using MudBlazor.Services;

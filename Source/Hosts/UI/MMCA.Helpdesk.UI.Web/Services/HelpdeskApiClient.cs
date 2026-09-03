@@ -1,7 +1,7 @@
 using System.Globalization;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Http;
-using MMCA.Common.UI.Services;
+using MMCA.Common.UI.Services.Api;
 using MMCA.Helpdesk.Tickets.Shared.Tickets;
 
 namespace MMCA.Helpdesk.UI.Web.Services;
