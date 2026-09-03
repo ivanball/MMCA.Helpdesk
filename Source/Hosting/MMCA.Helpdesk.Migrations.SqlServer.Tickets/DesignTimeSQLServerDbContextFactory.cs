@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore.Design;
+using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Design;
-using MMCA.Common.Infrastructure.Settings;
 
 namespace MMCA.Helpdesk.Migrations.SqlServer.Tickets;
 
