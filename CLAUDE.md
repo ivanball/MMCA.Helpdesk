@@ -55,7 +55,7 @@ rather than to a generated app and laying `build/templates/overlay/` on top. Con
   otherwise PROMPTS, which would hang `smoke.ps1` and every adopter's own automation, and it would
   also run before the app has been built. The `.editorconfig` delta plus the README command is the
   supported answer.
-- **The `IntegrationEventContractTests` subclass DOES ship**, and used to not. `IntegrationEventContractTestsBase`
+- **The `IntegrationEventContractTests` subclass ships in the seed.** `IntegrationEventContractTestsBase`
   compares each event's members as an unordered set, so the aggregate's own Id moving position is no
   longer a difference, and everything else in the literal is an ordinary symbol substitution. The one
   member a flag can remove (`RequesterUserId`) is handled by `$optionalAxisLines` like any other
@@ -162,9 +162,9 @@ where it is gitignored) sets `UseLocalMMCA=true` and points at `../MMCA.Common/S
 `MMCA.Common.*` packages resolve via `ProjectReference` to the framework source: no GitHub Packages
 token needed. The
 `PackageReference`→`ProjectReference` swap lives in `Directory.Build.targets`; `nuget.config` only lists
-nuget.org. To consume published packages instead, just delete `local.props`: since v1.128.0 the
-`MMCA.Common.*` packages are published to **nuget.org** (ADR-053), so no extra feed and no token are
-needed. **Building in local-source mode requires `../MMCA.Common/Source` to exist on disk.**
+nuget.org. To consume published packages instead, just delete `local.props`: the `MMCA.Common.*`
+packages are published to **nuget.org** (ADR-053), so no extra feed and no token are needed.
+**Building in local-source mode requires `../MMCA.Common/Source` to exist on disk.**
 
 ```bash
 dotnet build MMCA.Helpdesk.slnx                       # warning-free under all analyzers
@@ -207,7 +207,7 @@ The one module, `Tickets`, is split across five projects under `Source/Modules/T
 `Source/Hosting/` (AppHost + migrations).
 
 **The host DI sequence is load-bearing and fixed** (`Source/Hosts/MMCA.Helpdesk.Web/Program.cs`):
-`AddApplication()` → `AddInfrastructure()` → the three v1.150.0 opt-ins that layer on top of it
+`AddApplication()` → `AddInfrastructure()` → the three opt-ins that layer on top of it
 (`AddAuditTrail()` → `AddScheduledJobs()` → `AddMultiTenancy()`, order irrelevant among themselves)
 → `AddAPI(modulesSettings)` →
 `AddErrorResources<TicketsErrorResources>()` (module error-code translations for localized
@@ -253,8 +253,8 @@ scanned like the create mapper), and the controller constructs `UpdateEntityComm
 **Three ordering facts are load-bearing and silent**: `AddEntityCrud` runs AFTER the scan (it uses
 `TryAdd`, so `CreateTicketHandler` keeps the create verb and `TicketUpdateHandler`, which exists only
 to eager-load the children the response carries, keeps the update verb); the same call also registers
-the `CommandRequestValidator` bridge for the closed framework command (since MMCA.Common v1.177.0, so
-the module registers nothing by hand: the scan's own bridge only sees commands declared in the module
+the `CommandRequestValidator` bridge for the closed framework command (so the module registers
+nothing by hand: the scan's own bridge only sees commands declared in the module
 assembly, and without the framework's registration `TicketUpdateRequestValidator` would silently stop
 running); and `DeleteTicketHandler` stays hand-written with its own command, because it loads the
 children so `Delete()` can cascade and because it is the source of the `mmca-command` slice template.
@@ -280,7 +280,7 @@ null. The two pages therefore **branch instead of catching**, using the ergonomi
 `MMCA.Common.UI.Common` (`TryGetValue` to unwrap, `LocalizedErrorMessage` to compose the snackbar
 text through the page's own localizer); `_Imports.razor` carries that namespace.
 
-## Multi-tenancy demo (and the other v1.150.0 opt-ins)
+## Multi-tenancy demo (and the other opt-ins)
 
 This seed is the framework's **runnable reference for multi-tenancy**, so unlike ADC and Store it turns
 the feature on. `Ticket` and `TicketComment` implement `ITenantEntity`, which is the whole domain-side
