@@ -206,6 +206,15 @@ The one module, `Tickets`, is split across five projects under `Source/Modules/T
 `Source/Hosts/MMCA.Helpdesk.Web` (the API monolith), `Source/Hosts/UI/MMCA.Helpdesk.UI.Web` (Blazor),
 `Source/Hosting/` (AppHost + migrations).
 
+**Folder convention (feature by folder, use case by leaf; rubric §5).** Inside `Domain`, `Application` and
+`Shared` the first folder level is the aggregate (`Tickets/`), with `UseCases/{Operation}/` as the leaf beside
+`DTOs/` and `Validation/`; inside `API`, `Infrastructure` and the UI RCL the first level is a documented
+technical root (`Controllers/`, `Persistence/`, `Pages/`, `Services/`) and the aggregate sits beneath it. The
+aggregate carries the same plural name in every project (`Tickets` everywhere, test mirrors included), and
+no folder holds more than 12 direct code files (`FolderWidthTests`, a `.razor` + `.razor.cs` + `.resx` set
+counting once). Namespaces follow folders, so move files with the workspace `Tools/Scripts/move-namespace.ps1`.
+This layout is what the `mmca-module` template generates, so keep the two in step.
+
 **The host DI sequence is load-bearing and fixed** (`Source/Hosts/MMCA.Helpdesk.Web/Program.cs`):
 `AddApplication()` → `AddInfrastructure()` → the three opt-ins that layer on top of it
 (`AddAuditTrail()` → `AddScheduledJobs()` → `AddMultiTenancy()`, order irrelevant among themselves)
