@@ -1,8 +1,10 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using MMCA.Common.Application.Interfaces;
-using MMCA.Common.Application.UseCases;
+using MMCA.Common.Application.UseCases.Contracts;
+using MMCA.Common.Application.UseCases.Crud;
 using MMCA.Common.Application.UseCases.Decorators;
+using MMCA.Common.Application.UseCases.Markers;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Helpdesk.Tickets.Application.Tickets;
 // template:begin child

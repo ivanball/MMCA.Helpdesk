@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Application.Interfaces.Events;
 using MMCA.Common.Domain.Enums;
 using MMCA.Helpdesk.Tickets.Domain.Tickets.DomainEvents;
 

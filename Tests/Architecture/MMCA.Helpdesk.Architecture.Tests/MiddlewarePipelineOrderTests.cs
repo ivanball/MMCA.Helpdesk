@@ -1,4 +1,4 @@
-using MMCA.Common.Testing;
+using MMCA.Common.Testing.Conformance;
 
 namespace MMCA.Helpdesk.Architecture.Tests;
 

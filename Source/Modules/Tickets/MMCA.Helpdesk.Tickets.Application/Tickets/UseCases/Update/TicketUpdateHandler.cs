@@ -1,6 +1,6 @@
-using MMCA.Common.Application.Interfaces;
-using MMCA.Common.Application.Interfaces.Infrastructure;
-using MMCA.Common.Application.UseCases;
+using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
+using MMCA.Common.Application.Interfaces.Mapping;
+using MMCA.Common.Application.UseCases.Crud;
 using MMCA.Helpdesk.Tickets.Application.Tickets.DTOs;
 using MMCA.Helpdesk.Tickets.Domain.Tickets;
 using MMCA.Helpdesk.Tickets.Shared.Tickets;
