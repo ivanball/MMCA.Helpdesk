@@ -33,4 +33,14 @@ public sealed class AnonymousEndpointTests : AnonymousEndpointTestsBase
     // The exact count today: one controller type and no routable components in the API assembly. A
     // renamed or missing assembly would make the allow-list check vacuous, so the floor fails first.
     protected override int MinimumScannedTypes => 1;
+
+    // The stricter half of the gate (SEC-ADC-03), opted into here because this seed passes it: the
+    // allow-list above can only see an endpoint that CARRIES [AllowAnonymous], so an endpoint
+    // carrying no authorization attribute at all (exactly the shape a forgotten [Authorize]
+    // produces) is invisible to it. With this on, every controller and routable page in the scanned
+    // assembly must declare a decision or be listed in EndpointsWithoutAuthorizationAttribute, which
+    // is deliberately left empty here. On controllers the host's fallback authorization policy
+    // (Web/Program.cs) closes the same hole at run time; for a routable page, gated by
+    // AuthorizeRouteView, which ignores the fallback policy, this test IS the control.
+    protected override bool RequireExplicitAuthorizationDecision => true;
 }

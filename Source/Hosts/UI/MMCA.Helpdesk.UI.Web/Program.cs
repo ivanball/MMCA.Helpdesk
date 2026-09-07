@@ -74,6 +74,10 @@ app.MapStaticAssets();
 app.MapDefaultEndpoints();
 
 // Culture switch endpoint (ADR-027): writes the standard ASP.NET culture cookie and reloads.
+// SECURITY (SEC-Common-16): .AllowAnonymous() below states the decision this endpoint has always
+// made, the way MapCultureEndpoint in MMCA.Common.API states it. This host registers no
+// authorization services, so the framework's fallback policy cannot reach it today; the attribute
+// is what keeps it public (and reviewable) the day this host gains an authenticated surface.
 app.MapGet("/culture/set", (string culture, string? redirectUri, HttpContext context) =>
 {
     if (SupportedCultures.IsSupported(culture) || allowPseudo && SupportedCultures.IsPseudoLocale(culture))
@@ -93,7 +97,7 @@ app.MapGet("/culture/set", (string culture, string? redirectUri, HttpContext con
     }
 
     return Results.LocalRedirect(string.IsNullOrWhiteSpace(redirectUri) ? "/" : redirectUri);
-});
+}).AllowAnonymous();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()
