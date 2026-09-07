@@ -1,4 +1,5 @@
 using MMCA.Common.API;
+using MMCA.Common.API.Authorization;
 using MMCA.Common.API.Startup;
 using MMCA.Common.Application;
 using MMCA.Common.Application.Modules;
@@ -57,7 +58,18 @@ if (!string.IsNullOrWhiteSpace(jwtAuthority))
 else
 {
     services.AddAuthentication();
-    services.AddAuthorization();
+
+    // SECURITY (SEC-Common-16): AddAuthorizationPolicies, not the bare AddAuthorization, so both
+    // branches register the same authorization model. It brings the framework's fallback policy,
+    // which makes an endpoint declaring NO authorization metadata require an authenticated caller
+    // instead of publishing every inherited action anonymously. Nothing here relies on that today:
+    // every endpoint this host routes states its own decision (TicketsController is
+    // [AllowAnonymous]; the probes, JWKS and OIDC discovery endpoints the framework maps declare
+    // [AllowAnonymous] themselves, and /health, /alive and /.well-known are exempt by path prefix).
+    // The point is the next endpoint someone adds. A host that cannot annotate its anonymous
+    // surface yet opts out deliberately with
+    // AddAuthorizationPolicies(options => options.Enabled = false).
+    services.AddAuthorizationPolicies();
 }
 
 services.AddCommonExceptionHandlers();
