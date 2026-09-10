@@ -1,6 +1,8 @@
 <Project>
-  <!-- Optional: copy local.props.template to local.props (gitignored) to build against MMCA.Common
-       source instead of the NuGet packages. The swap itself lives in Directory.Build.targets. -->
+  <!-- Optional: copy local.props.template to local.props to build against MMCA.Common source instead
+       of the NuGet packages. Whether that file is tracked or ignored is .gitignore's call: this
+       reference seed keeps local.props in git (unlike Store/ADC, and unlike a generated app, which
+       ignores it). The swap itself lives in Directory.Build.targets. -->
   <Import Project="local.props" Condition="Exists('local.props')" />
 
   <PropertyGroup>
