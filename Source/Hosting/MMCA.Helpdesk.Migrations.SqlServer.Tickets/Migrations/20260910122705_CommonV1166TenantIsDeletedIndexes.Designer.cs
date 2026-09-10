@@ -4,6 +4,7 @@ using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MMCA.Helpdesk.Migrations.SqlServer.Tickets.Migrations
 {
     [DbContext(typeof(SQLServerDbContext))]
-    partial class SQLServerDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260910122705_CommonV1166TenantIsDeletedIndexes")]
+    partial class CommonV1166TenantIsDeletedIndexes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -151,94 +154,6 @@ namespace MMCA.Helpdesk.Migrations.SqlServer.Tickets.Migrations
                         .HasDatabaseName("IX_InboxMessages_ProcessedOn");
 
                     b.ToTable("InboxMessages", "dbo");
-                });
-
-            modelBuilder.Entity("MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<int>("Attempts")
-                        .HasColumnType("int");
-
-                    b.Property<Guid?>("ClaimedBy")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime?>("ClaimedUntil")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CommandType")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(500)");
-
-                    b.Property<string>("CorrelationId")
-                        .HasMaxLength(64)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(64)");
-
-                    b.Property<DateTime>("CreatedOn")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("DeadLetteredOn")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("LastError")
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
-
-                    b.Property<string>("Payload")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("ProcessedOn")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("ScheduledOn")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("SpanId")
-                        .HasMaxLength(64)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(64)");
-
-                    b.Property<string>("TenantId")
-                        .HasMaxLength(64)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(64)");
-
-                    b.Property<string>("TraceId")
-                        .HasMaxLength(64)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(64)");
-
-                    b.Property<int?>("UserId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("UserRoles")
-                        .HasMaxLength(512)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(512)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("DeadLetteredOn")
-                        .HasDatabaseName("IX_InternalCommands_DeadLettered")
-                        .HasFilter("[DeadLetteredOn] IS NOT NULL");
-
-                    b.HasIndex("ProcessedOn")
-                        .HasDatabaseName("IX_InternalCommands_Processed")
-                        .HasFilter("[ProcessedOn] IS NOT NULL");
-
-                    b.HasIndex("ScheduledOn")
-                        .HasDatabaseName("IX_InternalCommands_Pending")
-                        .HasFilter("[ProcessedOn] IS NULL AND [DeadLetteredOn] IS NULL");
-
-                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("ScheduledOn"), new[] { "Attempts", "ClaimedUntil" });
-
-                    b.ToTable("InternalCommands", "dbo");
                 });
 
             modelBuilder.Entity("MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage", b =>
