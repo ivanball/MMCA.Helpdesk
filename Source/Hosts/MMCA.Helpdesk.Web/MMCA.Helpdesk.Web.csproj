@@ -1,6 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <ItemGroup>
+    <!-- The readiness check's provider package. The engineName rename turns this id into
+         AspNetCore.HealthChecks.Sqlite for the sqlite database option, but PostgreSQL spells its
+         check AspNetCore.HealthChecks.NpgSql, so that branch is injected as a sibling postgresql
+         region by build/templates/stage.ps1 instead of being renamed. -->
+    <!-- template:begin sqlserverOrSqlite -->
     <PackageReference Include="AspNetCore.HealthChecks.SqlServer" />
+    <!-- template:end sqlserverOrSqlite -->
     <PackageReference Include="MMCA.Common.Aspire" />
   </ItemGroup>
   <ItemGroup>

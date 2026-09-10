@@ -75,18 +75,32 @@ rather than to a generated app and laying `build/templates/overlay/` on top. Con
   unbalanced or unknown-label marker. **Never put a raw `//#if` in the seed**, and keep a region's
   trailing blank line INSIDE it (a marker followed by a blank line is SA1512).
 - **Two SOLUTION axes sit beside the four module ones**, and they behave differently. `--database
-  sqlserver|sqlite` and `--no-aspire` use the same marker mechanism (labels `sqlserver`, `sqlite`,
-  `aspire`, `aspireSqlServer`, the last being `!(noAspire || useSqlite)` so one line can carry both),
-  plus three things the module axes never needed:
+  sqlserver|sqlite|postgresql` and `--no-aspire` use the same marker mechanism (labels `sqlserver`,
+  `sqlite`, `postgresql`, `sqlserverOrSqlite`, `aspire`, `aspireSqlServer`, the last being
+  `!(noAspire || useSqlite)` so one line can carry both), plus three things the module axes never
+  needed:
   - **`--database` is a SWAP, not a removal**, and the seed can only hold one branch of a swap. So the
     seed keeps the SQL Server code inside a `sqlserver` region, and `stage.ps1`'s `$engineAlternatives`
-    table **injects** the SQLite branch as a sibling `sqlite` region at staging time (three entries
-    today: the AppHost block, the health-check call, the design-time connection string). Nothing else
-    is engine-specific in code, because two derived symbols do the rest by substring: `engineName`
-    rewrites `SqlServer` (both provider package ids, the migrations project's folder / namespace /
-    assembly, and `CreateSqlServer`) and `engineNameUpper` rewrites `SQLServer` (the design-time
-    factory's file and class, `SQLServerDbContext`, `EntityTypeConfigurationSQLServer`, and the
-    `SQLServerConnectionString` / `SQLServerMigrationsAssembly` settings).
+    table **injects** the SQLite and PostgreSQL branches as sibling `sqlite` / `postgresql` regions at
+    staging time (eight entries today: the AppHost block and the design-time connection string per
+    engine, the AppHost's hosting-integration reference, and the three package-id swaps below).
+    Several alternatives may anchor on the SAME region: each injection carries its own label, so the
+    anchor stays unique for the next one. Nothing else is engine-specific in code, because two
+    derived symbols do the rest by substring: `engineName` rewrites `SqlServer` (the migrations
+    project's folder / namespace / assembly, `CreateSqlServer`, and the Aspire hosting integration
+    id) and `engineNameUpper` rewrites `SQLServer` (the design-time factory's file and class,
+    `SQLServerDbContext`, `EntityTypeConfigurationSQLServer`, and the `SQLServerConnectionString` /
+    `SQLServerMigrationsAssembly` settings). PostgreSQL is the one choice where both symbols take the
+    same value, `PostgreSQL`.
+  - **Two package ids the rename cannot reach**, which is what the `sqlserverOrSqlite` label
+    (`!usePostgreSQL`) exists for. `Microsoft.EntityFrameworkCore.SqlServer` and
+    `AspNetCore.HealthChecks.SqlServer` rename cleanly for sqlite and produce two packages that do
+    not exist for postgresql, whose provider is `Npgsql.EntityFrameworkCore.PostgreSQL` and whose
+    readiness check is `AspNetCore.HealthChecks.NpgSql`. Those lines therefore sit in a
+    `sqlserverOrSqlite` region in `Directory.Packages.props`, the Web host csproj and the migrations
+    csproj, with the PostgreSQL branch injected beside them. `Aspire.Hosting.SqlServer` is
+    deliberately NOT in that set: it renames to the real `Aspire.Hosting.PostgreSQL` at the same
+    version.
   - **`.slnx` carries markers** (added to `$markerStyles` with the XML comment form), which is how
     `--no-aspire` drops the AppHost's `<Project>` line. Verified: the solution parsers keep comments.
   - **Three whole files are variants, not regions**, because `.json` and `.md` differ structurally
@@ -272,6 +286,15 @@ inject handlers directly into `TicketsController`. Mapping is **manual via Mappe
 (`*DTOMapper`, `*RequestMapper`), not AutoMapper (ADR-001). Failures map to RFC 9457 ProblemDetails
 through `HandleFailure`.
 
+**Filtered indexes are engine-aware, never a SQL literal.** `TicketConfiguration`'s index on
+`RequesterUserId` uses the framework's `HasSoftDeleteFilter(DataSource.SQLServer)` rather than
+`HasFilter("[IsDeleted] = 0")`. The engine token is the one `engineNameUpper` renames, so a
+`--database postgresql` scaffold gets `DataSource.PostgreSQL` and the predicate becomes
+`"IsDeleted" = false`: PostgreSQL maps the flag to a real boolean and rejects both the brackets and
+the comparison with `0`, at `CREATE INDEX`. On SQL Server the produced string is byte-identical to
+the old literal, so the checked-in migrations are unchanged. Copy this, not a literal, for any new
+filtered index.
+
 **Persistence:** `ModuleApplicationDbContext` is abstract and only declares the module's `DbSet`s; the
 concrete runtime context is the single `SQLServerDbContext` from MMCA.Common: **one instance per
 database, never a per-module context class** (ADR-006). EF entity configurations are auto-discovered by
@@ -368,7 +391,16 @@ documentation-only changes included (this file too). For any modification, branc
 - **Commit messages use Scoped Commits** (`<scope>: <description>`), not Conventional Commits (see
   `CONTRIBUTING.md`).
 - **The one required check is `build-and-test`** (`.github/workflows/ci.yml`): Release build + the
-  headless domain/architecture tests. CI checks out `ivanball/MMCA.Common@main` as a sibling and
+  headless domain/architecture tests. Two advisory jobs sit beside it: `template-smoke` (the real
+  gate on anything under `build/templates/`, `templates/` or `.template.config/`) and
+  `PostgreSQL canary (template + real server)`, which runs `build/templates/canary-postgresql.ps1`:
+  generate with `--database postgresql`, build and test in package mode, scaffold the first
+  migration and apply it to a `postgres:17` service container. It is `continue-on-error` and gated
+  on a `changes` job so a docs-only PR never starts the container. That apply step is the only place
+  the SQL the framework emits for PostgreSQL is executed, and the canary is the consumer half of
+  ADR-113 (MMCA.Common's own `postgresql-integration` job proves the provider). The script takes an
+  optional `-ConnectionString`; without one it stops after scaffolding the migration, which is what
+  makes it runnable on a workstation with no server. CI checks out `ivanball/MMCA.Common@main` as a sibling and
   builds against its source (local-source mode, no package token), so a change merged to MMCA.Common
   `main` can break Helpdesk CI with no Helpdesk-side change; if CI goes red on an untouched area,
   diff recent Common commits first.

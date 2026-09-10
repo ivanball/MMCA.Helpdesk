@@ -211,7 +211,7 @@ compose with each other and with everything above. This solution was generated w
 
 | Option | Effect |
 |---|---|
-| `--database sqlserver\|sqlite` | The relational engine. `sqlite` gives you one file and no server: entity configurations inherit `EntityTypeConfigurationSqlite`, the migrations project is `<App>.Migrations.Sqlite.<Module>` against `Microsoft.EntityFrameworkCore.Sqlite`, the API host requires a database rather than SQL Server specifically, and the app is single-tenant (database per tenant needs a second server-backed database). Default `sqlserver`. |
+| `--database sqlserver\|sqlite\|postgresql` | The relational engine. `sqlite` gives you one file and no server: entity configurations inherit `EntityTypeConfigurationSqlite`, the migrations project is `<App>.Migrations.Sqlite.<Module>` against `Microsoft.EntityFrameworkCore.Sqlite`, the API host requires a database rather than SQL Server specifically, and the app is single-tenant (database per tenant needs a second server-backed database). `postgresql` is the other server engine (ADR-113): entity configurations inherit `EntityTypeConfigurationPostgreSQL`, the migrations project is `<App>.Migrations.PostgreSQL.<Module>` against `Npgsql.EntityFrameworkCore.PostgreSQL`. Default `sqlserver`. |
 | `--no-aspire` | No orchestration project: no AppHost, no `Aspire.Hosting.*` pins, and the UI host reaches the API at a fixed `https://localhost:60801` instead of through service discovery. Both hosts keep `AddServiceDefaults()` (OpenTelemetry, `/health` + `/alive`, resilience), so adding an AppHost later is additive rather than a rewrite. |
 
 ```bash
@@ -219,8 +219,9 @@ dotnet new mmca-app -n Contoso.Notes --module Notes --aggregate Note --database 
 ```
 
 That is the smallest shape the template produces: two hosts, one module, one `notes.db` file, and
-`dotnet run` on each host. `--database sqlite` also drops the sample migrations for the same reason
-the shape flags do (they are SQL Server DDL), so run `dotnet ef migrations add InitialCreate`
+`dotnet run` on each host. Any `--database` other than `sqlserver` also drops the sample migrations
+for the same reason the shape flags do (they are SQL Server DDL), so run
+`dotnet ef migrations add InitialCreate`
 against the project the scaffold generated, before the first run rather than after it (see Before
 the first run above).
 

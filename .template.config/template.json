@@ -5,7 +5,7 @@
   "identity": "MMCA.Templates.App",
   "name": "MMCA modular monolith (DDD + CQRS + Aspire)",
   "shortName": "mmca-app",
-  "description": "A complete modular-monolith solution on the MMCA.Common framework: one business module across all five layers, a REST API host, a Blazor Server + MudBlazor UI host, an Aspire AppHost, a per-database migrations project, and domain + application + architecture-fitness test projects. Shape the sample module with --flat (no child collection), --no-status (no status axis), --no-description (no description property), --no-owner (no requester/owner property), and --child (rename the child entity); name its vocabulary with --title (the aggregate's main text property) and --event-verb (the creation integration event's verb). Pick the shape of the solution itself with --database sqlserver|sqlite and --no-aspire, which compose: --database sqlite --no-aspire is a two-host app with a single database file and no container anywhere. Build the monolith now, extract a module into its own service later.",
+  "description": "A complete modular-monolith solution on the MMCA.Common framework: one business module across all five layers, a REST API host, a Blazor Server + MudBlazor UI host, an Aspire AppHost, a per-database migrations project, and domain + application + architecture-fitness test projects. Shape the sample module with --flat (no child collection), --no-status (no status axis), --no-description (no description property), --no-owner (no requester/owner property), and --child (rename the child entity); name its vocabulary with --title (the aggregate's main text property) and --event-verb (the creation integration event's verb). Pick the shape of the solution itself with --database sqlserver|sqlite|postgresql and --no-aspire, which compose: --database sqlite --no-aspire is a two-host app with a single database file and no container anywhere. Build the monolith now, extract a module into its own service later.",
   "tags": {
     "language": "C#",
     "type": "solution"
@@ -71,9 +71,14 @@
       "pattern": "^sqlite$",
       "replacement": "Sqlite"
     },
+    "enginePostgreSQL": {
+      "identifier": "replace",
+      "pattern": "^postgresql$",
+      "replacement": "PostgreSQL"
+    },
     "toEngineName": {
       "identifier": "chain",
-      "steps": [ "engineSqlServerPascal", "engineSqlitePascal" ]
+      "steps": [ "engineSqlServerPascal", "engineSqlitePascal", "enginePostgreSQL" ]
     },
     "engineSqlServerUpper": {
       "identifier": "replace",
@@ -82,7 +87,7 @@
     },
     "toEngineNameUpper": {
       "identifier": "chain",
-      "steps": [ "engineSqlServerUpper", "engineSqlitePascal" ]
+      "steps": [ "engineSqlServerUpper", "engineSqlitePascal", "enginePostgreSQL" ]
     }
   },
 
@@ -254,13 +259,21 @@
         {
           "choice": "sqlite",
           "description": "SQLite. A single file, no container and no server: entity configurations inherit EntityTypeConfigurationSqlite, the migrations project targets Microsoft.EntityFrameworkCore.Sqlite and is named .Migrations.Sqlite.<Module>, and the app is single-tenant (the database-per-tenant demo needs a second server-backed database)."
+        },
+        {
+          "choice": "postgresql",
+          "description": "PostgreSQL (ADR-113). The Aspire AppHost declares a Postgres container and its databases, entity configurations inherit EntityTypeConfigurationPostgreSQL, and the migrations project targets Npgsql.EntityFrameworkCore.PostgreSQL and is named .Migrations.PostgreSQL.<Module>. The two-tenant demo is kept, so this shape exercises database-per-tenant like the SQL Server one. The sample migrations are dropped, so run 'dotnet ef migrations add InitialCreate' before the first run."
         }
       ],
-      "description": "Relational engine for the sample module. Both shapes are the same application code: the engine is a configuration-base choice plus a connection string, which is the whole point of the framework's data-source routing."
+      "description": "Relational engine for the sample module. All three shapes are the same application code: the engine is a configuration-base choice plus a connection string, which is the whole point of the framework's data-source routing."
     },
     "useSqlite": {
       "type": "computed",
       "value": "(database == \"sqlite\")"
+    },
+    "usePostgreSQL": {
+      "type": "computed",
+      "value": "(database == \"postgresql\")"
     },
     "engineName": {
       "type": "derived",
@@ -268,7 +281,7 @@
       "valueTransform": "toEngineName",
       "replaces": "SqlServer",
       "fileRename": "SqlServer",
-      "description": "Pascal spelling of the engine (SqlServer / Sqlite). It is what renames the migrations project (folder, csproj, namespace, assembly, and every reference to it), the two engine provider package ids, and the design-time helper call DesignTimeDbContextHelper.CreateSqlServer -> CreateSqlite. DERIVED from --database; there is no flag of its own."
+      "description": "Pascal spelling of the engine (SqlServer / Sqlite / PostgreSQL). It is what renames the migrations project (folder, csproj, namespace, assembly, and every reference to it), the Aspire hosting integration package id, and the design-time helper call DesignTimeDbContextHelper.CreateSqlServer -> CreateSqlite / CreatePostgreSQL. DERIVED from --database; there is no flag of its own. The two EF provider package ids are NOT renamed by substring on the postgresql choice (Npgsql.EntityFrameworkCore.PostgreSQL and AspNetCore.HealthChecks.NpgSql share no spelling with their SQL Server peers), so they are swapped by a marker region instead: see the sqlserverOrSqlite label in build/templates/stage.ps1."
     },
     "engineNameUpper": {
       "type": "derived",
@@ -276,7 +289,7 @@
       "valueTransform": "toEngineNameUpper",
       "replaces": "SQLServer",
       "fileRename": "SQLServer",
-      "description": "The framework's OTHER spelling of the same engine (SQLServer / Sqlite), which is the one its public types and settings use. It renames the design-time factory (file and class), SQLServerDbContext -> SqliteDbContext, EntityTypeConfigurationSQLServer -> EntityTypeConfigurationSqlite, and the SQLServerConnectionString / SQLServerMigrationsAssembly settings properties. Two symbols rather than one because the two spellings are both real: renaming either alone leaves half the tree pointing at the other engine."
+      "description": "The framework's OTHER spelling of the same engine (SQLServer / Sqlite / PostgreSQL), which is the one its public types and settings use. It renames the design-time factory (file and class), SQLServerDbContext -> SqliteDbContext / PostgreSQLDbContext, EntityTypeConfigurationSQLServer -> EntityTypeConfigurationSqlite / EntityTypeConfigurationPostgreSQL, and the SQLServerConnectionString / SQLServerMigrationsAssembly settings properties. Two symbols rather than one because the two spellings are both real: renaming either alone leaves half the tree pointing at the other engine. PostgreSQL is the one choice where the two spellings coincide, which is why its form is shared by both chains."
     },
 
     "noAspire": {
@@ -357,18 +370,21 @@
           ]
         },
         {
-          "comment": "The seed's migrations describe the FULL sample schema (child table, status column, description column, requester column and its index) against SQL Server. Any shape flag makes them wrong on arrival, and --database sqlite makes them wrong for a second reason (they are SQL Server DDL, and their model snapshot names SQLServerDbContext), so they are dropped and the adopter runs 'dotnet ef migrations add InitialCreate' against the shape they asked for. Migrations/.editorconfig still ships: dotnet ef never recreates it.",
-          "condition": "(flat || noStatus || noOwner || noDescription || useSqlite)",
+          "comment": "The seed's migrations describe the FULL sample schema (child table, status column, description column, requester column and its index) against SQL Server. Any shape flag makes them wrong on arrival, and a non-default engine makes them wrong for a second reason (they are SQL Server DDL, and their model snapshot names SQLServerDbContext), so they are dropped and the adopter runs 'dotnet ef migrations add InitialCreate' against the shape they asked for. Migrations/.editorconfig still ships: dotnet ef never recreates it.",
+          "condition": "(flat || noStatus || noOwner || noDescription || useSqlite || usePostgreSQL)",
           "exclude": [
             "Source/Hosting/MMCA.Helpdesk.Migrations.SqlServer.Tickets/Migrations/*.cs"
           ]
         },
         {
-          "comment": "--database sqlite: the API host's appsettings.json differs structurally rather than by one value (a different connection-string key, a different migrations-assembly key, a DataSources entry, and no database-per-tenant override), and .json carries no marker regions in this seed. The sqlite copy ships beside it from build/templates/overlay and is renamed into place; the SQL Server copy comes out. Paths here are SOURCE paths, matched before any rename.",
-          "condition": "(useSqlite)",
+          "comment": "A non-default --database: the API host's appsettings.json differs structurally rather than by one value (a different connection-string key, a different migrations-assembly key, a DataSources entry, and for sqlite no database-per-tenant override), and .json carries no marker regions in this seed. The chosen copy ships beside it from build/templates/overlay and is renamed into place; the SQL Server copy comes out. Paths here are SOURCE paths, matched before any rename.",
+          "condition": "(useSqlite || usePostgreSQL)",
           "exclude": [
             "Source/Hosts/MMCA.Helpdesk.Web/appsettings.json"
-          ],
+          ]
+        },
+        {
+          "condition": "(useSqlite)",
           "rename": {
             "Source/Hosts/MMCA.Helpdesk.Web/appsettings.sqlite.json": "Source/Hosts/MMCA.Helpdesk.Web/appsettings.json"
           }
@@ -377,6 +393,18 @@
           "condition": "(!useSqlite)",
           "exclude": [
             "Source/Hosts/MMCA.Helpdesk.Web/appsettings.sqlite.json"
+          ]
+        },
+        {
+          "condition": "(usePostgreSQL)",
+          "rename": {
+            "Source/Hosts/MMCA.Helpdesk.Web/appsettings.postgresql.json": "Source/Hosts/MMCA.Helpdesk.Web/appsettings.json"
+          }
+        },
+        {
+          "condition": "(!usePostgreSQL)",
+          "exclude": [
+            "Source/Hosts/MMCA.Helpdesk.Web/appsettings.postgresql.json"
           ]
         },
         {

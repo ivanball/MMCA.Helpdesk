@@ -1,9 +1,15 @@
-// template:begin childOrOwner
-// A couple of calls below (a relational index filter, a navigation access mode) reach into this
-// namespace; every other call is an instance method on a builder from Metadata.Builders.
+// template:begin child
+// One call below (a navigation access mode) reaches into this namespace; every other call is an
+// instance method on a builder from Metadata.Builders.
 using Microsoft.EntityFrameworkCore;
-// template:end childOrOwner
+// template:end child
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+// template:begin owner
+// The filtered index below is engine-aware: DataSource names the engine, and HasSoftDeleteFilter
+// lives one namespace above the configuration bases.
+using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
+using MMCA.Common.Infrastructure.Persistence.Configuration;
+// template:end owner
 using MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration;
 using MMCA.Helpdesk.Tickets.Domain.Tickets;
 
@@ -40,8 +46,14 @@ internal sealed class TicketConfiguration : EntityTypeConfigurationSQLServer<Tic
         builder.Property(p => p.RequesterUserId)
             .IsRequired();
 
+        // Filtered on live rows only: soft-deleted rows are hidden by the global query filter but
+        // still occupy index pages. HasSoftDeleteFilter rather than a HasFilter literal because the
+        // predicate is not the same string on every engine: the column is quoted the provider's way,
+        // and on PostgreSQL the flag is a real boolean, so comparing it with 0 is a type error the
+        // server refuses at CREATE INDEX. The engine argument is the same token the configuration
+        // base carries, so scaffolding rewrites both together.
         builder.HasIndex(p => p.RequesterUserId)
-            .HasFilter("[IsDeleted] = 0");
+            .HasSoftDeleteFilter(DataSource.SQLServer);
 
         // template:end owner
         // template:begin child

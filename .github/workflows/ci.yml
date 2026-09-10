@@ -11,6 +11,50 @@ on:
 # CI checks out MMCA.Common as a sibling and needs no GitHub Packages token. The full test run
 # (domain + architecture) needs no database and runs headless; the Aspire round-trip is not run here.
 jobs:
+  # Path classifier for the heavy advisory jobs below. The two gates above it run unconditionally:
+  # build-and-test is the required check and template-smoke is cheap enough to always run. This job
+  # exists so a docs-only PR does not pull a PostgreSQL image and start a container for nothing.
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Classify changed paths
+        id: filter
+        # The ref name reaches the script through env, never through a template substitution: a
+        # template value is pasted in before the shell parses the line, so a name containing a quote
+        # would break out of the assignment and run as code.
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          base="origin/$BASE_REF"
+          git fetch --no-tags --depth=1 origin "$BASE_REF" >/dev/null 2>&1 || true
+          if ! git rev-parse --verify --quiet "$base" >/dev/null; then
+            echo "Cannot resolve base ref '$base'. Assuming code changed."
+            echo "code=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if ! changed=$(git diff --name-only "$base...HEAD"); then
+            echo "git diff failed. Assuming code changed."
+            echo "code=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          echo "Changed files:"; printf '%s\n' "$changed"
+          code=false
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            case "$f" in
+              *.md) ;;
+              *) code=true; break ;;
+            esac
+          done <<< "$changed"
+          echo "code=$code"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+
   build-and-test:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -87,3 +131,85 @@ jobs:
       # from nuget.org with no token and no extra feed, and that is exactly the path being proven.
       - name: Stage, pack, generate, build, test
         run: pwsh build/templates/smoke.ps1
+
+  # The consumer canary for the framework's PostgreSQL engine (ADR-113). MMCA.Common proves the
+  # PROVIDER against a real server in its own Testcontainers tier; what nothing proves without this
+  # job is that an APPLICATION shaped for PostgreSQL comes out of the scaffold whole and that the
+  # SQL the framework emits for it is accepted by a server.
+  #
+  # It is deliberately a job of its own rather than a fourth case inside smoke.ps1: that run is the
+  # template's correctness gate and has to stay fast and Docker-free, while this one wants a server.
+  #
+  # ADVISORY, hence continue-on-error, and NOT added to branch protection: build-and-test remains the
+  # one required check. It reds the job for visibility without failing the run. Promote it once it
+  # has a green streak.
+  postgresql-canary:
+    name: PostgreSQL canary (template + real server)
+    needs: changes
+    # Job-level rather than step-level, unlike MMCA.Common's heavy jobs: the service container below
+    # is pulled and started before any step runs, so a step-level guard would still pay for it on a
+    # docs-only PR. This job is advisory, so it costs nothing to skip its context entirely.
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    continue-on-error: true
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: depot
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      # The migration is scaffolded and applied by the CLI tool, not by the build, so it has to be
+      # on PATH. Pinned to the EF version the seed's Microsoft.EntityFrameworkCore.Design pin
+      # resolves: a tool one major behind cannot read a net10.0 startup project.
+      - name: PostgreSQL canary - install dotnet-ef
+        run: |
+          set -euo pipefail
+          dotnet tool install --global dotnet-ef --version 10.0.11
+          # Global tools land here, and whether the runner already has it on PATH depends on the
+          # setup-dotnet version. Adding it unconditionally is idempotent and one line.
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+      # No MMCA.Common checkout, for the same reason template-smoke has none: the generated app
+      # restores the pinned MMCA.Common.* release from nuget.org, and that package-mode build is
+      # exactly the path being proven.
+      - name: PostgreSQL canary - generate, build, test, migrate
+        run: >-
+          pwsh build/templates/canary-postgresql.ps1
+          -WorkPath /tmp/mmca-pg
+          -ConnectionString "Host=localhost;Port=5432;Database=depot;Username=postgres;Password=postgres"
+
+      # The migration reported success; this asserts it left the schema behind rather than a no-op.
+      # Two tables, chosen because they come from opposite ends of the model: EF's own history table
+      # proves the migration was recorded, and the framework's outbox proves the MMCA.Common tables
+      # (whose partial-index predicates are the one thing PostgreSQL spells differently) were created
+      # too. psql runs inside the service container, so no client package is needed on the runner.
+      - name: PostgreSQL canary - assert the schema landed
+        env:
+          POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
+        run: |
+          set -euo pipefail
+          for table in __EFMigrationsHistory OutboxMessages; do
+            count=$(docker exec "$POSTGRES_CONTAINER" psql -U postgres -d depot -tAc \
+              "select count(*) from information_schema.tables where table_name = '$table'")
+            echo "$table: $count"
+            if [ "$count" = "0" ]; then
+              echo "The migration reported success but table $table does not exist."
+              exit 1
+            fi
+          done
