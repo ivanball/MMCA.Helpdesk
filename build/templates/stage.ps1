@@ -133,24 +133,35 @@ function Copy-Tree {
 # 'statusOrOwner' needs EITHER (it wraps a UI block that would otherwise render empty once both of
 # the values inside it are gone).
 #
-# The last four are the SOLUTION axes rather than the module's: --database sqlserver|sqlite and
-# --no-aspire. They come in both polarities for the same reason the module axes do, and 'sqlite'
-# exists even though NO seed file carries that marker: the seed cannot hold two engines' code at
-# once, so the sqlite branches are INJECTED at staging time by Add-EngineAlternative below, which
-# writes them as ordinary 'sqlite' marker regions for this same pass to convert.
+# The last six are the SOLUTION axes rather than the module's: --database sqlserver|sqlite|postgresql
+# and --no-aspire. They come in both polarities for the same reason the module axes do, and 'sqlite'
+# and 'postgresql' exist even though NO seed file carries either marker: the seed cannot hold three
+# engines' code at once, so those branches are INJECTED at staging time by Add-EngineAlternative
+# below, which writes them as ordinary marker regions for this same pass to convert.
+#
+# 'sqlserverOrSqlite' is the one label that is about PACKAGE IDS rather than about code. Two ids in
+# this tree carry the engine as a substring and are renamed by the engineName symbol
+# (Microsoft.EntityFrameworkCore.SqlServer, AspNetCore.HealthChecks.SqlServer), which lands sqlite on
+# real packages and postgresql on two that do not exist: its provider is
+# Npgsql.EntityFrameworkCore.PostgreSQL and its readiness check AspNetCore.HealthChecks.NpgSql. So
+# those lines are conditioned on NOT being postgresql, and the postgresql branch is injected beside
+# them like any other engine alternative. Aspire.Hosting.SqlServer is deliberately NOT in that set:
+# the rename produces Aspire.Hosting.PostgreSQL, which is the real id at the same version.
 $markerConditions = @{
-    'child'           = '!flat'
-    'status'          = '!noStatus'
-    'childStatus'     = '!(flat || noStatus)'
-    'description'     = '!noDescription'
-    'owner'           = '!noOwner'
-    'statusOwner'     = '!(noStatus || noOwner)'
-    'statusOrOwner'   = '!(noStatus && noOwner)'
-    'childOrOwner'    = '!(flat && noOwner)'
-    'sqlserver'       = '!useSqlite'
-    'sqlite'          = 'useSqlite'
-    'aspire'          = '!noAspire'
-    'aspireSqlServer' = '!(noAspire || useSqlite)'
+    'child'             = '!flat'
+    'status'            = '!noStatus'
+    'childStatus'       = '!(flat || noStatus)'
+    'description'       = '!noDescription'
+    'owner'             = '!noOwner'
+    'statusOwner'       = '!(noStatus || noOwner)'
+    'statusOrOwner'     = '!(noStatus && noOwner)'
+    'childOrOwner'      = '!(flat && noOwner)'
+    'sqlserver'         = '!(useSqlite || usePostgreSQL)'
+    'sqlite'            = 'useSqlite'
+    'postgresql'        = 'usePostgreSQL'
+    'sqlserverOrSqlite' = '!usePostgreSQL'
+    'aspire'            = '!noAspire'
+    'aspireSqlServer'   = '!(noAspire || useSqlite)'
 }
 
 # The two solution axes reach different templates, so the strip lists are not one list.
@@ -289,11 +300,14 @@ function Convert-TemplateMarkers {
 # of the two: it is a real solution whose CI has to build, and a commented-out second branch would
 # both fail S125 (commented-out code) and rot unread.
 #
-# So the seed keeps the SQL Server branch as ordinary code inside a 'sqlserver' marker region, and the
-# SQLite branch lives HERE, in the staging script, injected as a sibling 'sqlite' region right after
-# the region it alternates with. Convert-TemplateMarkers then converts both in the same pass, and the
-# generated app gets exactly one of them. dotnet new's symbol replacement runs over the injected lines
-# like any other staged text, so they may (and do) name the seed's own tokens.
+# So the seed keeps the SQL Server branch as ordinary code inside a 'sqlserver' (or, for the package
+# ids the rename cannot reach, 'sqlserverOrSqlite') marker region, and the SQLite and PostgreSQL
+# branches live HERE, in the staging script, injected as sibling regions right after the region they
+# alternate with. Convert-TemplateMarkers then converts all of them in the same pass, and the
+# generated app gets exactly one. Several alternatives may anchor on the SAME region: each injection
+# adds a region with its OWN label, so the anchor it looked for is still unique for the next one.
+# dotnet new's symbol replacement runs over the injected lines like any other staged text, so they
+# may (and do) name the seed's own tokens.
 #
 # The anchor is the region's END marker rather than a line of code: a body that gets reflowed does not
 # move it, while removing or renaming the region does, and that is precisely when this table is wrong.
@@ -301,6 +315,7 @@ function Add-EngineAlternative {
     param(
         [string] $Path,
         [string] $Marker,
+        [string] $Alternative,
         [string[]] $Lines,
         [string] $TemplateName
     )
@@ -313,14 +328,14 @@ function Add-EngineAlternative {
     $anchors = @(0..($sourceLines.Count - 1) | Where-Object { $sourceLines[$_] -match $endPattern })
 
     if ($anchors.Count -ne 1) {
-        throw "${TemplateName}: expected exactly one 'template:end $Marker' line in $Path, found $($anchors.Count). The region this engine alternative attaches to moved or was renamed; update `$engineAlternatives in stage.ps1 rather than shipping a template whose sqlite shape still emits SQL Server code."
+        throw "${TemplateName}: expected exactly one 'template:end $Marker' line in $Path, found $($anchors.Count). The region this engine alternative attaches to moved or was renamed; update `$engineAlternatives in stage.ps1 rather than shipping a template whose $Alternative shape still emits SQL Server code."
     }
 
     $at = $anchors[0]
     $comment = if ($sourceLines[$at] -match '<!--') { '<!--{0}-->' } else { '// {0}' }
     $indent = [regex]::Match($sourceLines[$at], '^[ \t]*').Value
 
-    $injected = @($indent + ($comment -f 'template:begin sqlite')) + $Lines + @($indent + ($comment -f 'template:end sqlite'))
+    $injected = @($indent + ($comment -f "template:begin $Alternative")) + $Lines + @($indent + ($comment -f "template:end $Alternative"))
     $out = @($sourceLines[0..$at]) + $injected + @($sourceLines[($at + 1)..($sourceLines.Count - 1)])
 
     Set-Content -Path $Path -Value ($out -join $newline) -NoNewline
@@ -341,6 +356,7 @@ $engineAlternatives = @(
         Scope = 'app'
         Path = 'Source/Hosting/MMCA.Helpdesk.Migrations.SqlServer.Tickets/DesignTimeSQLServerDbContextFactory.cs'
         Marker = 'sqlserver'
+        Alternative = 'sqlite'
         Lines = @(
             '            var connectionString = Environment.GetEnvironmentVariable("HELPDESK_TICKETS_SQL")'
             '                ?? "Data Source=helpdesk.db";'
@@ -351,6 +367,7 @@ $engineAlternatives = @(
         Scope = 'module'
         Path = 'Source/Hosting/MMCA.Helpdesk.Migrations.SqlServer.Tickets/DesignTimeSQLServerDbContextFactory.cs'
         Marker = 'sqlserver'
+        Alternative = 'sqlite'
         Lines = @(
             '            var connectionString = Environment.GetEnvironmentVariable("HELPDESK_TICKETS_SQL")'
             '                ?? "Data Source=helpdesk_tickets.db";'
@@ -359,8 +376,31 @@ $engineAlternatives = @(
     },
     @{
         Scope = 'app'
+        Path = 'Source/Hosting/MMCA.Helpdesk.Migrations.SqlServer.Tickets/DesignTimeSQLServerDbContextFactory.cs'
+        Marker = 'sqlserver'
+        Alternative = 'postgresql'
+        Lines = @(
+            '            var connectionString = Environment.GetEnvironmentVariable("HELPDESK_TICKETS_SQL")'
+            '                ?? "Host=localhost;Port=5432;Database=Helpdesk;Username=postgres;Password=postgres";'
+            ''
+        )
+    },
+    @{
+        Scope = 'module'
+        Path = 'Source/Hosting/MMCA.Helpdesk.Migrations.SqlServer.Tickets/DesignTimeSQLServerDbContextFactory.cs'
+        Marker = 'sqlserver'
+        Alternative = 'postgresql'
+        Lines = @(
+            '            var connectionString = Environment.GetEnvironmentVariable("HELPDESK_TICKETS_SQL")'
+            '                ?? "Host=localhost;Port=5432;Database=Helpdesk_Tickets;Username=postgres;Password=postgres";'
+            ''
+        )
+    },
+    @{
+        Scope = 'app'
         Path = 'Source/Hosting/MMCA.Helpdesk.AppHost/Program.cs'
         Marker = 'sqlserver'
+        Alternative = 'sqlite'
         Lines = @(
             '// SQLite is an in-process file: there is no container to declare and nothing to wait for, so'
             '// WithSqliteDataSource only injects the connection string the API host opens at startup. One'
@@ -375,6 +415,95 @@ $engineAlternatives = @(
             '    .WithHttpHealthCheck("/health/ready")'
             '    .WithExternalHttpEndpoints();'
             ''
+        )
+    },
+    # PostgreSQL is a server engine, so this branch is the SQL Server block with its resource type
+    # and its two spellings swapped, tenants and all: a container, two databases, and the same
+    # per-tenant override the SQL Server shape demonstrates. Aspire spells the resource AddPostgres
+    # while the framework spells the routing call WithPostgreSQLDataSource, which is why this is an
+    # injected branch rather than a substring rename of the SQL Server one.
+    @{
+        Scope = 'app'
+        Path = 'Source/Hosting/MMCA.Helpdesk.AppHost/Program.cs'
+        Marker = 'sqlserver'
+        Alternative = 'postgresql'
+        Lines = @(
+            '// A PostgreSQL container plus its databases. WithPostgreSQLDataSource injects both the routing'
+            '// key and DataSources__Tickets__PostgreSQLConnectionString, which is what makes the two names'
+            '// collapse onto one database.'
+            'var postgres = builder.AddPostgres("postgres")'
+            '    .WithLifetime(ContainerLifetime.Persistent);'
+            ''
+            'var helpdeskDb = postgres.AddDatabase("helpdesk", "Helpdesk");'
+            ''
+            '// Multi-tenancy demo. Two tenants show the two isolation modes the framework supports at once:'
+            '// "acme" is any tenant WITHOUT an override and shares the pooled database above (shared schema,'
+            '// rows separated by the TenantId query filter), while "globex" is routed onto its own database'
+            '// by the per-tenant DataSources override below. The override is keyed by PHYSICAL source name,'
+            '// and the single "Tickets" logical source collapses onto Default, so the key is "Default".'
+            'var globexDb = postgres.AddDatabase("helpdesk-globex", "Helpdesk_Globex");'
+            ''
+            '// WaitFor the server (healthy once the container accepts connections), not the database'
+            '// resource. The web host CREATES the schema via EF Migrate at startup, so waiting on the'
+            '// database being populated would deadlock: it never is until the app that is waiting runs.'
+            'var web = builder.AddProject<Projects.MMCA_Helpdesk_Web>("web")'
+            '    .WithPostgreSQLDataSource(helpdeskDb, "Tickets")'
+            '    .WithEnvironment('
+            '        "Tenancy__Tenants__globex__DataSources__Default__PostgreSQLConnectionString",'
+            '        globexDb.Resource.ConnectionStringExpression)'
+            '    .WaitFor(postgres)'
+            '    // Declares the readiness probe as this resource''s health check, which is what makes the'
+            '    // WaitFor(web) below mean "wait until the API is HEALTHY" instead of "wait until its'
+            '    // process started". MapDefaultEndpoints() serves /health/ready from the same'
+            '    // MMCA.Common.Aspire pipeline the deployed readiness probe uses.'
+            '    .WithHttpHealthCheck("/health/ready")'
+            '    .WithExternalHttpEndpoints();'
+            ''
+        )
+    },
+    # The Aspire hosting integration. Aspire.Hosting.SqlServer renames cleanly to
+    # Aspire.Hosting.PostgreSQL, so the PackageVersion pin in Directory.Packages.props needs no
+    # branch at all; the PackageReference does, because its whole region is dropped on any engine
+    # that is not SQL Server (sqlite declares no container resource and needs no integration).
+    @{
+        Scope = 'app'
+        Path = 'Source/Hosting/MMCA.Helpdesk.AppHost/MMCA.Helpdesk.AppHost.csproj'
+        Marker = 'sqlserver'
+        Alternative = 'postgresql'
+        Lines = @(
+            '    <PackageReference Include="Aspire.Hosting.PostgreSQL" />'
+        )
+    },
+    # The three package-id swaps the engineName rename cannot make. Everywhere else the two provider
+    # ids are the SQL Server ids with one substring rewritten, which is true for sqlite and false for
+    # PostgreSQL: its EF provider is Npgsql.EntityFrameworkCore.PostgreSQL and its readiness check
+    # AspNetCore.HealthChecks.NpgSql. The versions are the ones MMCA.Common itself resolves (ADR-113).
+    @{
+        Scope = 'app'
+        Path = 'Directory.Packages.props'
+        Marker = 'sqlserverOrSqlite'
+        Alternative = 'postgresql'
+        Lines = @(
+            '    <PackageVersion Include="AspNetCore.HealthChecks.NpgSql" Version="9.0.0" />'
+            '    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />'
+        )
+    },
+    @{
+        Scope = 'app'
+        Path = 'Source/Hosts/MMCA.Helpdesk.Web/MMCA.Helpdesk.Web.csproj'
+        Marker = 'sqlserverOrSqlite'
+        Alternative = 'postgresql'
+        Lines = @(
+            '    <PackageReference Include="AspNetCore.HealthChecks.NpgSql" />'
+        )
+    },
+    @{
+        Scope = 'both'
+        Path = 'Source/Hosting/MMCA.Helpdesk.Migrations.SqlServer.Tickets/MMCA.Helpdesk.Migrations.SqlServer.Tickets.csproj'
+        Marker = 'sqlserverOrSqlite'
+        Alternative = 'postgresql'
+        Lines = @(
+            '    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />'
         )
     }
 )
@@ -396,15 +525,27 @@ function Add-EngineAlternatives {
             throw "${TemplateName}: stage.ps1 declares an engine alternative for $($alternative.Path), which is not in staging. Either the file moved (update `$engineAlternatives) or its Scope is wrong."
         }
 
-        Add-EngineAlternative -Path $full -Marker $alternative.Marker -Lines $alternative.Lines -TemplateName $TemplateName
+        Add-EngineAlternative -Path $full -Marker $alternative.Marker -Alternative $alternative.Alternative -Lines $alternative.Lines -TemplateName $TemplateName
         $injected++
     }
 
     if ($injected -eq 0) {
-        throw "${TemplateName}: no engine alternative is scoped to this template, so its sqlite shape would emit SQL Server code. Check the Scope values in `$engineAlternatives."
+        throw "${TemplateName}: no engine alternative is scoped to this template, so its non-default engine shapes would emit SQL Server code. Check the Scope values in `$engineAlternatives."
     }
 
-    Write-Host "${TemplateName}: $injected sqlite alternative(s) injected beside their SQL Server regions"
+    # Both non-default engines have to be represented, or the shape that lost its branch generates
+    # cleanly and then fails to compile on a configuration base and a provider package it does not
+    # have. A count is enough: the per-file anchor check above already proves each one landed.
+    foreach ($expected in @('sqlite', 'postgresql')) {
+        $scoped = @($engineAlternatives | Where-Object {
+            ($_.Scope -eq 'both' -or $_.Scope -eq $scope) -and $_.Alternative -eq $expected
+        })
+        if ($scoped.Count -eq 0) {
+            throw "${TemplateName}: no '$expected' engine alternative is scoped to this template, so its $expected shape would emit SQL Server code. Check the Scope and Alternative values in `$engineAlternatives."
+        }
+    }
+
+    Write-Host "${TemplateName}: $injected engine alternative(s) injected beside their SQL Server regions"
 }
 
 # ---- rewrites that apply to mmca-module only -----------------------------------------------------
@@ -964,6 +1105,7 @@ $overlayExpectations = @(
     # generated app is quietly wired for the shape the adopter did not ask for.
     'README.standalone.md'
     'Source/Hosts/MMCA.Helpdesk.Web/appsettings.sqlite.json'
+    'Source/Hosts/MMCA.Helpdesk.Web/appsettings.postgresql.json'
     'Source/Hosts/UI/MMCA.Helpdesk.UI.Web/appsettings.standalone.json'
 )
 
@@ -1324,6 +1466,8 @@ $moduleTemplateJson = Get-Content (Join-Path $moduleStaging '.template.config/te
 foreach ($declaration in @(
     @{ Pattern = '(?s)"database"\s*:\s*\{[^}]*"datatype"\s*:\s*"choice"'; What = 'the --database choice parameter' }
     @{ Pattern = '(?s)"useSqlite"\s*:\s*\{[^}]*"value"\s*:\s*"\(database == \\"sqlite\\"\)"'; What = 'the useSqlite computed symbol the markers condition on' }
+    @{ Pattern = '"choice"\s*:\s*"postgresql"'; What = 'the postgresql choice of the --database parameter' }
+    @{ Pattern = '(?s)"usePostgreSQL"\s*:\s*\{[^}]*"value"\s*:\s*"\(database == \\"postgresql\\"\)"'; What = 'the usePostgreSQL computed symbol the markers condition on' }
     @{ Pattern = '(?s)"engineName"\s*:\s*\{[^}]*"replaces"\s*:\s*"SqlServer"'; What = 'the engineName rename (migrations project, provider package, CreateSqlServer)' }
     @{ Pattern = '(?s)"engineNameUpper"\s*:\s*\{[^}]*"replaces"\s*:\s*"SQLServer"'; What = 'the engineNameUpper rename (design-time factory, DbContext, configuration base, settings keys)' }
     @{ Pattern = '"condition"\s*:\s*"\(useSqlite\)"'; What = 'the sqlite branch of the printed wire-up instructions' }
@@ -1568,6 +1712,7 @@ if ($appTemplateJson -notmatch "(?s)`"copyOnly`"\s*:\s*\[[^\]]*$([regex]::Escape
 #    asserted here rather than trusted.
 $variantRenames = @(
     @{ From = 'Source/Hosts/MMCA.Helpdesk.Web/appsettings.sqlite.json';            To = 'Source/Hosts/MMCA.Helpdesk.Web/appsettings.json' }
+    @{ From = 'Source/Hosts/MMCA.Helpdesk.Web/appsettings.postgresql.json';        To = 'Source/Hosts/MMCA.Helpdesk.Web/appsettings.json' }
     @{ From = 'Source/Hosts/UI/MMCA.Helpdesk.UI.Web/appsettings.standalone.json';  To = 'Source/Hosts/UI/MMCA.Helpdesk.UI.Web/appsettings.json' }
     @{ From = 'README.standalone.md';                                              To = 'README.md' }
 )

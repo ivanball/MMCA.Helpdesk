@@ -4,21 +4,28 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
-    <!-- The two engine provider pins. Both package ids carry the engine's name as a substring, and
-         scaffolding rewrites exactly that substring (the engineName symbol in
-         .template.config/template.json), so the sqlite database option lands on
-         AspNetCore.HealthChecks.Sqlite and Microsoft.EntityFrameworkCore.Sqlite at these same
-         versions. Keep the ids spelled so the substring stays intact, or the rename stops reaching
-         them.
-         XML comments cannot carry a double hyphen, so option names are spelled out in prose here. -->
-    <PackageVersion Include="AspNetCore.HealthChecks.SqlServer" Version="9.0.0" />
     <PackageVersion Include="AwesomeAssertions" Version="9.6.0" />
     <PackageVersion Include="AspNet.Security.OAuth.GitHub" Version="10.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.Google" Version="10.0.11" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.11" />
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.11" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.11" />
+    <!-- The two engine provider pins, kept together because scaffolding swaps them as a pair.
+         Both ids carry the engine's name as a substring, and the engineName symbol in
+         .template.config/template.json rewrites exactly that substring, so the sqlite database
+         option lands on AspNetCore.HealthChecks.Sqlite and Microsoft.EntityFrameworkCore.Sqlite at
+         these same versions. Keep the ids spelled so the substring stays intact, or the rename stops
+         reaching them.
+         PostgreSQL is the exception, which is why these two lines sit inside a marker region rather
+         than relying on the rename: its provider is Npgsql.EntityFrameworkCore.PostgreSQL and its
+         readiness check is AspNetCore.HealthChecks.NpgSql, neither of which shares a substring with
+         its SQL Server peer. build/templates/stage.ps1 injects that branch as the sibling postgresql
+         region; the versions there are the ones MMCA.Common itself resolves.
+         XML comments cannot carry a double hyphen, so option names are spelled out in prose here. -->
+    <!-- template:begin sqlserverOrSqlite -->
+    <PackageVersion Include="AspNetCore.HealthChecks.SqlServer" Version="9.0.0" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.11" />
+    <!-- template:end sqlserverOrSqlite -->
     <PackageVersion Include="xunit.v3" Version="4.0.0" />
     <PackageVersion Include="MudBlazor" Version="9.9.0" />
     <!-- bUnit v2 (BunitContext / Render API) — xUnit v3 / Microsoft Testing Platform compatible. -->
@@ -53,7 +60,10 @@
     <!-- template:begin aspireSqlServer -->
     <!-- The one engine-specific orchestration pin: SQLite has no container resource, so the sqlite
          database option needs no hosting integration at all (WithSqliteDataSource only injects a
-         connection string). Its own region rather than a nested one: two axes, one line. -->
+         connection string). Its own region rather than a nested one: two axes, one line.
+         The postgresql option DOES declare a container, and its hosting integration is spelled
+         Aspire.Hosting.PostgreSQL at the same version, which is exactly what the engineName rename
+         produces from this id. So this one line serves both server engines unchanged. -->
     <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.5.3" />
     <!-- template:end aspireSqlServer -->
     <PackageVersion Include="Aspire.StackExchange.Redis.DistributedCaching" Version="13.5.3" />

@@ -19,8 +19,9 @@ engine-specific configuration base and its migrations project references an engi
 provider package, so a module built for the wrong engine does not merely look wrong, it does not
 compile in the solution it was added to. The engine is read from the API host's own
 appsettings.json, from the key spelling inside its top-level ConnectionStrings section
-(SQLServerConnectionString or SqliteConnectionString). That file was picked over the alternatives
-because it is the file this script also WRITES: detecting from the same place the new data source
+(SQLServerConnectionString, SqliteConnectionString or PostgreSQLConnectionString). That file was
+picked over the alternatives because it is the file this script also WRITES: detecting from the
+same place the new data source
 is written into is what makes the two impossible to disagree. The existing migrations project
 folder (<App>.Migrations.<Engine>.<Module>) is then cross-checked against it, and a disagreement
 stops the run rather than adding a project half the solution cannot use. Pass -Database to
@@ -82,7 +83,7 @@ Names the creation integration event's verb, past tense PascalCase (Created, Pla
 Passed as --event-verb.
 
 .PARAMETER Database
-Overrides the engine this solution is read to be running on: sqlserver or sqlite. Leave it off and
+Overrides the engine this solution is read to be running on: sqlserver, sqlite or postgresql. Leave it off and
 the engine is detected (see HOW THE ENGINE IS DETECTED above), which is right for every solution
 the scaffold produced. Pass it when a solution has grown a second engine and the detection can no
 longer answer for the module you are adding. Passed to the template as --database.
@@ -131,7 +132,7 @@ param(
     [ValidatePattern('^[A-Za-z][A-Za-z0-9]*$')]
     [string] $EventVerb,
 
-    [ValidateSet('sqlserver', 'sqlite')]
+    [ValidateSet('sqlserver', 'sqlite', 'postgresql')]
     [string] $Database,
 
     [switch] $SkipMigration
@@ -497,11 +498,13 @@ $archMap = $mapCandidates[0].FullName
 # ---- which engine this solution runs on ----------------------------------------------------------
 # Two spellings, because the framework uses two and both are real. The first names the migrations
 # project (its folder, its assembly, its namespace) and the provider package; the second names the
-# DbContext, the entity-configuration base and every settings key. SQLite happens to spell them the
-# same, which is precisely why they are carried as two values rather than derived from one another.
+# DbContext, the entity-configuration base and every settings key. SQLite and PostgreSQL happen to
+# spell them the same, which is precisely why they are carried as two values rather than derived from
+# one another: SQL Server does not.
 $engineSpellings = @{
-    'sqlserver' = @{ Name = 'SqlServer'; Upper = 'SQLServer' }
-    'sqlite'    = @{ Name = 'Sqlite';    Upper = 'Sqlite' }
+    'sqlserver'  = @{ Name = 'SqlServer';  Upper = 'SQLServer' }
+    'sqlite'     = @{ Name = 'Sqlite';     Upper = 'Sqlite' }
+    'postgresql' = @{ Name = 'PostgreSQL'; Upper = 'PostgreSQL' }
 }
 
 # Read from the top-level ConnectionStrings section rather than from anywhere in the file: a
@@ -533,6 +536,7 @@ Say it explicitly and rerun:
 
     pwsh build/add-module.ps1 -Name $Name -Aggregate $Aggregate -Database sqlserver
     pwsh build/add-module.ps1 -Name $Name -Aggregate $Aggregate -Database sqlite
+    pwsh build/add-module.ps1 -Name $Name -Aggregate $Aggregate -Database postgresql
 "@
 }
 
@@ -564,7 +568,7 @@ package the rest of the solution does not use, so it will not build here.
     if ($Database) {
         Write-Warning $mismatch
     } else {
-        throw "$mismatch`nFix the settings file, or say which engine you meant with -Database sqlserver / -Database sqlite. Nothing was written."
+        throw "$mismatch`nFix the settings file, or say which engine you meant with -Database sqlserver / -Database sqlite / -Database postgresql. Nothing was written."
     }
 }
 
@@ -857,24 +861,37 @@ if (-not $appHostProgram) {
         -Description "the orchestration host routes the $Name data source to its own database file" `
         -Manual "Chain onto the web project in the orchestration host's Program.cs, ABOVE the existing call (the last one wins the Default source, and that has to stay the first module):`n    .WithSqliteDataSource(`"$Name`", Path.Combine(builder.AppHostDirectory, `"$moduleDbFile`"))"
 } else {
+    # Which variable the server resource is held in is the scaffold's choice, not this script's, and
+    # it differs per engine (sql for SQL Server, postgres for PostgreSQL). Read it off the existing
+    # AddDatabase call rather than assuming either spelling, so a solution whose AppHost was renamed
+    # by hand still gets a line that compiles. No match falls back to the SQL Server spelling, which
+    # is what the -Manual text below then tells the adopter to fix.
+    $serverVar = 'sql'
+    $serverVarMatch = [regex]::Match(
+        (Get-Content $appHostProgram -Raw),
+        '(?m)^\s*var\s+\w+\s*=\s*(?<server>\w+)\.AddDatabase\(')
+    if ($serverVarMatch.Success) { $serverVar = $serverVarMatch.Groups['server'].Value }
+
+    $dataSourceCall = "With${engineUpper}DataSource"
+
     Add-AfterAnchor `
         -Path $appHostProgram `
-        -Anchor '^\s*var\s+\w+\s*=\s*sql\.AddDatabase\(' `
-        -Insert @("var ${nameLower}Db = sql.AddDatabase(`"$appShortLower-$nameLower`", `"${appShort}_$Name`");") `
-        -AlreadyApplied ([regex]::Escape("${nameLower}Db = sql.AddDatabase(")) `
+        -Anchor '^\s*var\s+\w+\s*=\s*\w+\.AddDatabase\(' `
+        -Insert @("var ${nameLower}Db = $serverVar.AddDatabase(`"$appShortLower-$nameLower`", `"${appShort}_$Name`");") `
+        -AlreadyApplied ([regex]::Escape("${nameLower}Db = $serverVar.AddDatabase(")) `
         -Description "the orchestration host declares the $Name database" `
-        -Manual "Add to the orchestration host's Program.cs, beside the existing AddDatabase call:`n    var ${nameLower}Db = sql.AddDatabase(`"$appShortLower-$nameLower`", `"${appShort}_$Name`");"
+        -Manual "Add to the orchestration host's Program.cs, beside the existing AddDatabase call:`n    var ${nameLower}Db = $serverVar.AddDatabase(`"$appShortLower-$nameLower`", `"${appShort}_$Name`");"
 
     # Chained onto the web project builder, so it is inserted WITHOUT a terminator: the statement it
     # joins ends further down the chain. Above the existing call rather than below it, for the reason
     # Add-BeforeAnchor exists: the last data-source call in the chain wins the Default source.
     Add-BeforeAnchor `
         -Path $appHostProgram `
-        -Anchor '\.WithSQLServerDataSource\(' `
-        -Insert @(".WithSQLServerDataSource(${nameLower}Db, `"$Name`")") `
-        -AlreadyApplied ([regex]::Escape("WithSQLServerDataSource(${nameLower}Db")) `
+        -Anchor ([regex]::Escape(".$dataSourceCall(")) `
+        -Insert @(".$dataSourceCall(${nameLower}Db, `"$Name`")") `
+        -AlreadyApplied ([regex]::Escape("$dataSourceCall(${nameLower}Db")) `
         -Description "the orchestration host routes the $Name data source to the web host" `
-        -Manual "Chain onto the web project in the orchestration host's Program.cs, ABOVE the existing call (the last one wins the Default source, and that has to stay the first module):`n    .WithSQLServerDataSource(${nameLower}Db, `"$Name`")"
+        -Manual "Chain onto the web project in the orchestration host's Program.cs, ABOVE the existing call (the last one wins the Default source, and that has to stay the first module):`n    .$dataSourceCall(${nameLower}Db, `"$Name`")"
 }
 
 # ---- 10. web host configuration ------------------------------------------------------------------

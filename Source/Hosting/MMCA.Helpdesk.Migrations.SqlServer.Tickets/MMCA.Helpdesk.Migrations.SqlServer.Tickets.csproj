@@ -8,7 +8,13 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <!-- The EF provider. The engineName rename turns this id into
+         Microsoft.EntityFrameworkCore.Sqlite for the sqlite database option, but PostgreSQL's
+         provider is Npgsql.EntityFrameworkCore.PostgreSQL, which shares no substring with it, so
+         that branch is injected as a sibling postgresql region by build/templates/stage.ps1. -->
+    <!-- template:begin sqlserverOrSqlite -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+    <!-- template:end sqlserverOrSqlite -->
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="MMCA.Common.Infrastructure" />

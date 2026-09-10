@@ -27,6 +27,18 @@ that from nothing to a running app in six steps;
 templates and every parameter; and `build/templates/README.md` covers how the pack is built from
 this tree.
 
+`--database` picks the relational engine: `sqlserver` (the default, and the shape this repository
+itself is checked out as), `sqlite` for a single file with no server, and `postgresql` (ADR-113) for
+the other server engine. The PostgreSQL shape is the same application code with a different
+configuration base and connection string: entity configurations inherit
+`EntityTypeConfigurationPostgreSQL`, the migrations project is `<App>.Migrations.PostgreSQL.<Module>`
+against `Npgsql.EntityFrameworkCore.PostgreSQL`, and the AppHost declares a Postgres container. It is
+a template-only path, because one checkout cannot carry two engines at once. The advisory
+`PostgreSQL canary` job in CI is what keeps it honest: it generates that shape, builds and tests it
+in package mode, then applies its first migration to a real `postgres:17` server, which is the only
+place the SQL the framework emits (partial-index predicates, the soft-delete filter, UTC timestamps)
+is actually executed.
+
 - The framework: <https://github.com/ivanball/MMCA.Common> (`dotnet add package MMCA.Common.API`)
 - Full documentation, ADRs, and scorecards: <https://ivanball.github.io/docs/>
 - Long-form articles on the patterns used here: <https://ivanball.github.io/writing.html>
