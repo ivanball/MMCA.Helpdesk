@@ -8,17 +8,26 @@
 
 <PageHeading Text="@(L["Browser.Tab"].Value)" />
 
-<MudText Typo="Typo.h4" GutterBottom="true">@L["Heading"]</MudText>
+@* HtmlTag, not just the type scale: Routes.razor focuses Selector="h1" on every navigation, and
+   Typo.h4 alone renders an h4 that the selector never matches (WCAG 1.3.1 / 2.4.1). *@
+<MudText Typo="Typo.h4" HtmlTag="h1" GutterBottom="true">@L["Heading"]</MudText>
 
 <MudPaper Class="pa-4 mb-6" Elevation="1">
     <SectionHeading>@L["Section.Open"]</SectionHeading>
     <MudGrid>
         <MudItem xs="12" md="4">
-            <MudTextField @bind-Value="_title" Label="@L["Field.Title"].Value" Variant="Variant.Outlined" />
+            @* Required marks the control required for assistive technology; Error/ErrorText are what
+               a rejected submit sets, so the failure lands ON the field instead of only in a toast
+               that a screen reader user never gets back to (WCAG 3.3.1). *@
+            <MudTextField @ref="_titleField" @bind-Value="_title" Label="@L["Field.Title"].Value" Variant="Variant.Outlined"
+                          Required="true" RequiredError="@L["Validation.TitleRequired"].Value"
+                          Error="_titleInvalid" ErrorText="@L["Validation.TitleRequired"].Value" />
         </MudItem>
         @* template:begin description *@
         <MudItem xs="12" md="6">
-            <MudTextField @bind-Value="_description" Label="@L["Field.Description"].Value" Variant="Variant.Outlined" />
+            <MudTextField @ref="_descriptionField" @bind-Value="_description" Label="@L["Field.Description"].Value" Variant="Variant.Outlined"
+                          Required="true" RequiredError="@L["Validation.DescriptionRequired"].Value"
+                          Error="_descriptionInvalid" ErrorText="@L["Validation.DescriptionRequired"].Value" />
         </MudItem>
         @* template:end description *@
         <MudItem xs="12" md="2" Class="d-flex align-center">
@@ -29,7 +38,17 @@
     </MudGrid>
 </MudPaper>
 
-<MudTable Items="_tickets" Hover="true" Loading="_busy" Dense="true" Elevation="1">
+@* The table's own state, announced. Loading="_busy" swaps in a progress bar with no text, and the
+   row count changes silently after every write, so a polite live region carries both. It is visible
+   only to assistive technology: the grid itself is the sighted view of the same fact. *@
+<div role="status" aria-live="polite" class="visually-hidden">@TableStatus</div>
+
+@* Hover dropped: the rows are not clickable (the row's own buttons are), so a pointer-only highlight
+   promised an interaction that does not exist. MudTable splats unmatched attributes onto its wrapper
+   div rather than the table element, and a bare div may not carry aria-label, so role="region" is the
+   W3C pattern for a labelled table container. *@
+<MudTable Items="_tickets" Loading="_busy" Dense="true" Elevation="1"
+          role="region" aria-label="@L["Table.Label"]">
     <HeaderContent>
         <MudTh>@L["Column.Id"]</MudTh>
         <MudTh>@L["Column.Title"]</MudTh>
@@ -52,12 +71,17 @@
         <MudTd DataLabel="@L["Column.Requester"].Value">@context.RequesterUserId</MudTd>
         @* template:end owner *@
         <MudTd DataLabel="@L["Column.Actions"].Value">
+            @* Both controls repeat once per row, so their visible text ("View") and their icon alone
+               name nothing in a list of links or buttons. The aria-label adds the row's identity
+               (WCAG 2.4.4 / 4.1.2) while the visible text stays short. *@
             <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary"
-                       OnClick="@(() => Nav.NavigateTo($"/tickets/{context.Id}"))">
+                       OnClick="@(() => Nav.NavigateTo($"/tickets/{context.Id}"))"
+                       aria-label="@L["Aria.View", context.Id]">
                 @L["Button.View"]
             </MudButton>
             <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
-                           OnClick="@(() => DeleteAsync(context.Id))" Disabled="_busy" />
+                           OnClick="@(() => DeleteAsync(context.Id))" Disabled="_busy"
+                           aria-label="@L["Aria.Delete", context.Id]" />
         </MudTd>
     </RowTemplate>
     <NoRecordsContent>
@@ -72,6 +96,22 @@
     private string _description = string.Empty;
     @* template:end description *@
     private bool _busy;
+
+    // Validation state per field, so a rejected submit can mark the control invalid and put focus on
+    // it rather than only raising a toast (WCAG 3.3.1 / 3.3.3).
+    private MudTextField<string>? _titleField;
+    private bool _titleInvalid;
+
+    @* template:begin description *@
+    private MudTextField<string>? _descriptionField;
+    private bool _descriptionInvalid;
+
+    @* template:end description *@
+    // Text for the table's live region: what the grid is doing, in words, for a reader that cannot
+    // see either the progress bar or the rows.
+    private string TableStatus => _busy
+        ? L["Live.Loading"].Value
+        : L["Live.RowCount", _tickets.Count].Value;
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
 
@@ -135,13 +175,21 @@
     {
         // One accumulator per field rather than one boolean expression: each optional field of the
         // scaffold then occupies its own line, which is what lets a shape drop it whole.
-        bool missingRequired = string.IsNullOrWhiteSpace(_title);
+        _titleInvalid = string.IsNullOrWhiteSpace(_title);
         @* template:begin description *@
-        missingRequired = missingRequired || string.IsNullOrWhiteSpace(_description);
+        _descriptionInvalid = string.IsNullOrWhiteSpace(_description);
+        @* template:end description *@
+        bool missingRequired = _titleInvalid;
+        @* template:begin description *@
+        missingRequired = missingRequired || _descriptionInvalid;
         @* template:end description *@
         if (missingRequired)
         {
+            // The toast alone is a WCAG 3.3.1 gap: it says something is wrong, never which control,
+            // and it is gone before a reader reaches it. The per-field flags above put the message on
+            // the offending control; this puts the caret there too.
             Toast.Warning(L["Snackbar.RequiredFields"]);
+            await FocusFirstInvalidAsync();
             return;
         }
 
@@ -167,5 +215,22 @@
         {
             _busy = false;
         }
+    }
+
+    // First invalid control wins, in visual order, which is what a sighted user would reach first too.
+    private async Task FocusFirstInvalidAsync()
+    {
+        if (_titleInvalid && _titleField is not null)
+        {
+            await _titleField.FocusAsync();
+            return;
+        }
+        @* template:begin description *@
+
+        if (_descriptionInvalid && _descriptionField is not null)
+        {
+            await _descriptionField.FocusAsync();
+        }
+        @* template:end description *@
     }
 }

@@ -1,0 +1,22 @@
+/* Skip navigation (WCAG 2.4.1). Parked off-canvas until it takes keyboard focus, then pinned to the
+   top-left corner. The colors are literals rather than palette variables on purpose: this link is
+   painted over whatever the page happens to be showing, in either theme, and #fff on #0D47A1 is
+   8.6:1 in both. The z-index variable comes from the framework stylesheet, with a fallback so the
+   rule still works if that link is ever dropped. */
+.skip-nav {
+    position: absolute;
+    top: -100%;
+    left: 0;
+    z-index: var(--mmca-z-skip-nav, 9999);
+    padding: 0.75rem 1.5rem;
+    background: #0D47A1;
+    color: #fff;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 0 0 6px 0;
+    transition: top 0.2s;
+}
+
+.skip-nav:focus {
+    top: 0;
+}

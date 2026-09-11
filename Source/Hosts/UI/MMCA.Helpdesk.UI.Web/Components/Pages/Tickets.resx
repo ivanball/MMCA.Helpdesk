@@ -24,9 +24,15 @@
   <data name="Field.Title" xml:space="preserve">
     <value>Title</value>
   </data>
+  <data name="Validation.TitleRequired" xml:space="preserve">
+    <value>Enter a title.</value>
+  </data>
   <!-- template:begin description -->
   <data name="Field.Description" xml:space="preserve">
     <value>Description</value>
+  </data>
+  <data name="Validation.DescriptionRequired" xml:space="preserve">
+    <value>Enter a description.</value>
   </data>
   <!-- template:end description -->
   <data name="Button.Open" xml:space="preserve">
@@ -51,6 +57,21 @@
   </data>
   <data name="Button.View" xml:space="preserve">
     <value>View</value>
+  </data>
+  <data name="Aria.View" xml:space="preserve">
+    <value>View ticket #{0}</value>
+  </data>
+  <data name="Aria.Delete" xml:space="preserve">
+    <value>Delete ticket #{0}</value>
+  </data>
+  <data name="Table.Label" xml:space="preserve">
+    <value>Support tickets</value>
+  </data>
+  <data name="Live.Loading" xml:space="preserve">
+    <value>Loading tickets</value>
+  </data>
+  <data name="Live.RowCount" xml:space="preserve">
+    <value>{0} tickets listed</value>
   </data>
   <data name="Empty.Message" xml:space="preserve">
     <value>No tickets yet. Open one above.</value>

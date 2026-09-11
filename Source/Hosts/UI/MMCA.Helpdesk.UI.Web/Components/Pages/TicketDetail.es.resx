@@ -33,9 +33,15 @@
   <data name="Field.Title" xml:space="preserve">
     <value>Título</value>
   </data>
+  <data name="Validation.TitleRequired" xml:space="preserve">
+    <value>Escriba un título.</value>
+  </data>
   <!-- template:begin description -->
   <data name="Field.Description" xml:space="preserve">
     <value>Descripción</value>
+  </data>
+  <data name="Validation.DescriptionRequired" xml:space="preserve">
+    <value>Escriba una descripción.</value>
   </data>
   <!-- template:end description -->
   <data name="Detail.Status" xml:space="preserve">
@@ -63,6 +69,18 @@
   </data>
   <data name="Field.Comment" xml:space="preserve">
     <value>Comentario</value>
+  </data>
+  <data name="Validation.CommentRequired" xml:space="preserve">
+    <value>Escriba un comentario.</value>
+  </data>
+  <data name="Aria.CommentList" xml:space="preserve">
+    <value>Comentarios de este ticket</value>
+  </data>
+  <data name="Aria.EditComment" xml:space="preserve">
+    <value>Editar el comentario n.º {0}</value>
+  </data>
+  <data name="Aria.DeleteComment" xml:space="preserve">
+    <value>Eliminar el comentario n.º {0}</value>
   </data>
   <data name="Button.AddComment" xml:space="preserve">
     <value>Agregar</value>
