@@ -33,9 +33,15 @@
   <data name="Field.Title" xml:space="preserve">
     <value>Title</value>
   </data>
+  <data name="Validation.TitleRequired" xml:space="preserve">
+    <value>Enter a title.</value>
+  </data>
   <!-- template:begin description -->
   <data name="Field.Description" xml:space="preserve">
     <value>Description</value>
+  </data>
+  <data name="Validation.DescriptionRequired" xml:space="preserve">
+    <value>Enter a description.</value>
   </data>
   <!-- template:end description -->
   <data name="Detail.Status" xml:space="preserve">
@@ -63,6 +69,18 @@
   </data>
   <data name="Field.Comment" xml:space="preserve">
     <value>Comment</value>
+  </data>
+  <data name="Validation.CommentRequired" xml:space="preserve">
+    <value>Enter a comment.</value>
+  </data>
+  <data name="Aria.CommentList" xml:space="preserve">
+    <value>Comments on this ticket</value>
+  </data>
+  <data name="Aria.EditComment" xml:space="preserve">
+    <value>Edit comment #{0}</value>
+  </data>
+  <data name="Aria.DeleteComment" xml:space="preserve">
+    <value>Delete comment #{0}</value>
   </data>
   <data name="Button.AddComment" xml:space="preserve">
     <value>Add</value>

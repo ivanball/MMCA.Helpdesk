@@ -14,20 +14,33 @@
 
 @if (_ticket is null)
 {
-    <MudText>@L["Loading", Id]</MudText>
+    @* The framework's loading placeholder is a role="status" live region, so the wait is announced
+       rather than rendered as a silent line of text. *@
+    <PageLoadingState Label="@L["Loading", Id].Value" />
 }
 else
 {
-    <MudText Typo="Typo.h4" GutterBottom="true">@L["Heading", _ticket.Id]</MudText>
+    @* HtmlTag, not just the type scale: Routes.razor focuses Selector="h1" on every navigation, and
+       Typo.h4 alone renders an h4 that the selector never matches (WCAG 1.3.1 / 2.4.1). *@
+    <MudText Typo="Typo.h4" HtmlTag="h1" GutterBottom="true">@L["Heading", _ticket.Id]</MudText>
 
     <MudPaper Class="pa-4 mb-6" Elevation="1">
         <SectionHeading>@L["Section.Details"]</SectionHeading>
-        <MudTextField @bind-Value="_title" Label="@L["Field.Title"].Value" Variant="Variant.Outlined" Class="mb-3" />
+        @* Required marks the control required for assistive technology; Error/ErrorText are what a
+           rejected save sets, so the failure lands ON the field instead of only in a toast that a
+           screen reader user never gets back to (WCAG 3.3.1). *@
+        <MudTextField @ref="_titleField" @bind-Value="_title" Label="@L["Field.Title"].Value" Variant="Variant.Outlined" Class="mb-3"
+                      Required="true" RequiredError="@L["Validation.TitleRequired"].Value"
+                      Error="_titleInvalid" ErrorText="@L["Validation.TitleRequired"].Value" />
         @* template:begin description *@
-        <MudTextField @bind-Value="_description" Label="@L["Field.Description"].Value" Variant="Variant.Outlined" Lines="3" Class="mb-3" />
+        <MudTextField @ref="_descriptionField" @bind-Value="_description" Label="@L["Field.Description"].Value" Variant="Variant.Outlined" Lines="3" Class="mb-3"
+                      Required="true" RequiredError="@L["Validation.DescriptionRequired"].Value"
+                      Error="_descriptionInvalid" ErrorText="@L["Validation.DescriptionRequired"].Value" />
         @* template:end description *@
         @* template:begin statusOrOwner *@
-        <MudText Typo="Typo.body2" Class="mb-3">
+        @* A save changes this line without moving focus, so it is a polite live region: the new value
+           is announced instead of only repainting. *@
+        <MudText Typo="Typo.body2" Class="mb-3" role="status" aria-live="polite">
             @* template:begin status *@
             @* Enum display localizes via Status.* keys; the wire/enum value itself stays untranslated. *@
             @L["Detail.Status"] <b>@L[$"Status.{_ticket.Status}"]</b>
@@ -71,7 +84,9 @@ else
         <SectionHeading>@L["Section.AddComment"]</SectionHeading>
         <MudGrid>
             <MudItem xs="12" md="10">
-                <MudTextField @bind-Value="_newComment" Label="@L["Field.Comment"].Value" Variant="Variant.Outlined" />
+                <MudTextField @ref="_newCommentField" @bind-Value="_newComment" Label="@L["Field.Comment"].Value" Variant="Variant.Outlined"
+                              Required="true" RequiredError="@L["Validation.CommentRequired"].Value"
+                              Error="_newCommentInvalid" ErrorText="@L["Validation.CommentRequired"].Value" />
             </MudItem>
             <MudItem xs="12" md="2" Class="d-flex align-center">
                 <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="AddCommentAsync" Disabled="_busy" FullWidth="true">
@@ -88,35 +103,50 @@ else
     }
     else
     {
-        foreach (var comment in _ticket.Comments)
-        {
-            <MudPaper Class="pa-3 mb-2" Outlined="true">
-                @if (_editingCommentId == comment.Id)
-                {
-                    <MudTextField @bind-Value="_editCommentBody" Variant="Variant.Outlined" Class="mb-2" />
-                    <MudButton Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled"
-                               OnClick="@(() => SaveCommentAsync(comment.Id))" Disabled="_busy">
-                        @L["Button.SaveComment"]
-                    </MudButton>
-                    <MudButton Size="Size.Small" OnClick="CancelEdit">@L["Button.CancelEdit"]</MudButton>
-                }
-                else
-                {
-                    <div class="d-flex align-center justify-space-between">
-                        <div>
-                            <MudText>@comment.Body</MudText>
-                            <MudText Typo="Typo.caption">@L["Comment.By", comment.AuthorUserId]</MudText>
-                        </div>
-                        <div>
-                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
-                                           OnClick="@(() => BeginEdit(comment))" Disabled="_busy" />
-                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
-                                           OnClick="@(() => RemoveCommentAsync(comment.Id))" Disabled="_busy" />
-                        </div>
-                    </div>
-                }
-            </MudPaper>
-        }
+        @* A real list, not a run of sibling cards: the list role is what tells a reader how many
+           children there are and which one it is on (WCAG 1.3.1). The bullet is dropped because
+           the card inside supplies the visual separation. *@
+        <ul class="pa-0 ma-0" style="list-style: none;" aria-label="@L["Aria.CommentList"]">
+            @foreach (var comment in _ticket.Comments)
+            {
+                <li>
+                    <MudPaper Class="pa-3 mb-2" Outlined="true">
+                        @if (_editingCommentId == comment.Id)
+                        {
+                            <MudTextField @ref="_editCommentField" @bind-Value="_editCommentBody" Label="@L["Field.Comment"].Value"
+                                          Variant="Variant.Outlined" Class="mb-2"
+                                          Required="true" RequiredError="@L["Validation.CommentRequired"].Value"
+                                          Error="_editCommentInvalid" ErrorText="@L["Validation.CommentRequired"].Value" />
+                            <MudButton Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled"
+                                       OnClick="@(() => SaveCommentAsync(comment.Id))" Disabled="_busy">
+                                @L["Button.SaveComment"]
+                            </MudButton>
+                            <MudButton Size="Size.Small" OnClick="CancelEdit">@L["Button.CancelEdit"]</MudButton>
+                        }
+                        else
+                        {
+                            <div class="d-flex align-center justify-space-between">
+                                <div>
+                                    <MudText>@comment.Body</MudText>
+                                    <MudText Typo="Typo.caption">@L["Comment.By", comment.AuthorUserId]</MudText>
+                                </div>
+                                <div>
+                                    @* Icon-only buttons repeated once per child name nothing on their
+                                       own, and the ref is what lets leaving the editor put focus back
+                                       on the button that opened it (WCAG 2.4.3 / 4.1.2). *@
+                                    <MudIconButton @ref="_editButtons[comment.Id]" Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                                   OnClick="@(() => BeginEdit(comment))" Disabled="_busy"
+                                                   aria-label="@L["Aria.EditComment", comment.Id]" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                                   OnClick="@(() => RemoveCommentAsync(comment.Id))" Disabled="_busy"
+                                                   aria-label="@L["Aria.DeleteComment", comment.Id]" />
+                                </div>
+                            </div>
+                        }
+                    </MudPaper>
+                </li>
+            }
+        </ul>
     }
     @* template:end child *@
 }
@@ -139,8 +169,50 @@ else
     @* template:end child *@
     private bool _busy;
 
+    // Validation state per field, so a rejected save can mark the control invalid and put focus on
+    // it rather than only raising a toast (WCAG 3.3.1 / 3.3.3).
+    private MudTextField<string>? _titleField;
+    private bool _titleInvalid;
+
+    @* template:begin description *@
+    private MudTextField<string>? _descriptionField;
+    private bool _descriptionInvalid;
+
+    @* template:end description *@
+    @* template:begin child *@
+    // Focus management for the inline editor. Opening it moves focus into the field; leaving it hands
+    // focus back to the button that opened it, which is the one a keyboard user was standing on
+    // (WCAG 2.4.3). The dictionary is keyed by child id because the buttons come from a loop.
+    private readonly Dictionary<int, MudIconButton> _editButtons = [];
+    private MudTextField<string>? _newCommentField;
+    private bool _newCommentInvalid;
+    private MudTextField<string>? _editCommentField;
+    private bool _editCommentInvalid;
+    private bool _focusEditor;
+    private int? _restoreFocusTo;
+
+    @* template:end child *@
     protected override async Task OnParametersSetAsync() => await LoadAsync();
 
+    @* template:begin child *@
+    // Focus has to move AFTER the render that creates (or removes) the editor, which is what this
+    // override is for. Both flags are one-shot: they are cleared as they are honored.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusEditor && _editCommentField is not null)
+        {
+            _focusEditor = false;
+            await _editCommentField.FocusAsync();
+        }
+
+        if (_restoreFocusTo is int restoreId && _editButtons.TryGetValue(restoreId, out var button))
+        {
+            _restoreFocusTo = null;
+            await button.FocusAsync();
+        }
+    }
+
+    @* template:end child *@
     private async Task LoadAsync()
     {
         _busy = true;
@@ -184,13 +256,21 @@ else
 
         // One accumulator per field rather than one boolean expression: each optional field of the
         // scaffold then occupies its own line, which is what lets a shape drop it whole.
-        bool missingRequired = string.IsNullOrWhiteSpace(_title);
+        _titleInvalid = string.IsNullOrWhiteSpace(_title);
         @* template:begin description *@
-        missingRequired = missingRequired || string.IsNullOrWhiteSpace(_description);
+        _descriptionInvalid = string.IsNullOrWhiteSpace(_description);
+        @* template:end description *@
+        bool missingRequired = _titleInvalid;
+        @* template:begin description *@
+        missingRequired = missingRequired || _descriptionInvalid;
         @* template:end description *@
         if (missingRequired)
         {
+            // The toast alone is a WCAG 3.3.1 gap: it says something is wrong, never which control,
+            // and it is gone before a reader reaches it. The per-field flags above put the message on
+            // the offending control; this puts the caret there too.
             Toast.Warning(L["Snackbar.RequiredFields"]);
+            await FocusFirstInvalidAsync();
             return;
         }
 
@@ -247,9 +327,15 @@ else
     @* template:begin child *@
     private async Task AddCommentAsync()
     {
-        if (string.IsNullOrWhiteSpace(_newComment))
+        _newCommentInvalid = string.IsNullOrWhiteSpace(_newComment);
+        if (_newCommentInvalid)
         {
             Toast.Warning(L["Snackbar.CommentEmpty"]);
+            if (_newCommentField is not null)
+            {
+                await _newCommentField.FocusAsync();
+            }
+
             return;
         }
 
@@ -277,12 +363,19 @@ else
     {
         _editingCommentId = comment.Id;
         _editCommentBody = comment.Body;
+        _editCommentInvalid = false;
+        // The editor does not exist yet; OnAfterRenderAsync focuses it once this render creates it.
+        _focusEditor = true;
     }
 
     private void CancelEdit()
     {
+        // Leaving the editor destroys the control focus was on, so focus is handed back to the button
+        // that opened it rather than being dropped onto the document body.
+        _restoreFocusTo = _editingCommentId;
         _editingCommentId = null;
         _editCommentBody = string.Empty;
+        _editCommentInvalid = false;
     }
 
     private async Task SaveCommentAsync(int commentId)
@@ -295,9 +388,15 @@ else
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(_editCommentBody))
+        _editCommentInvalid = string.IsNullOrWhiteSpace(_editCommentBody);
+        if (_editCommentInvalid)
         {
             Toast.Warning(L["Snackbar.CommentEmpty"]);
+            if (_editCommentField is not null)
+            {
+                await _editCommentField.FocusAsync();
+            }
+
             return;
         }
 
@@ -307,6 +406,7 @@ else
             var result = await Api.EditCommentAsync(Id, commentId, _editCommentBody, ticket.RowVersion);
             if (result.IsSuccess)
             {
+                _restoreFocusTo = commentId;
                 _editingCommentId = null;
                 await LoadAsync();
             }
@@ -369,6 +469,23 @@ else
             Toast.Error(L["Snackbar.DeleteFailed", result.LocalizedErrorMessage(L) ?? string.Empty]);
             _busy = false;
         }
+    }
+
+    // First invalid control wins, in visual order, which is what a sighted user would reach first too.
+    private async Task FocusFirstInvalidAsync()
+    {
+        if (_titleInvalid && _titleField is not null)
+        {
+            await _titleField.FocusAsync();
+            return;
+        }
+        @* template:begin description *@
+
+        if (_descriptionInvalid && _descriptionField is not null)
+        {
+            await _descriptionField.FocusAsync();
+        }
+        @* template:end description *@
     }
 
     private void GoBack() => Nav.NavigateTo("/tickets");

@@ -7,6 +7,13 @@
     <base href="/" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" />
     <link rel="stylesheet" href="_content/MudBlazor/MudBlazor.min.css" />
+    @* The framework stylesheet carries the shared accessibility primitives this host relies on: the
+       visually-hidden helper behind the live regions, the keyboard focus ring on the page heading,
+       and the z-index variable the skip link resolves against. *@
+    <link rel="stylesheet" href="_content/MMCA.Common.UI/app.css" />
+    @* The scoped-css bundle. Without this link the layout's own .razor.css never reaches the browser,
+       which is what styles the skip link. *@
+    <link rel="stylesheet" href="MMCA.Helpdesk.UI.Web.styles.css" />
     <HeadOutlet @rendermode="InteractiveServer" />
 </head>
 
