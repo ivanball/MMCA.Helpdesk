@@ -182,7 +182,7 @@ packages are published to **nuget.org** (ADR-053), so no extra feed and no token
 
 ```bash
 dotnet build MMCA.Helpdesk.slnx                       # warning-free under all analyzers
-dotnet test  --solution MMCA.Helpdesk.slnx            # 117 tests (domain + application + architecture), NO database needed
+dotnet test  --solution MMCA.Helpdesk.slnx            # 128 tests (domain + application + architecture), NO database needed
 dotnet run --project Source/Hosting/MMCA.Helpdesk.AppHost   # interactive terminal ONLY, see caveat below
 ```
 

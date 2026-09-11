@@ -174,6 +174,34 @@ public sealed class CommandValidatorCoverageTests : CommandValidatorCoverageTest
     // template:end childStatus
 }
 
+// Payload purity for the async API (ADR-010): every concrete integration event ships from a *.Shared
+// assembly (the only layer a consuming module may reference), and no property on its wire shape reaches
+// a type declared in a *.Domain assembly, nested payload records included. Non-vacuous: the module's
+// integration event is the one the rule inspects, beside the frozen contract above.
+public sealed class IntegrationEventPayloadPurityTests : IntegrationEventPayloadPurityTestsBase
+{
+    protected override IArchitectureMap Map { get; } = new HelpdeskArchitectureMap();
+}
+
+// Parameterized SQL only: FromSqlRaw, SqlQueryRaw, ExecuteSqlRaw and ExecuteSqlRawAsync take a plain
+// string, so a concatenated value compiles and every distinct value defeats plan reuse. The
+// interpolated siblings and the framework's IRawSqlQueryExecutor stay allowed. AllowedFiles is
+// deliberately not overridden: this seed has no raw call site to ratchet away from, and the scaffold
+// should hand an adopter an empty list rather than an inherited exemption.
+public sealed class RawSqlConventionTests : RawSqlConventionTestsBase
+{
+    protected override IArchitectureMap Map { get; } = new HelpdeskArchitectureMap();
+}
+
+// The model boundary (rubric section 16): no layer outside Infrastructure names a language-model SDK
+// (Anthropic.*, Microsoft.Extensions.AI*, OpenAI.*, Azure.AI.*), and none references the governed
+// MMCA.Common.AI package. Vacuous today (this seed calls no model at all), and that is the state the
+// gate defends: the first adopter who reaches for a model has to do it at one place.
+public sealed class AiDependencyIsolationTests : AiDependencyIsolationTestsBase
+{
+    protected override IArchitectureMap Map { get; } = new HelpdeskArchitectureMap();
+}
+
 // NOT adopted (legitimately inapplicable, not an enforcement gap): ConstructorDependencyCountTestsBase
 // scans Application *Service classes and deliberately fails when it finds none (anti-vacuity guard).
 // This seed's Application layer is handlers-only. Subclass it (ceiling 7, matching ADC) as soon as the
