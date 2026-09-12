@@ -202,6 +202,16 @@ public sealed class AiDependencyIsolationTests : AiDependencyIsolationTestsBase
     protected override IArchitectureMap Map { get; } = new HelpdeskArchitectureMap();
 }
 
+// Feature-flag lifecycle (ADR-031): every flag constant on a static *Features class in a Shared layer
+// declares [FeatureFlag] as Permanent or Temporary with an ISO RemoveBy, and a temporary one past that
+// date fails the build (the dead-toggle detector). Vacuous on the module side today (this seed declares
+// no *Features class), and that is the state the gate defends: the first flag an adopter adds has to
+// say whether it is a capability switch or a rollout toggle with an end date.
+public sealed class FeatureFlagLifecycleTests : FeatureFlagLifecycleTestsBase
+{
+    protected override IArchitectureMap Map { get; } = new HelpdeskArchitectureMap();
+}
+
 // NOT adopted (legitimately inapplicable, not an enforcement gap): ConstructorDependencyCountTestsBase
 // scans Application *Service classes and deliberately fails when it finds none (anti-vacuity guard).
 // This seed's Application layer is handlers-only. Subclass it (ceiling 7, matching ADC) as soon as the
