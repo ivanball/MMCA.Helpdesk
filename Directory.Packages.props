@@ -37,7 +37,7 @@
     <PackageVersion Include="Roslynator.Analyzers" Version="5.0.0" />
     <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.34.0.3385" />
     <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" />
-    <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.22.0" />
+    <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.23.0" />
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
     <!-- Lockstep with the resolved Microsoft.Testing.Platform (1.9.1, via xunit.v3). -->
     <PackageVersion Include="Microsoft.Testing.Extensions.Retry" Version="2.4.0" />
@@ -70,14 +70,14 @@
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.10.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.10.0" />
     <!-- OpenTelemetry.Api pinned directly to force transitive resolution to non-vulnerable version. -->
-    <PackageVersion Include="OpenTelemetry.Api" Version="1.18.0" />
-    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.18.0" />
-    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.18.0" />
+    <PackageVersion Include="OpenTelemetry.Api" Version="1.19.1" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.19.1" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.19.1" />
     <!-- gRPC -->
     <PackageVersion Include="Google.Protobuf" Version="3.36.1" />
     <PackageVersion Include="Grpc.AspNetCore" Version="2.83.0" />
     <PackageVersion Include="Grpc.AspNetCore.Server.Reflection" Version="2.83.0" />
-    <PackageVersion Include="Grpc.Net.ClientFactory" Version="2.83.0" />
+    <PackageVersion Include="Grpc.Net.ClientFactory" Version="2.84.0" />
     <PackageVersion Include="Grpc.Tools" Version="2.84.0" />
     <PackageVersion Include="MMCA.Common.Grpc" Version="1.208.0" />
     <!-- MMCA Common Packages -->

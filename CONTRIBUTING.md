@@ -5,7 +5,7 @@ module exercised end to end through all five layers. It is the worked companion 
 guides, [Getting Started](https://ivanball.github.io/docs/guides/common-GETTING-STARTED.html) (the
 `dotnet new mmca-app` path) and
 [Building by Hand](https://ivanball.github.io/docs/guides/common-BUILD-BY-HAND.html) (phase by
-phase). The full contributor reference is [CLAUDE.md](CLAUDE.md).
+phase). The full contributor reference is [AGENTS.md](AGENTS.md).
 
 ## Onboarding: no token needed
 
