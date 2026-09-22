@@ -55,7 +55,8 @@ $excludedDirs = @(
 $excludedFiles = @(
     'local.props',       # the seed's ACTIVE local-source override; overlay ships an opt-in one
     'README.md',         # describes the reference app, not the adopter's app
-    'CLAUDE.md',         # agent guidance for this repo
+    'AGENTS.md',         # agent guidance for this repo (vendor-neutral instruction file)
+    'CLAUDE.md',         # the Claude Code pointer that imports AGENTS.md
     'CONTRIBUTING.md',   # this repo's PR rules
     'LICENSE',           # the seed's license is not the adopter's license
     '.gitignore'         # seed-specific: it deliberately does NOT ignore local.props
