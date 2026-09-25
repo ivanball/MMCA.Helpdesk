@@ -1,6 +1,5 @@
-using Microsoft.AspNetCore.Localization;
+using MMCA.Common.API.Startup;
 using MMCA.Common.Aspire;
-using MMCA.Common.Shared.Globalization;
 using MMCA.Common.UI.Services.Culture;
 using MMCA.Common.UI.Theme;
 using MMCA.Helpdesk.UI.Web.Components;
@@ -17,9 +16,10 @@ builder.Services.AddRazorComponents()
 
 builder.Services.AddMudServices();
 
-// Internationalization (ADR-027) + Day/Dark theme (ADR-028). The shared UseCommonRequestLocalization /
-// MapCultureEndpoint helpers live in MMCA.Common.API; this seed does not reference the API layer, so the
-// few lines are inlined here against the same SupportedCultures allowlist + ThemeService.
+// Internationalization (ADR-027) + Day/Dark theme (ADR-028). The request-localization middleware and
+// the /culture/set endpoint below come from the shared MMCA.Common.API helpers (reached through
+// MMCA.Common.UI.Web), so the SupportedCultures allowlist and the Development-only pseudo locale are
+// the framework's, not a local copy.
 builder.Services.AddLocalization();
 builder.Services.AddScoped<ThemeService>();
 
@@ -56,48 +56,20 @@ if (!app.Environment.IsDevelopment())
 }
 
 // Set CurrentUICulture from the culture cookie / Accept-Language so SSR prerender uses the right locale.
-// Pseudo-localization (ADR-027 section 8) is a Development-only diagnostic locale; CultureSwitcher only
-// offers it there, so both this allowlist and /culture/set below must accept it under the same condition
-// or the menu entry silently no-ops. Mirrors UseCommonRequestLocalization in MMCA.Common.API.
-var allowPseudo = app.Environment.IsDevelopment();
-string[] supportedCultures = allowPseudo
-    ? [.. SupportedCultures.All, SupportedCultures.PseudoLocale]
-    : [.. SupportedCultures.All];
-app.UseRequestLocalization(new RequestLocalizationOptions()
-    .SetDefaultCulture(SupportedCultures.Default)
-    .AddSupportedCultures(supportedCultures)
-    .AddSupportedUICultures(supportedCultures));
+// The helper accepts the Development-only pseudo locale (ADR-027 section 8) under the same condition as
+// the /culture/set endpoint below, so the CultureSwitcher's pseudo entry never silently no-ops.
+app.UseCommonRequestLocalization();
 
 app.UseHttpsRedirection();
 app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapDefaultEndpoints();
 
-// Culture switch endpoint (ADR-027): writes the standard ASP.NET culture cookie and reloads.
-// SECURITY (SEC-Common-16): .AllowAnonymous() below states the decision this endpoint has always
-// made, the way MapCultureEndpoint in MMCA.Common.API states it. This host registers no
-// authorization services, so the framework's fallback policy cannot reach it today; the attribute
-// is what keeps it public (and reviewable) the day this host gains an authenticated surface.
-app.MapGet("/culture/set", (string culture, string? redirectUri, HttpContext context) =>
-{
-    if (SupportedCultures.IsSupported(culture) || allowPseudo && SupportedCultures.IsPseudoLocale(culture))
-    {
-        context.Response.Cookies.Append(
-            CookieRequestCultureProvider.DefaultCookieName,
-            CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture)),
-            new CookieOptions
-            {
-                Path = "/",
-                Expires = DateTimeOffset.UtcNow.AddYears(1),
-                IsEssential = true,
-                HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.Lax,
-            });
-    }
-
-    return Results.LocalRedirect(string.IsNullOrWhiteSpace(redirectUri) ? "/" : redirectUri);
-}).AllowAnonymous();
+// Culture switch endpoint (ADR-027): writes the standard ASP.NET culture cookie and reloads. The
+// helper maps it AllowAnonymous (SEC-Common-16), so it stays public the day this host gains an
+// authenticated surface. httpOnly: true because this is a Server-only host with no WebAssembly
+// client to read the cookie; a host that serves WASM keeps the parameterless overload.
+app.MapCultureEndpoint(httpOnly: true);
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()
