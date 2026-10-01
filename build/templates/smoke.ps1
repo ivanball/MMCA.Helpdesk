@@ -752,7 +752,7 @@ but $($offenders.Count) file(s) still carry a removed axis or an un-renamed word
         # write. Asserted on the member list too: the module is added --no-owner, so the owning-user
         # member must NOT be in it.
         $contract = "Tests/Architecture/$appName.Architecture.Tests/ArchitectureTests.cs"
-        Assert-Match $contract ([regex]::Escape("$appName.$newModule.Shared.$newModule.IntegrationEvents.$newAggregate${newEventVerb}IntegrationEvent { ${newAggregate}Id:Int32 }")) 'frozen wire-contract entry'
+        Assert-Match $contract ([regex]::Escape("$newModule.$newAggregate$newEventVerb.v1 { ${newAggregate}Id:Int32 }")) 'frozen wire-contract entry'
 
         Write-Host "  solution, both csproj files, the alias link, the map, Program.cs, the AppHost and the wire contract"
     }

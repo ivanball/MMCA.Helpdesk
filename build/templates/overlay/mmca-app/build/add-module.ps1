@@ -823,15 +823,17 @@ if ($contractFiles.Count -ne 1) {
     if (-not $NoOwner) { $contractMembers += 'RequesterUserId:Int32' }
     $contractMembers += "${Aggregate}Id:Int32"
 
+    # Entries are keyed on the event's [EventName] wire identity (<Module>.<Aggregate><Verb>.v1),
+    # the same value the module's event declares, not on its CLR type name.
     $verb = if ($EventVerb) { $EventVerb } else { 'Opened' }
-    $eventType = "$app.$Name.Shared.$Name.IntegrationEvents.$Aggregate${verb}IntegrationEvent"
-    $contractLine = "`"$eventType { $($contractMembers -join ', ') }`","
+    $eventKey = "$Name.$Aggregate$verb.v1"
+    $contractLine = "`"$eventKey { $($contractMembers -join ', ') }`","
 
     Add-AfterAnchor `
         -Path $contractFiles[0].FullName `
-        -Anchor 'IntegrationEvent \{[^}]*\}",$' `
+        -Anchor '\.v[0-9]+ \{[^}]*\}",$' `
         -Insert @($contractLine) `
-        -AlreadyApplied ([regex]::Escape($eventType)) `
+        -AlreadyApplied ([regex]::Escape("`"$eventKey {")) `
         -Description "$($contractFiles[0].Name) freezes $Aggregate${verb}IntegrationEvent" `
         -Manual "Add to ExpectedContract in $($contractFiles[0].Name):`n        $contractLine"
 }
