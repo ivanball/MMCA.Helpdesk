@@ -936,7 +936,7 @@ $optionalAxisLines = @(
         # what build/add-module.ps1 appends to.
         Scope = 'app'
         Path = 'Tests/Architecture/MMCA.Helpdesk.Architecture.Tests/ArchitectureTests.cs'
-        Anchor = '"MMCA\.Helpdesk\.Tickets\.Shared\.Tickets\.IntegrationEvents\.TicketOpenedIntegrationEvent \{ RequesterUserId:Int32, TicketId:Int32 \}",'
+        Anchor = '"Tickets\.TicketOpened\.v1 \{ RequesterUserId:Int32, TicketId:Int32 \}",'
         Description = ''
         Owner = 'RequesterUserId:Int32, '
         Hits = 1
