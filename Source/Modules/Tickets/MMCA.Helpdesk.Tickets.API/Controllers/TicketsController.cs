@@ -60,6 +60,9 @@ public sealed class TicketsController(
     ILogger<TicketsController> logger)
     : EntityControllerBase<Ticket, TicketDTO, TicketIdentifierType>(queryService, logger)
 {
+    // Tickets are the shared queue, not per-user rows: every caller of this controller already lists them all (tenancy is the EF query filter), so the export mirrors GET /Tickets.
+    protected override bool AllowUnscopedExport => true;
+
     /// <summary>Gets a single ticket by id, with its children.</summary>
     [HttpGet("{id}/details")]
     [ProducesResponseType(StatusCodes.Status200OK)]
