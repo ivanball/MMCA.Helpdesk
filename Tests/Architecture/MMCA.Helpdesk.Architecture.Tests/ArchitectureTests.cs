@@ -104,7 +104,7 @@ public sealed class IntegrationEventContractTests : IntegrationEventContractTest
     // integration event (version it per ADR-010; never a silent reshape).
     protected override IReadOnlyList<string> ExpectedContract =>
     [
-        "MMCA.Helpdesk.Tickets.Shared.Tickets.IntegrationEvents.TicketOpenedIntegrationEvent { RequesterUserId:Int32, TicketId:Int32 }",
+        "Tickets.TicketOpened.v1 { RequesterUserId:Int32, TicketId:Int32 }",
     ];
 }
 
