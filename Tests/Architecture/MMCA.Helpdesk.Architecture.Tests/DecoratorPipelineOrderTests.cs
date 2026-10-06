@@ -60,4 +60,19 @@ public sealed class DecoratorPipelineOrderTests
         services.AddModuleTicketsApplication(new ApplicationSettings());
         services.AddApplicationDecorators();
     }
+
+    [Fact]
+    public void ComposedPipeline_LeavesNoHandlerUndecorated()
+    {
+        // Arrange: the same sequence the host runs, over the Tickets module's whole handler set.
+        var services = new ServiceCollection();
+        ConfigureServices(services);
+
+        // Act + Assert: the framework's own registration-shape check. The nesting assertions in the
+        // base class prove ONE command and ONE query are wrapped correctly; this proves no handler in
+        // the module escaped the pipeline, which is the failure mode that ships silently (an unwrapped
+        // handler runs with no feature gate, authorization, validation or transaction, and nothing
+        // throws at startup to say so).
+        services.VerifyDecoratorPipeline();
+    }
 }
