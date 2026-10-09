@@ -265,13 +265,14 @@ $Manual
 }
 
 # The mirror of Add-AfterAnchor, and it exists for exactly one step: the orchestration host's
-# data-source routing, where the order of the chained calls is SEMANTIC rather than cosmetic. Every
-# data-source call also rewrites the host's top-level connection string, so the last one in the chain
-# decides which module is the solution's Default source. That has to stay the FIRST module: the
-# top-level connection in appsettings names its database, the outbox is pinned to it, and its
-# migrations are the ones scaffolded with the Default-source-only framework tables in them. Appending
-# would silently hand the role to whichever module was added most recently, whose migrations do not
-# carry those tables, and EF refuses to migrate a database whose model has pending changes.
+# data-source routing. The order of those chained calls is cosmetic, because a data-source call sets
+# only its own module's DataSources entry and never the top-level connection string. What decides the
+# solution's Default source is the explicit ConnectionStrings__ override the scaffolded AppHost chains
+# right after the FIRST module's call, and that has to stay the first module: the outbox is pinned to
+# it, and its migrations are the ones scaffolded with the Default-source-only framework tables in them
+# (EF refuses to migrate a database whose model has pending changes). Inserting every later module
+# ABOVE the existing call keeps the first module's call and that override together at the end of the
+# chain, so the Default source's wiring reads as one block.
 function Add-BeforeAnchor {
     param(
         [string] $Path,
@@ -861,7 +862,7 @@ if (-not $appHostProgram) {
         -Insert @(".WithSqliteDataSource(`"$Name`", Path.Combine(builder.AppHostDirectory, `"$moduleDbFile`"))") `
         -AlreadyApplied ([regex]::Escape("WithSqliteDataSource(`"$Name`"")) `
         -Description "the orchestration host routes the $Name data source to its own database file" `
-        -Manual "Chain onto the web project in the orchestration host's Program.cs, ABOVE the existing call (the last one wins the Default source, and that has to stay the first module):`n    .WithSqliteDataSource(`"$Name`", Path.Combine(builder.AppHostDirectory, `"$moduleDbFile`"))"
+        -Manual "Chain onto the web project in the orchestration host's Program.cs, above the existing call (the order is cosmetic; leave the top-level ConnectionStrings__ override on the first module, which has to stay the Default source):`n    .WithSqliteDataSource(`"$Name`", Path.Combine(builder.AppHostDirectory, `"$moduleDbFile`"))"
 } else {
     # Which variable the server resource is held in is the scaffold's choice, not this script's, and
     # it differs per engine (sql for SQL Server, postgres for PostgreSQL). Read it off the existing
@@ -885,15 +886,15 @@ if (-not $appHostProgram) {
         -Manual "Add to the orchestration host's Program.cs, beside the existing AddDatabase call:`n    var ${nameLower}Db = $serverVar.AddDatabase(`"$appShortLower-$nameLower`", `"${appShort}_$Name`");"
 
     # Chained onto the web project builder, so it is inserted WITHOUT a terminator: the statement it
-    # joins ends further down the chain. Above the existing call rather than below it, for the reason
-    # Add-BeforeAnchor exists: the last data-source call in the chain wins the Default source.
+    # joins ends further down the chain. Above the existing call rather than below it, so the first
+    # module's call and its top-level override stay together at the end (see Add-BeforeAnchor).
     Add-BeforeAnchor `
         -Path $appHostProgram `
         -Anchor ([regex]::Escape(".$dataSourceCall(")) `
         -Insert @(".$dataSourceCall(${nameLower}Db, `"$Name`")") `
         -AlreadyApplied ([regex]::Escape("$dataSourceCall(${nameLower}Db")) `
         -Description "the orchestration host routes the $Name data source to the web host" `
-        -Manual "Chain onto the web project in the orchestration host's Program.cs, ABOVE the existing call (the last one wins the Default source, and that has to stay the first module):`n    .$dataSourceCall(${nameLower}Db, `"$Name`")"
+        -Manual "Chain onto the web project in the orchestration host's Program.cs, above the existing call (the order is cosmetic; leave the top-level ConnectionStrings__ override on the first module, which has to stay the Default source):`n    .$dataSourceCall(${nameLower}Db, `"$Name`")"
 }
 
 # ---- 10. web host configuration ------------------------------------------------------------------
@@ -916,11 +917,13 @@ if (($settings.Lines -join "`n") -match ('"' + [regex]::Escape($Name) + '"\s*:\s
 }
 
 # The top-level connection string stays (it is the Default fallback that startup validation and the
-# health checks use) but its migrations-assembly pin must GO. Under Aspire every data-source call
-# also rewrites the top-level connection string and the last one wins, so one module always collapses
-# onto the Default source; a top-level pin naming the OTHER module's assembly then fails startup with
-# a conflicting-value error. That is true of both engines: WithSqliteDataSource writes
-# ConnectionStrings__SqliteConnectionString for exactly the same reason its SQL Server counterpart does.
+# health checks use) but its migrations-assembly pin must GO. From here on every module, the first
+# included, names its migrations assembly on its own DataSources entry, and an entry whose connection
+# equals the top-level one collapses onto the Default source and contributes that assembly. A second
+# declaration at top level then has to agree with whichever entry collapses there: today that is the
+# first module (the AppHost pins the top-level connection to it), but the day the top-level connection
+# names another module's database, startup fails with a conflicting-value error. One declaration per
+# module, on its own entry, cannot drift that way. That holds for both engines alike.
 $connectionRange = Get-JsonObjectRange -Document $settings -Key 'ConnectionStrings'
 $connectionLine = $null
 $pinLine = -1
@@ -993,9 +996,9 @@ if ($null -eq $dataSources) {
 }
 
 # IEventBus writes handler-published integration events to ONE configured outbox source per host. It
-# defaults to Default, and Default is whichever module's data-source call ran last (both engines
-# rewrite the top-level connection string), so leaving it implicit means the outbox silently moves
-# the day those calls are reordered.
+# defaults to Default, which is whichever database the top-level connection string names. The
+# AppHost pins that to the first module, but appsettings, a deployment or a hand edit can name
+# another, so leaving it implicit means the outbox silently moves with it.
 if ($null -ne (Get-JsonObjectRange -Document $settings -Key 'Outbox' -Optional)) {
     Write-Skipped 'appsettings.json already pins the outbox source'
 } else {
