@@ -773,14 +773,15 @@ but $($offenders.Count) file(s) still carry a removed axis or an un-renamed word
         }
 
         # The top-level connection string STAYS (it is the Default fallback used by startup
-        # validation and the health checks); its assembly pin must not, because under Aspire the last
-        # WithSQLServerDataSource call wins the top-level connection string, so one module always
-        # collapses onto Default and a pin naming the other module's assembly fails startup.
+        # validation and the health checks); its assembly pin must not. Every module, the first
+        # included, now names its assembly on its own DataSources entry, and the entry that collapses
+        # onto Default contributes it, so a top-level pin is a second declaration that fails startup
+        # with a conflicting-value error the day the top-level connection names another module.
         if (-not $settings.ConnectionStrings.PSObject.Properties['SQLServerConnectionString']) {
             throw "The top-level SQLServerConnectionString was removed. Only its assembly pin should have been."
         }
         if ($settings.ConnectionStrings.PSObject.Properties['SQLServerMigrationsAssembly']) {
-            throw "The top-level SQLServerMigrationsAssembly pin survived. Startup would fail with a conflicting-value error once both modules route their own data source."
+            throw "The top-level SQLServerMigrationsAssembly pin survived. It duplicates the first module's DataSources entry and fails startup with a conflicting-value error once the top-level connection names another module's database."
         }
 
         if (-not $settings.PSObject.Properties['DataSources']) {
@@ -798,8 +799,8 @@ but $($offenders.Count) file(s) still carry a removed axis or an un-renamed word
         }
 
         # IEventBus writes handler-published integration events to ONE outbox source per host, and it
-        # defaults to whichever module's data source ran last. Naming it is what stops the outbox
-        # moving to another module's database the day those calls are reordered.
+        # defaults to whichever database the top-level connection string names. Naming it is what
+        # stops the outbox moving to another module's database the day that connection changes.
         if (-not $settings.PSObject.Properties['Outbox']) { throw "No top-level Outbox section." }
         if ($settings.Outbox.DatabaseName -ne $case.Module) {
             throw "Outbox is pinned to '$($settings.Outbox.DatabaseName)', expected the first module $($case.Module)."
