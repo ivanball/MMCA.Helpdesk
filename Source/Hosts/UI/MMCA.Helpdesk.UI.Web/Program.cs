@@ -1,5 +1,6 @@
 using MMCA.Common.API.Startup;
 using MMCA.Common.Aspire;
+using MMCA.Common.UI;
 using MMCA.Common.UI.Services.Culture;
 using MMCA.Common.UI.Theme;
 using MMCA.Helpdesk.UI.Web.Components;
@@ -15,6 +16,11 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddMudServices();
+
+// The vendor-neutral toast and confirm-dialog facades (IToastService, IAppDialogService) the Tickets
+// pages inject. AddUIShared would normally register them; this seed does not call it (see the
+// ICultureApplier note below), so the facades are registered on their own over the Mud services above.
+builder.Services.AddCommonUiFacades();
 
 // Internationalization (ADR-027) + Day/Dark theme (ADR-028). The request-localization middleware and
 // the /culture/set endpoint below come from the shared MMCA.Common.API helpers (reached through

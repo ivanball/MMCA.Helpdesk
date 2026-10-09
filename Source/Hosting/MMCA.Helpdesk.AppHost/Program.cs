@@ -7,8 +7,12 @@ using MMCA.Common.Aspire.Hosting;
 var builder = DistributedApplication.CreateBuilder(args);
 
 // template:begin sqlserver
-// A SQL Server container plus its databases. WithSQLServerDataSource injects both the routing key
-// and ConnectionStrings__SQLServerConnectionString, which is what makes the two names collapse.
+// A SQL Server container plus its databases. WithSQLServerDataSource injects only the routing key
+// (DataSources__Tickets__SQLServerConnectionString), so the web resource below also overrides the
+// top-level ConnectionStrings__SQLServerConnectionString with the same value. Without that, the
+// appsettings.json localhost value survives: the readiness check and the Default source (the
+// framework's own tables) would target a SQL Server on the workstation instead of this container,
+// and web would never report healthy. Equal values are what make the two names collapse.
 var sql = builder.AddSqlServer("sql")
     .WithLifetime(ContainerLifetime.Persistent);
 
@@ -27,6 +31,7 @@ var globexDb = sql.AddDatabase("helpdesk-globex", "Helpdesk_Globex");
 // database's existence would deadlock: it never exists until the app that is waiting runs.
 var web = builder.AddProject<Projects.MMCA_Helpdesk_Web>("web")
     .WithSQLServerDataSource(helpdeskDb, "Tickets")
+    .WithEnvironment("ConnectionStrings__SQLServerConnectionString", helpdeskDb.Resource.ConnectionStringExpression)
     .WithEnvironment(
         "Tenancy__Tenants__globex__DataSources__Default__SQLServerConnectionString",
         globexDb.Resource.ConnectionStringExpression)
