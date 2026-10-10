@@ -53,9 +53,8 @@
     <!-- These three pins belong to the orchestration project alone, which the no-aspire option does
          not generate. Aspire.StackExchange.* and the service-discovery/resilience pins below belong
          to the service hosts and stay in every shape, because AddServiceDefaults() does. -->
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.6.0" />
-    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.6.0" />
-    <PackageVersion Include="Aspire.Hosting.Redis" Version="13.6.0" />
+    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.6.1" />
+    <PackageVersion Include="Aspire.Hosting.Redis" Version="13.6.1" />
     <!-- template:end aspire -->
     <!-- template:begin aspireSqlServer -->
     <!-- The one engine-specific orchestration pin: SQLite has no container resource, so the sqlite
@@ -64,9 +63,9 @@
          The postgresql option DOES declare a container, and its hosting integration is spelled
          Aspire.Hosting.PostgreSQL at the same version, which is exactly what the engineName rename
          produces from this id. So this one line serves both server engines unchanged. -->
-    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.6.0" />
+    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.6.1" />
     <!-- template:end aspireSqlServer -->
-    <PackageVersion Include="Aspire.StackExchange.Redis.DistributedCaching" Version="13.6.0" />
+    <PackageVersion Include="Aspire.StackExchange.Redis.DistributedCaching" Version="13.6.1" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.10.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.10.0" />
     <!-- OpenTelemetry.Api pinned directly to force transitive resolution to non-vulnerable version. -->
