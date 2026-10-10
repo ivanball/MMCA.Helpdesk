@@ -408,10 +408,11 @@
           ]
         },
         {
-          "comment": "--no-aspire: the orchestration project, and the two files that assume it. The UI host resolves the API as 'https+http://web' through Aspire service discovery; standalone it needs the API host's own dev address, which is fixed in that host's launchSettings.json. The README is the other one: it is prose about running the app, and prose has no conditional form.",
+          "comment": "--no-aspire: the orchestration project, and the three files that assume it. The UI host resolves the API as 'https+http://web' through Aspire service discovery; standalone it needs the API host's own dev address, which is fixed in that host's launchSettings.json. The README is the second: it is prose about running the app, and prose has no conditional form. aspire.config.json is the third: it only tells the Aspire CLI where the AppHost project is.",
           "condition": "(noAspire)",
           "exclude": [
             "Source/Hosting/MMCA.Helpdesk.AppHost/**",
+            "aspire.config.json",
             "Source/Hosts/UI/MMCA.Helpdesk.UI.Web/appsettings.json",
             "README.md"
           ],
