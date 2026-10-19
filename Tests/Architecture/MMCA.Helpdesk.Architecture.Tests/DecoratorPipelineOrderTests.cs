@@ -23,13 +23,16 @@ namespace MMCA.Helpdesk.Architecture.Tests;
 /// Runtime fitness function for the ADR-014 decorator pipeline, exercised against a real Tickets
 /// command/query pair (the framework's generic update command over the Ticket aggregate, and
 /// <see cref="GetTicketByIdQuery"/>): it
-/// builds this seed's genuine registration sequence (the module registration first,
-/// <c>AddApplicationDecorators()</c> LAST, which is the one load-bearing ordering in the host) and
-/// asserts the resolved object graph nests the decorators in exactly the documented order.
+/// builds this seed's genuine registration sequence through <c>AddMmcaApplicationPipeline</c> (the
+/// module registration first, <c>AddApplicationDecorators()</c> LAST, which is the one load-bearing
+/// ordering in the host) and asserts the resolved object graph nests the decorators in exactly the
+/// documented order.
 /// <para>
-/// The seed's host wires that sequence in <c>Web/Program.cs</c>, where nothing but this test would
-/// notice a reordered line or a module scan that drifted below the decorator call: Scrutor's
-/// <c>TryDecorate</c> applies decorators in reverse registration order, so the damage is silent.
+/// The seed's host composes that sequence the same way in <c>Web/Program.cs</c>. The composed call
+/// seals the pipeline, so a handler registered after it throws; what it cannot catch is a
+/// regression in the helper's own ordering or in the decorator registration order, which only
+/// this test would notice: Scrutor's <c>TryDecorate</c> applies decorators in reverse registration
+/// order, so the damage is silent.
 /// </para>
 /// </summary>
 public sealed class DecoratorPipelineOrderTests
@@ -53,12 +56,16 @@ public sealed class DecoratorPipelineOrderTests
         services.AddSingleton(Mock.Of<ICurrentUserService>());
         services.AddSingleton(Mock.Of<IPermissionRegistry>());
 
-        // The real registration sequence, mirroring the host: the Tickets module's own registration
-        // first (its convention scan registers GetTicketByIdHandler, the update applier and the DTO
-        // mappers, and AddEntityCrud closes the generic write side over them), decorators last.
-        services.AddApplication();
-        services.AddModuleTicketsApplication(new ApplicationSettings());
-        services.AddApplicationDecorators();
+        // The real registration sequence, composed the way the host composes it:
+        // AddMmcaApplicationPipeline runs AddApplication() first, then the Tickets module's own
+        // registration (its convention scan registers GetTicketByIdHandler, the update applier and
+        // the DTO mappers, and AddEntityCrud closes the generic write side over them), then
+        // AddApplicationDecorators() last, and seals the collection. Written as the composed call
+        // rather than the three hand-sequenced ones so this fitness function exercises the same
+        // helper the host does: a regression in the helper's ordering would surface here as a wrong
+        // nesting, not just as a startup failure nobody runs.
+        services.AddMmcaApplicationPipeline(pipeline => pipeline
+            .Register(s => s.AddModuleTicketsApplication(new ApplicationSettings())));
     }
 
     [Fact]
