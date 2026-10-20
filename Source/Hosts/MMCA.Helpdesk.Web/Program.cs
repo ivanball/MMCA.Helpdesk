@@ -74,8 +74,6 @@ else
 
 services.AddCommonExceptionHandlers();
 
-// Fixed DI sequence: AddApplication -> module scans (via ModuleLoader) -> AddApplicationDecorators last.
-services.AddApplication();
 services.AddInfrastructure(builder.Configuration);
 
 // Enterprise capability opt-ins (MMCA.Common v1.150.0). Each one is inert until the matching
@@ -110,26 +108,35 @@ var moduleLoader = new ModuleLoader
 {
     Logger = loggerFactory.CreateLogger<ModuleLoader>(),
 };
-// The host names the module assemblies discovery scans, one marker type per module. Naming them is
-// what makes discovery deterministic: a referenced assembly no code path has touched yet is not
-// loaded, so it would be silently absent from any ambient scan.
-moduleLoader.DiscoverAndRegister(
-    services,
-    builder.Configuration,
-    applicationSettings,
-    modulesSettings,
-    builder.Environment.EnvironmentName,
-    [
-        typeof(TicketsModule).Assembly,
-    ]);
 services.AddSingleton(moduleLoader);
 
-// In-process message bus in the monolith (no MessageBus:Provider configured). When a module is
-// extracted, the provider and its connection string arrive as configuration (the orchestrator's
-// WithBroker call locally, deployment settings in the cloud) and this same call wires the broker.
-services.AddBrokerMessaging(builder.Configuration);
+// Application pipeline (ADR-014). AddMmcaApplicationPipeline runs AddApplication() first, then each
+// Register step below in order, then AddApplicationDecorators() LAST, and seals the collection.
+// Scrutor's TryDecorate only wraps registrations that already exist, so a handler registered after
+// the decorators would run with no feature gate, authorization, validation or transaction; with the
+// pipeline sealed, that mistake throws at startup instead of shipping silently. Everything that can
+// contribute or replace a command/query handler belongs inside; registrations that cannot
+// (infrastructure, the opt-ins, API, error resources, health checks) stay outside, where their order
+// relative to the decorators does not matter.
+services.AddMmcaApplicationPipeline(pipeline => pipeline
+    // Module discovery. The host names the module assemblies discovery scans, one marker type per
+    // module. Naming them is what makes discovery deterministic: a referenced assembly no code path
+    // has touched yet is not loaded, so it would be silently absent from any ambient scan.
+    .Register(s => moduleLoader.DiscoverAndRegister(
+        s,
+        builder.Configuration,
+        applicationSettings,
+        modulesSettings,
+        builder.Environment.EnvironmentName,
+        [
+            typeof(TicketsModule).Assembly,
+        ]))
 
-services.AddApplicationDecorators();
+    // In-process message bus in the monolith (no MessageBus:Provider configured). When a module is
+    // extracted, the provider and its connection string arrive as configuration (the orchestrator's
+    // WithBroker call locally, deployment settings in the cloud) and this same call wires the
+    // broker. It stays after discovery so its Replace calls still win over the loader's.
+    .Register(s => s.AddBrokerMessaging(builder.Configuration)));
 
 services.AddModuleHealthChecks(moduleLoader);
 

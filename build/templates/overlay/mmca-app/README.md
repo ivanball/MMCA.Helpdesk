@@ -77,9 +77,13 @@ Tests/
 
 ## Things that are load-bearing and quiet about it
 
-- **`AddApplicationDecorators()` must be the last DI call** in `Source/Hosts/MMCA.Helpdesk.Web/Program.cs`.
-  Decorators wrap handlers that already exist, and the module handlers are registered by
-  `ModuleLoader`. Move it earlier and the pipeline silently stops wrapping them.
+- **Every handler registration goes inside `AddMmcaApplicationPipeline(...)`** in
+  `Source/Hosts/MMCA.Helpdesk.Web/Program.cs`. The call runs `AddApplication()`, then its `Register`
+  steps (module discovery through `ModuleLoader`, then broker messaging), then
+  `AddApplicationDecorators()` last, and seals the pipeline. Decorators wrap only handlers that
+  already exist, so a handler registered after the call would run unwrapped; the seal makes that
+  throw at startup instead. Non-handler registrations (`AddInfrastructure`, `AddAPI`,
+  `AddModuleHealthChecks`, which follows the call) stay outside it.
 - **`AddEntityCrud<...>()` must come AFTER the module's convention scan**, in
   `Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/DependencyInjection.cs`. It registers the
   framework's create, update and delete handlers with `TryAdd`, which is what lets the module keep a
