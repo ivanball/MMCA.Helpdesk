@@ -17,7 +17,7 @@ namespace MMCA.Helpdesk.Migrations.SqlServer.Tickets.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.11")
+                .HasAnnotation("ProductVersion", "10.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -177,6 +177,9 @@ namespace MMCA.Helpdesk.Migrations.SqlServer.Tickets.Migrations
                     b.Property<int?>("UserId")
                         .HasColumnType("int");
 
+                    b.Property<string>("UserPermissions")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("UserRoles")
                         .HasMaxLength(512)
                         .IsUnicode(false)
@@ -263,6 +266,9 @@ namespace MMCA.Helpdesk.Migrations.SqlServer.Tickets.Migrations
 
                     b.Property<int?>("UserId")
                         .HasColumnType("int");
+
+                    b.Property<string>("UserPermissions")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("UserRoles")
                         .HasMaxLength(512)
