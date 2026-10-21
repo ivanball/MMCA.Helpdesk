@@ -36,12 +36,12 @@ public sealed class CreateTicketHandler(
     /// <param name="entity">The persisted ticket.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    protected override async Task OnCreatedAsync(Ticket entity, CancellationToken cancellationToken)
+    protected override Task OnCreatedAsync(Ticket entity, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(entity);
 
-        await eventBus.PublishAsync(
+        return eventBus.PublishAsync(
             new TicketOpenedIntegrationEvent(entity.Id, entity.RequesterUserId),
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken);
     }
 }
