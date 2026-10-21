@@ -33,8 +33,8 @@
     <PackageVersion Include="NetArchTest.eNhancedEdition" Version="1.4.5" />
     <PackageVersion Include="Riok.Mapperly" Version="4.3.1" />
     <PackageVersion Include="Meziantou.Analyzer" Version="3.0.315" />
-    <PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="18.7.23" />
-    <PackageVersion Include="Roslynator.Analyzers" Version="5.0.0" />
+    <PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="18.12.1" />
+    <PackageVersion Include="Roslynator.Analyzers" Version="5.0.1" />
     <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.35.0.4138" />
     <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.23.0" />
@@ -78,22 +78,22 @@
     <PackageVersion Include="Grpc.AspNetCore.Server.Reflection" Version="2.84.0" />
     <PackageVersion Include="Grpc.Net.ClientFactory" Version="2.84.0" />
     <PackageVersion Include="Grpc.Tools" Version="2.84.0" />
-    <PackageVersion Include="MMCA.Common.Grpc" Version="1.248.0" />
+    <PackageVersion Include="MMCA.Common.Grpc" Version="1.249.0" />
     <!-- MMCA Common Packages -->
-    <PackageVersion Include="MMCA.Common.Shared" Version="1.248.0" />
-    <PackageVersion Include="MMCA.Common.Domain" Version="1.248.0" />
-    <PackageVersion Include="MMCA.Common.Application" Version="1.248.0" />
-    <PackageVersion Include="MMCA.Common.Infrastructure" Version="1.248.0" />
-    <PackageVersion Include="MMCA.Common.API" Version="1.248.0" />
-    <PackageVersion Include="MMCA.Common.Aspire" Version="1.248.0" />
-    <PackageVersion Include="MMCA.Common.Aspire.Hosting" Version="1.248.0" />
+    <PackageVersion Include="MMCA.Common.Shared" Version="1.249.0" />
+    <PackageVersion Include="MMCA.Common.Domain" Version="1.249.0" />
+    <PackageVersion Include="MMCA.Common.Application" Version="1.249.0" />
+    <PackageVersion Include="MMCA.Common.Infrastructure" Version="1.249.0" />
+    <PackageVersion Include="MMCA.Common.API" Version="1.249.0" />
+    <PackageVersion Include="MMCA.Common.Aspire" Version="1.249.0" />
+    <PackageVersion Include="MMCA.Common.Aspire.Hosting" Version="1.249.0" />
     <PackageVersion Include="Yarp.ReverseProxy" Version="2.3.0" />
-    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery.Yarp" Version="10.10.0" />
-    <PackageVersion Include="MMCA.Common.Testing" Version="1.248.0" />
-    <PackageVersion Include="MMCA.Common.Testing.E2E" Version="1.248.0" />
-    <PackageVersion Include="MMCA.Common.Testing.UI" Version="1.248.0" />
-    <PackageVersion Include="MMCA.Common.Testing.Architecture" Version="1.248.0" />
-    <PackageVersion Include="MMCA.Common.UI" Version="1.248.0" />
-    <PackageVersion Include="MMCA.Common.UI.Web" Version="1.248.0" />
+    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery.Yarp" Version="10.11.0" />
+    <PackageVersion Include="MMCA.Common.Testing" Version="1.249.0" />
+    <PackageVersion Include="MMCA.Common.Testing.E2E" Version="1.249.0" />
+    <PackageVersion Include="MMCA.Common.Testing.UI" Version="1.249.0" />
+    <PackageVersion Include="MMCA.Common.Testing.Architecture" Version="1.249.0" />
+    <PackageVersion Include="MMCA.Common.UI" Version="1.249.0" />
+    <PackageVersion Include="MMCA.Common.UI.Web" Version="1.249.0" />
   </ItemGroup>
 </Project>
