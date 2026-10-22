@@ -135,10 +135,12 @@ surprise in someone else's service.
 It compares member lists as a set, so reordering two properties is free. Everything a consumer can
 observe is not: a missing member, an extra member, a changed type, and any change to the set of
 events itself. When you add an event or evolve one on purpose, version it (ADR-010), then update
-`ExpectedContract` in the same commit. The failure prints the live value to paste:
+`ExpectedContract` in the same commit. The failure lists each difference; to get the live contract
+as ready-to-paste literals, set `MMCA_CONTRACT_SNAPSHOT_OUT` to a file path and re-run, and the test
+writes them there (it still fails until `ExpectedContract` matches):
 
 ```bash
-dotnet test --project Tests/Architecture/MMCA.Helpdesk.Architecture.Tests/MMCA.Helpdesk.Architecture.Tests.csproj \
+MMCA_CONTRACT_SNAPSHOT_OUT="$PWD/contract.txt" dotnet test --project Tests/Architecture/MMCA.Helpdesk.Architecture.Tests/MMCA.Helpdesk.Architecture.Tests.csproj \
   -- --filter-class "*IntegrationEventContract*"
 ```
 

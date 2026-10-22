@@ -42,7 +42,7 @@ jobs:
           echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Publishing MMCA.Templates $VERSION"
 
-      # The gate, not a formality: it generates two solutions, builds them in package mode against
+      # The gate, not a formality: it generates three solutions, builds them in package mode against
       # the released MMCA.Common, runs their tests, and fails on any residual seed token. A template
       # that produces a red solution is worse than no template.
       - name: Smoke (generate, build, test)
