@@ -1310,8 +1310,9 @@ Either rewrite those lines here or drop the copyOnly modifier from .template.con
 # It used to be deleted here, on the grounds that no single frozen literal is right for every name
 # the scaffold can be given. Two things changed. IntegrationEventContractTestsBase now compares each
 # event's members as a SET rather than a sequence, so the aggregate's own Id moving position is no
-# longer a difference; and every other part of the literal (the namespace, the event type name) is
-# an ordinary symbol substitution that the template already performs everywhere else. What is left
+# longer a difference; and every other part of the literal (the [EventName] key it is keyed by, which
+# spells the module and event names, and the Id member's name) is an ordinary symbol substitution
+# that the template already performs everywhere else. What is left
 # is the one member the shape flags can remove, RequesterUserId, and that is a comma-separated list
 # like any other: $optionalAxisLines rewrites it.
 #
