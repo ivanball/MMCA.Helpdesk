@@ -100,12 +100,11 @@ public sealed class Ticket : AuditableAggregateRootEntity<TicketIdentifierType>,
 
         // template:end status
         var commentResult = TicketComment.Create(id, body, authorUserId);
-        if (commentResult.IsFailure)
+        if (!commentResult.TryGetValue(out var comment))
         {
             return Result.Failure<TicketComment>(commentResult.Errors);
         }
 
-        var comment = commentResult.Value!;
         _comments.Add(comment);
         AddDomainEvent(new TicketChanged(DomainEntityState.Updated, Id));
 
@@ -142,12 +141,12 @@ public sealed class Ticket : AuditableAggregateRootEntity<TicketIdentifierType>,
 
         // template:end status
         var commentResult = GetChildOrNotFound(_comments, commentId, nameof(EditComment));
-        if (commentResult.IsFailure)
+        if (!commentResult.TryGetValue(out var comment))
         {
             return Result.Failure(commentResult.Errors);
         }
 
-        var editResult = commentResult.Value!.EditBody(body);
+        var editResult = comment.EditBody(body);
         if (editResult.IsFailure)
         {
             return editResult;
