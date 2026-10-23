@@ -89,7 +89,7 @@ public sealed class TicketsController(
         CancellationToken cancellationToken)
     {
         var result = await createHandler.HandleAsync(request, cancellationToken).ConfigureAwait(false);
-        if (result.IsFailure)
+        if (!result.TryGetValue(out var dto))
         {
             return HandleFailure(result.Errors);
         }
@@ -97,7 +97,6 @@ public sealed class TicketsController(
         // Build a relative Location URI directly rather than CreatedAtAction(nameof(GetByIdAsync), ...):
         // route-link generation against the versioned base GetById route throws "No route matches the
         // supplied values".
-        var dto = result.Value!;
         var locationUri = new Uri(string.Create(CultureInfo.InvariantCulture, $"Tickets/{dto.Id}"), UriKind.Relative);
         return Created(locationUri, dto);
     }
