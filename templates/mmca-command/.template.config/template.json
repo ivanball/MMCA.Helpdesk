@@ -20,6 +20,7 @@
       "datatype": "text",
       "isRequired": true,
       "replaces": "MMCA.Helpdesk",
+      "fileRename": "MMCA.Helpdesk",
       "description": "The solution / root namespace this slice belongs to, for example Contoso.Support."
     },
     "module": {
@@ -27,6 +28,7 @@
       "datatype": "text",
       "isRequired": true,
       "replaces": "Tickets",
+      "fileRename": "Tickets",
       "description": "The module this slice goes into, plural PascalCase, for example Billing."
     },
     "aggregate": {
@@ -90,12 +92,24 @@
     "lowerCase": { "identifier": "lowerCase" }
   },
 
+  "sources": [
+    {
+      "source": "./",
+      "target": "./",
+      "exclude": [ ".template.config/**", "tests/**" ]
+    },
+    {
+      "source": "./tests/",
+      "target": "../../../../../../../"
+    }
+  ],
+
   "postActions": [
     {
       "description": "Wire the slice up.",
       "manualInstructions": [
         {
-          "text": "1. Add the guarded method this command calls to your aggregate, returning Result.\n2. Map the command in your module's controller (writes inject handlers directly).\n3. Handlers are convention-scanned by Scrutor, so there is no DI registration to add."
+          "text": "1. Add the guarded method this command calls to your aggregate, returning Result.\n2. Map the command in your module's controller (writes inject handlers directly).\n3. Handlers are convention-scanned by Scrutor, so there is no DI registration to add.\n4. The slice also wrote <Name>CommandCacheBuilder.cs into Tests/Modules/<Module>/<App>.<Module>.Application.Tests/<Module>/UseCases/<Name>/, which the module's cache-invalidation test uses to check the command's cache prefix. It is placed relative to the slice folder, so generate the slice from the module's <App>.<Module>.Application/<Module>/UseCases folder; anywhere else, move that file there."
         }
       ],
       "actionId": "AC1156F7-BB77-4DB8-B28F-24EEBCCA1E5C",

@@ -190,13 +190,13 @@ public class TicketCacheInvalidationTests
 
         string[] unbuilt = [.. discovered.Where(t => !builders.ContainsKey(t)).Select(t => t.ToString())];
         unbuilt.Should().BeEmpty(
-            $"every discovered ICacheInvalidating command needs a builder in {nameof(CommandBuilders)} so its CachePrefix can be checked; add one for: {string.Join(", ", unbuilt)}");
+            $"every discovered ICacheInvalidating command needs a builder (an entry in {nameof(HandWrittenBuilders)} or an {nameof(ICacheInvalidatingCommandBuilder)} in this project) so its CachePrefix can be checked; add one for: {string.Join(", ", unbuilt)}");
 
         foreach (var commandType in discovered)
         {
             var command = builders[commandType]();
 
-            command.Should().BeOfType(commandType, $"the {nameof(CommandBuilders)} entry for {commandType.Name} must build that type");
+            command.Should().BeOfType(commandType, $"the builder registered for {commandType.Name} must build that type");
             command.CachePrefix.Should().Be(
                 TicketCacheKeys.Prefix,
                 $"{commandType.Name} must invalidate the prefix every ticket read is keyed under");
@@ -235,12 +235,33 @@ public class TicketCacheInvalidationTests
         && typeof(ICacheInvalidating).IsAssignableFrom(type);
 
     /// <summary>
-    /// One builder per discovered command type. A command added to the module without an entry here
-    /// fails <see cref="EveryTicketCommand_InvalidatesThePrefixTheReadIsKeyedUnder"/> by name, which
-    /// is the prompt to add one.
+    /// One builder per discovered command type: the table in <see cref="HandWrittenBuilders"/>, plus
+    /// every <see cref="ICacheInvalidatingCommandBuilder"/> in this assembly (the mmca-command slice
+    /// template ships one with each command it scaffolds). A command added to the module with neither
+    /// fails <see cref="EveryTicketCommand_InvalidatesThePrefixTheReadIsKeyedUnder"/> by name, which is
+    /// the prompt to add one, and a command built in both places fails here so there is one owner.
     /// </summary>
     /// <returns>The builders, keyed by the exact command type each one builds.</returns>
-    private static Dictionary<Type, Func<ICacheInvalidating>> CommandBuilders() => new()
+    private static Dictionary<Type, Func<ICacheInvalidating>> CommandBuilders()
+    {
+        var builders = HandWrittenBuilders();
+        var shipped = typeof(TicketCacheInvalidationTests).Assembly.GetTypes()
+            .Where(t => t is { IsClass: true, IsAbstract: false } && typeof(ICacheInvalidatingCommandBuilder).IsAssignableFrom(t))
+            .Select(t => (ICacheInvalidatingCommandBuilder)Activator.CreateInstance(t)!);
+
+        foreach (var builder in shipped)
+        {
+            builders.ContainsKey(builder.CommandType).Should().BeFalse(
+                $"{builder.GetType().Name} builds {builder.CommandType.Name}, which already has an entry in {nameof(HandWrittenBuilders)}; keep one");
+            builders[builder.CommandType] = builder.Build;
+        }
+
+        return builders;
+    }
+
+    /// <summary>The builders for the commands written by hand in this module.</summary>
+    /// <returns>The builders, keyed by the exact command type each one builds.</returns>
+    private static Dictionary<Type, Func<ICacheInvalidating>> HandWrittenBuilders() => new()
     {
         [typeof(TicketCreateRequest)] = () => new TicketCreateRequest
         {
@@ -253,7 +274,6 @@ public class TicketCacheInvalidationTests
             // template:end owner
         },
         [typeof(UpdateEntityCommand<Ticket, TicketUpdateRequest, TicketIdentifierType>)] = () => UpdateCommand("Cannot log in"),
-        [typeof(DeleteTicketCommand)] = () => new DeleteTicketCommand(TicketId),
         [typeof(DeleteEntityCommand<Ticket, TicketIdentifierType>)] = () => new DeleteEntityCommand<Ticket, TicketIdentifierType>(TicketId),
         // template:begin status
         [typeof(ChangeTicketStatusCommand)] = () => new ChangeTicketStatusCommand(TicketId, TicketStatus.Closed) { RowVersion = ClientToken },
