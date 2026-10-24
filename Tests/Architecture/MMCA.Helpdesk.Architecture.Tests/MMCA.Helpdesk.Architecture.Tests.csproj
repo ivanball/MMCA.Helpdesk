@@ -32,4 +32,10 @@
     <ProjectReference Include="..\..\..\Source\Modules\Tickets\MMCA.Helpdesk.Tickets.Shared\MMCA.Helpdesk.Tickets.Shared.csproj" />
     <ProjectReference Include="..\..\..\Source\Modules\Tickets\MMCA.Helpdesk.Tickets.API\MMCA.Helpdesk.Tickets.API.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Build order only: DesignTimeFactoryHostSettingsTests loads the migrations assembly from that
+         project's own output. ReferenceOutputAssembly false keeps it out of this output folder, so its
+         generated migration code is neither compiled against nor counted toward coverage. -->
+    <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Helpdesk.Migrations.SqlServer.Tickets\MMCA.Helpdesk.Migrations.SqlServer.Tickets.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
 </Project>
