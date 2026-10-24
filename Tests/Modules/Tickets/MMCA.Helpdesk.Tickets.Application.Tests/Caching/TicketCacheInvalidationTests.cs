@@ -1,6 +1,9 @@
+using System.Reflection;
 using AwesomeAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Application.Settings;
 using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Application.UseCases.Crud;
 using MMCA.Common.Application.UseCases.Decorators;
@@ -46,6 +49,26 @@ public class TicketCacheInvalidationTests
     /// commands require it (ADR-035), so one value serves every command built here.
     /// </summary>
     private static readonly byte[] ClientToken = [1, 2, 3, 4];
+
+    /// <summary>
+    /// The commands the hand-kept list held before discovery replaced it. A floor, not the source of
+    /// what is checked: <see cref="Discovery_FindsAtLeastEveryCommandTheOldHandListNamed"/> asserts
+    /// discovery finds each of them, so a change to the discovery cannot silently shrink coverage.
+    /// </summary>
+    private static readonly Type[] HandListedBeforeDiscovery =
+    [
+        typeof(TicketCreateRequest),
+        typeof(UpdateEntityCommand<Ticket, TicketUpdateRequest, TicketIdentifierType>),
+        typeof(DeleteTicketCommand),
+        // template:begin status
+        typeof(ChangeTicketStatusCommand),
+        // template:end status
+        // template:begin child
+        typeof(AddCommentCommand),
+        typeof(EditCommentCommand),
+        typeof(RemoveCommentCommand),
+        // template:end child
+    ];
 
     /// <summary>
     /// The update command is the framework's generic one, and its default <c>CachePrefix</c> is the
@@ -150,24 +173,76 @@ public class TicketCacheInvalidationTests
     }
 
     [Fact]
+    public void Discovery_FindsAtLeastEveryCommandTheOldHandListNamed() =>
+        DiscoveredCommandTypes().Should().Contain(
+            HandListedBeforeDiscovery,
+            "discovery replaced a hand-kept list, and must never check fewer commands than that list did");
+
+    [Fact]
     public void EveryTicketCommand_InvalidatesThePrefixTheReadIsKeyedUnder()
     {
         // Nothing at compile time ties CachePrefix to CacheKey: the decorator matches them as
-        // strings. This is the test that keeps a renamed key from silently going stale.
+        // strings. This is the test that keeps a renamed key from silently going stale, and the
+        // commands are DISCOVERED, so a new ICacheInvalidating command is checked the day it lands.
         string readKey = new GetTicketByIdQuery(TicketId).CacheKey;
+        var builders = CommandBuilders();
+        var discovered = DiscoveredCommandTypes();
 
-        foreach (var command in AllTicketCommands())
+        string[] unbuilt = [.. discovered.Where(t => !builders.ContainsKey(t)).Select(t => t.ToString())];
+        unbuilt.Should().BeEmpty(
+            $"every discovered ICacheInvalidating command needs a builder in {nameof(CommandBuilders)} so its CachePrefix can be checked; add one for: {string.Join(", ", unbuilt)}");
+
+        foreach (var commandType in discovered)
         {
-            command.CachePrefix.Should().Be(TicketCacheKeys.Prefix);
+            var command = builders[commandType]();
+
+            command.Should().BeOfType(commandType, $"the {nameof(CommandBuilders)} entry for {commandType.Name} must build that type");
+            command.CachePrefix.Should().Be(
+                TicketCacheKeys.Prefix,
+                $"{commandType.Name} must invalidate the prefix every ticket read is keyed under");
             readKey.Should().StartWith(
                 command.CachePrefix,
-                $"{command.GetType().Name} would otherwise leave the cached ticket read behind");
+                $"{commandType.Name} would otherwise leave the cached ticket read behind");
         }
     }
 
-    private static IEnumerable<ICacheInvalidating> AllTicketCommands() =>
-    [
-        new TicketCreateRequest
+    /// <summary>
+    /// Every concrete <see cref="ICacheInvalidating"/> command the module can be sent, found two
+    /// ways. The module's own commands are the concrete implementers declared in its assemblies. The
+    /// generic write side's commands are declared in MMCA.Common and closed over the module's types
+    /// by <c>AddEntityCrud</c>, so no module assembly declares them: they are found as the command
+    /// type of every command handler the module registers.
+    /// </summary>
+    /// <returns>The distinct command types, each to be checked.</returns>
+    private static IReadOnlyCollection<Type> DiscoveredCommandTypes()
+    {
+        Assembly[] moduleAssemblies = [typeof(ClassReference).Assembly, typeof(Ticket).Assembly, typeof(TicketDTO).Assembly];
+        var declared = moduleAssemblies.Distinct().SelectMany(a => a.GetTypes()).Where(IsConcreteCacheInvalidating);
+
+        var services = new ServiceCollection();
+        services.AddModuleTicketsApplication(new ApplicationSettings());
+        var handled = services
+            .Select(d => d.ServiceType)
+            .Where(t => t.IsConstructedGenericType && t.GetGenericTypeDefinition() == typeof(ICommandHandler<,>))
+            .Select(t => t.GetGenericArguments()[0])
+            .Where(IsConcreteCacheInvalidating);
+
+        return [.. declared.Union(handled)];
+    }
+
+    private static bool IsConcreteCacheInvalidating(Type type) =>
+        type is { IsClass: true, IsAbstract: false, ContainsGenericParameters: false }
+        && typeof(ICacheInvalidating).IsAssignableFrom(type);
+
+    /// <summary>
+    /// One builder per discovered command type. A command added to the module without an entry here
+    /// fails <see cref="EveryTicketCommand_InvalidatesThePrefixTheReadIsKeyedUnder"/> by name, which
+    /// is the prompt to add one.
+    /// </summary>
+    /// <returns>The builders, keyed by the exact command type each one builds.</returns>
+    private static Dictionary<Type, Func<ICacheInvalidating>> CommandBuilders() => new()
+    {
+        [typeof(TicketCreateRequest)] = () => new TicketCreateRequest
         {
             Title = "Cannot log in",
             // template:begin description
@@ -177,17 +252,18 @@ public class TicketCacheInvalidationTests
             RequesterUserId = 42,
             // template:end owner
         },
-        UpdateCommand("Cannot log in"),
-        new DeleteTicketCommand(TicketId),
+        [typeof(UpdateEntityCommand<Ticket, TicketUpdateRequest, TicketIdentifierType>)] = () => UpdateCommand("Cannot log in"),
+        [typeof(DeleteTicketCommand)] = () => new DeleteTicketCommand(TicketId),
+        [typeof(DeleteEntityCommand<Ticket, TicketIdentifierType>)] = () => new DeleteEntityCommand<Ticket, TicketIdentifierType>(TicketId),
         // template:begin status
-        new ChangeTicketStatusCommand(TicketId, TicketStatus.Closed) { RowVersion = ClientToken },
+        [typeof(ChangeTicketStatusCommand)] = () => new ChangeTicketStatusCommand(TicketId, TicketStatus.Closed) { RowVersion = ClientToken },
         // template:end status
         // template:begin child
-        new AddCommentCommand(TicketId, "Looking into it.", AuthorUserId: 7),
-        new EditCommentCommand(TicketId, CommentId: 1, "Still looking into it.") { RowVersion = ClientToken },
-        new RemoveCommentCommand(TicketId, CommentId: 1),
+        [typeof(AddCommentCommand)] = () => new AddCommentCommand(TicketId, "Looking into it.", AuthorUserId: 7),
+        [typeof(EditCommentCommand)] = () => new EditCommentCommand(TicketId, CommentId: 1, "Still looking into it.") { RowVersion = ClientToken },
+        [typeof(RemoveCommentCommand)] = () => new RemoveCommentCommand(TicketId, CommentId: 1),
         // template:end child
-    ];
+    };
 
     private static Result<TicketDTO> TicketResult() =>
         Result.Success(new TicketDTO
