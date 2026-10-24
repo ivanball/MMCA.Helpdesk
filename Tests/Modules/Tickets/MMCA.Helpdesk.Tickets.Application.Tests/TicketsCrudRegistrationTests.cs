@@ -8,6 +8,7 @@ using MMCA.Common.Application.UseCases.Crud;
 using MMCA.Common.Application.Validation;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.Create;
+using MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.Delete;
 using MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.Update;
 using MMCA.Helpdesk.Tickets.Domain.Tickets;
 using MMCA.Helpdesk.Tickets.Shared.Tickets;
@@ -74,6 +75,20 @@ public sealed class TicketsCrudRegistrationTests
         Registrations.Should().Contain(d =>
             d.ServiceType == typeof(ICommandHandler<TicketCreateRequest, Result<TicketDTO>>)
             && d.ImplementationType == typeof(CreateTicketHandler));
+
+    /// <summary>
+    /// The delete verb deliberately does NOT go through the framework's generic handler, which
+    /// <c>AddEntityCrud</c> registers too: the controller sends the module's own
+    /// <see cref="DeleteTicketCommand"/>, and the hand-written <see cref="DeleteTicketHandler"/> that
+    /// answers it loads the children so <c>Delete()</c> can cascade to them. Exactly one registration,
+    /// so a second handler for the same command cannot silently take the verb over.
+    /// <see cref="Deletion.DeleteTicketCascadeTests"/> pins what that handler does.
+    /// </summary>
+    [Fact]
+    public void ModuleScan_Registers_TheHandWrittenDeleteHandler() =>
+        Registrations.Where(d => d.ServiceType == typeof(ICommandHandler<DeleteTicketCommand, Result>))
+            .Should().ContainSingle()
+            .Which.ImplementationType.Should().Be<DeleteTicketHandler>();
 
     // template:begin child
     /// <summary>

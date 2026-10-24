@@ -1406,6 +1406,25 @@ foreach ($slice in $slices) {
     Write-Host "$($slice.Name) staged: $($slice.Files.Count) files -> $target"
 }
 
+# The command slice also ships its cache-invalidation test builder, for the same reason it ships its
+# validator: the module's <Aggregate>CacheInvalidationTests discovers every ICacheInvalidating
+# command and fails by name on one it has no builder for, so a scaffolded command that arrived
+# without one would turn the adopter's next test run red. The builder belongs to the Application.Tests
+# project, not to the slice folder, so it is staged under tests/ with the repo-relative path intact
+# (the template's second source writes it seven levels up from the slice folder, at the solution
+# root) and with the use-case folder named after the sourceName, so the slice name renames it.
+$commandBuilderFrom = Join-Path $repoRoot 'Tests/Modules/Tickets/MMCA.Helpdesk.Tickets.Application.Tests/Tickets/UseCases/Delete/DeleteTicketCommandCacheBuilder.cs'
+if (-not (Test-Path $commandBuilderFrom)) {
+    throw "mmca-command ships its cache-invalidation test builder from $commandBuilderFrom, which no longer exists. Update stage.ps1."
+}
+$commandBuilderTo = Join-Path $OutputPath 'mmca-command/tests/Tests/Modules/Tickets/MMCA.Helpdesk.Tickets.Application.Tests/Tickets/UseCases/DeleteTicket'
+New-Item -ItemType Directory -Path $commandBuilderTo -Force | Out-Null
+Copy-Item -Path $commandBuilderFrom -Destination $commandBuilderTo -Force
+if ((Remove-TemplateMarkers -Path (Join-Path $commandBuilderTo 'DeleteTicketCommandCacheBuilder.cs')) -gt 0) {
+    Write-Host "mmca-command: template marker line(s) stripped from the test builder"
+}
+Write-Host "mmca-command: cache-invalidation test builder staged -> $commandBuilderTo"
+
 # ---- derived: make each slice's eager-load optional ----------------------------------------------
 # Both slices are staged from use cases whose aggregate owns a Comments collection: the command from
 # Delete (loaded tracked so the soft-delete cascades), the query from GetById (loaded to map children
