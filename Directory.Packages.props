@@ -32,7 +32,7 @@
     <PackageVersion Include="bunit" Version="2.12.5" />
     <PackageVersion Include="NetArchTest.eNhancedEdition" Version="1.4.5" />
     <PackageVersion Include="Riok.Mapperly" Version="4.3.1" />
-    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.315" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.317" />
     <PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="18.12.1" />
     <PackageVersion Include="Roslynator.Analyzers" Version="5.0.1" />
     <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.35.0.4138" />
@@ -45,7 +45,7 @@
     <PackageVersion Include="Moq" Version="4.21.0" />
     <PackageVersion Include="Respawn" Version="7.0.0" />
     <PackageVersion Include="Deque.AxeCore.Playwright" Version="4.14.0" />
-    <PackageVersion Include="Microsoft.Playwright" Version="1.63.0" />
+    <PackageVersion Include="Microsoft.Playwright" Version="1.64.1" />
     <PackageVersion Include="Testcontainers.MsSql" Version="4.16.0" />
     <!-- Aspire. Every comment about the orchestration project lives INSIDE its region, so a solution
          generated without one is not handed prose about a project it does not have. -->
@@ -53,8 +53,8 @@
     <!-- These three pins belong to the orchestration project alone, which the no-aspire option does
          not generate. Aspire.StackExchange.* and the service-discovery/resilience pins below belong
          to the service hosts and stay in every shape, because AddServiceDefaults() does. -->
-    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.6.2" />
-    <PackageVersion Include="Aspire.Hosting.Redis" Version="13.6.2" />
+    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.6.4" />
+    <PackageVersion Include="Aspire.Hosting.Redis" Version="13.6.4" />
     <!-- template:end aspire -->
     <!-- template:begin aspireSqlServer -->
     <!-- The one engine-specific orchestration pin: SQLite has no container resource, so the sqlite
@@ -63,9 +63,9 @@
          The postgresql option DOES declare a container, and its hosting integration is spelled
          Aspire.Hosting.PostgreSQL at the same version, which is exactly what the engineName rename
          produces from this id. So this one line serves both server engines unchanged. -->
-    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.6.2" />
+    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.6.4" />
     <!-- template:end aspireSqlServer -->
-    <PackageVersion Include="Aspire.StackExchange.Redis.DistributedCaching" Version="13.6.2" />
+    <PackageVersion Include="Aspire.StackExchange.Redis.DistributedCaching" Version="13.6.4" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.11.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.11.0" />
     <!-- OpenTelemetry.Api pinned directly to force transitive resolution to non-vulnerable version. -->
