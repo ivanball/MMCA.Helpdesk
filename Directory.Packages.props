@@ -6,10 +6,10 @@
   <ItemGroup>
     <PackageVersion Include="AwesomeAssertions" Version="9.6.0" />
     <PackageVersion Include="AspNet.Security.OAuth.GitHub" Version="10.0.0" />
-    <PackageVersion Include="Microsoft.AspNetCore.Authentication.Google" Version="10.0.13" />
-    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.13" />
-    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.13" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.Google" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.14" />
     <!-- The two engine provider pins, kept together because scaffolding swaps them as a pair.
          Both ids carry the engine's name as a substring, and the engineName symbol in
          .template.config/template.json rewrites exactly that substring, so the sqlite database
@@ -24,12 +24,12 @@
          XML comments cannot carry a double hyphen, so option names are spelled out in prose here. -->
     <!-- template:begin sqlserverOrSqlite -->
     <PackageVersion Include="AspNetCore.HealthChecks.SqlServer" Version="9.0.0" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.14" />
     <!-- template:end sqlserverOrSqlite -->
     <PackageVersion Include="xunit.v3" Version="4.0.2" />
     <PackageVersion Include="MudBlazor" Version="9.11.0" />
     <!-- bUnit v2 (BunitContext / Render API) — xUnit v3 / Microsoft Testing Platform compatible. -->
-    <PackageVersion Include="bunit" Version="2.12.5" />
+    <PackageVersion Include="bunit" Version="2.13.3" />
     <PackageVersion Include="NetArchTest.eNhancedEdition" Version="1.4.5" />
     <PackageVersion Include="Riok.Mapperly" Version="4.3.1" />
     <PackageVersion Include="Meziantou.Analyzer" Version="3.0.317" />
@@ -41,7 +41,7 @@
     <PackageVersion Include="coverlet.collector" Version="10.1.0" />
     <!-- Lockstep with the resolved Microsoft.Testing.Platform (2.5.1, via xunit.v3 4.0.2). -->
     <PackageVersion Include="Microsoft.Testing.Extensions.Retry" Version="2.5.1" />
-    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.14" />
     <PackageVersion Include="Moq" Version="4.21.0" />
     <PackageVersion Include="Respawn" Version="7.0.0" />
     <PackageVersion Include="Deque.AxeCore.Playwright" Version="4.14.0" />
