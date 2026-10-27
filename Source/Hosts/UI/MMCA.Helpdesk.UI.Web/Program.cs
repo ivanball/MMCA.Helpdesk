@@ -3,6 +3,7 @@ using MMCA.Common.Aspire;
 using MMCA.Common.UI;
 using MMCA.Common.UI.Services.Culture;
 using MMCA.Common.UI.Theme;
+using MMCA.Common.UI.Web.Pwa;
 using MMCA.Helpdesk.UI.Web.Components;
 using MMCA.Helpdesk.UI.Web.Services;
 using MudBlazor.Services;
@@ -70,6 +71,9 @@ app.UseHttpsRedirection();
 app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapDefaultEndpoints();
+
+// /service-worker.js at the site root: the installable web app's offline page (MMCA.Common ADR-136).
+app.MapCommonServiceWorker();
 
 // Culture switch endpoint (ADR-027): writes the standard ASP.NET culture cookie and reloads. The
 // helper maps it AllowAnonymous (SEC-Common-16), so it stays public the day this host gains an

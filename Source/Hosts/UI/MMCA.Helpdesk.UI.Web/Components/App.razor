@@ -14,6 +14,12 @@
     @* The scoped-css bundle. Without this link the layout's own .razor.css never reaches the browser,
        which is what styles the skip link. *@
     <link rel="stylesheet" href="MMCA.Helpdesk.UI.Web.styles.css" />
+    @* The manifest and the touch icon make the site installable, with the framework service worker
+       (MapCommonServiceWorker in Program.cs, pwa-register.js below) supplying the offline page.
+       Replace the icons and the manifest's colours with the app's own brand. *@
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <meta name="theme-color" content="#1565C0" />
     <HeadOutlet @rendermode="InteractiveServer" />
 </head>
 
@@ -21,6 +27,7 @@
     <Routes @rendermode="InteractiveServer" />
     <script src="_framework/blazor.web.js"></script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
+    <script src="_content/MMCA.Common.UI.Web/pwa-register.js"></script>
 </body>
 
 </html>
