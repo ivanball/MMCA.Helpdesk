@@ -345,6 +345,14 @@
           "copyOnly": [ "build/add-module.ps1" ]
         },
         {
+          "comment": "The adopter's agent guidance (AGENTS.md, the CLAUDE.md that imports it, and the slice skill driving mmca-command, mmca-query and mmca-module), copied verbatim for the add-module.ps1 reason: it is prose about this scaffold that names the flags and words the rename tokens replace, so replacement would rewrite the instructions themselves. It speaks in <App> / <Module> / <Aggregate> placeholders instead of seed names; build/templates/stage.ps1 asserts it names none of them and that this declaration still exists.",
+          "copyOnly": [
+            "AGENTS.md",
+            "CLAUDE.md",
+            ".claude/skills/slice/SKILL.md"
+          ]
+        },
+        {
           "comment": "--flat: the whole child (comment) axis, file by file. Partial-file removals are marker regions in the seed that stage.ps1 turns into conditional directives. TicketUpdateHandler is on the list for a subtler reason: it exists only to eager-load the children the update response carries, so with no child collection the framework's own generic update handler, registered by AddEntityCrud, IS the whole update slice.",
           "condition": "(flat)",
           "exclude": [

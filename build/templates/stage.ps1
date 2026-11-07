@@ -47,7 +47,10 @@ if ($Clean -and (Test-Path $OutputPath)) {
 $excludedDirs = @(
     '.git', '.vs', '.idea', '.vscode',
     'bin', 'obj', 'out', 'artifacts', 'nupkgs', 'logs',
-    'build', 'templates'
+    'build', 'templates',
+    # Any agent configuration in the seed belongs to whoever maintains the seed. The generated app's
+    # agent files (AGENTS.md, CLAUDE.md, the slice skill) come from the overlay alone.
+    '.claude'
 )
 
 # Files that belong to THIS repo rather than to a generated app. The overlay supplies replacements
@@ -1110,6 +1113,12 @@ $overlayExpectations = @(
     'local.props'
     '.github/workflows/ci.yml'
     'build/add-module.ps1'
+    # The adopter's agent guidance: the framework rules a coding agent needs, the Claude Code pointer
+    # that imports them, and the one skill that drives the slice templates. The seed's own AGENTS.md
+    # and CLAUDE.md are excluded above, so without these the generated app ships no agent file at all.
+    'AGENTS.md'
+    'CLAUDE.md'
+    '.claude/skills/slice/SKILL.md'
     # The three whole-file variants. Neither .json nor .md carries marker regions in this seed (the
     # sqlite appsettings differs structurally rather than by a line, and prose has no conditional
     # form), so each ships beside its default and template.json renames it into place under the flag
@@ -1577,7 +1586,7 @@ Template markers survived staging in $($survivingMarkers.Count) file(s) and woul
 # The files declared copyOnly in mmca-app's template.json. No symbol replacement runs over them, so
 # the prose hazards below cannot reach them; what they DO carry is guarded on its own terms further
 # down, because a copyOnly file leaks any seed token it holds straight into the generated app.
-$copyOnlyLeaves = @('.editorconfig', 'PageHeading.razor', 'SectionHeading.razor', 'add-module.ps1')
+$copyOnlyLeaves = @('.editorconfig', 'PageHeading.razor', 'SectionHeading.razor', 'add-module.ps1', 'AGENTS.md', 'CLAUDE.md', 'SKILL.md')
 
 # 2. Three symbols replace an ordinary English word by substring, so every occurrence in the staged
 #    trees that is NOT the concept gets mangled for anyone who passes the flag: --child on "comment",
@@ -1810,5 +1819,34 @@ Reword those lines, or move them back into the default README.md.
 "@
 }
 
-Write-Host "Guards passed: no surviving markers, no 'comment' / 'title' / 'opened' prose hazards, copyOnly declared for .editorconfig, both razor wrappers and $wireUpLeaf, $wireUpLeaf names no seed noun, and all $($variantRenames.Count) whole-file variants are declared and renamed."
+# 10. The adopter's agent files. They are prose ABOUT the scaffold, naming the very flags and words the
+#     rename tokens replace (--title, --child, "comment"), so they are copyOnly for the add-module.ps1
+#     reason, and the same inverted leak check follows: no rename reaches them, so a seed noun written
+#     into one ships verbatim and tells the adopter's agent about a module that does not exist. They
+#     speak in <App> / <Module> / <Aggregate> placeholders and discover the real names from the tree.
+$agentFiles = @('AGENTS.md', 'CLAUDE.md', '.claude/skills/slice/SKILL.md')
+
+foreach ($agentFile in $agentFiles) {
+    $stagedAgentFile = Join-Path $appStaging $agentFile
+    if (-not (Test-Path $stagedAgentFile)) {
+        throw "$agentFile did not reach mmca-app staging. Generated apps would ship without the agent guidance; check build/templates/overlay/mmca-app/."
+    }
+
+    $agentLeaks = @(Select-String -Path $stagedAgentFile -Pattern 'MMCA\.Helpdesk|Helpdesk|Ticket|ticket' -CaseSensitive |
+        ForEach-Object { "line $($_.LineNumber): $($_.Line.Trim())" })
+
+    if ($agentLeaks) {
+        throw @"
+$agentFile names the seed, and it is copyOnly so no rename reaches it:
+  $($agentLeaks -join "`n  ")
+Write the placeholder (<App>, <Module>, <Aggregate>) instead.
+"@
+    }
+
+    if ($appTemplateJson -notmatch "(?s)`"copyOnly`"\s*:\s*\[[^\]]*`"$([regex]::Escape($agentFile))`"") {
+        throw "mmca-app's template.json no longer declares $agentFile under a copyOnly modifier. Without it --title / --child / --event-verb rewrite the flag names and words in the agent guidance."
+    }
+}
+
+Write-Host "Guards passed: no surviving markers, no 'comment' / 'title' / 'opened' prose hazards, copyOnly declared for .editorconfig, both razor wrappers, $wireUpLeaf and the $($agentFiles.Count) agent files, none of them names a seed noun, and all $($variantRenames.Count) whole-file variants are declared and renamed."
 Write-Host "Staging complete."
