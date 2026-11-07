@@ -214,9 +214,10 @@ public sealed class FeatureFlagLifecycleTests : FeatureFlagLifecycleTestsBase
 
 // Tenant scope (ADR-073): this seed is the framework's tenancy host, so every entity carrying a TenantId
 // must implement ITenantEntity, and every module entity must be tenant-scoped or named in
-// GlobalEntityTypes with the reason every tenant shares its rows. Non-vacuous: Ticket and TicketComment
-// are the entities the rule inspects. Keep GlobalEntityTypes a reviewed inventory: an entry is a
-// decision that rows cross tenants, never a way to quiet the rule.
+// GlobalEntityTypes with the reason every tenant shares its rows. Non-vacuous: every module entity
+// implements ITenantEntity today, and the base fails when it finds no module entity at all. Keep
+// GlobalEntityTypes a reviewed inventory: an entry is a decision that rows cross tenants, never a way
+// to quiet the rule.
 public sealed class TenantScopeConventionTests : TenantScopeConventionTestsBase
 {
     protected override IArchitectureMap Map { get; } = new HelpdeskArchitectureMap();
