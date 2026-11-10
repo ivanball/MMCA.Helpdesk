@@ -314,6 +314,21 @@
       "description": "Emit a local.props that builds against ../MMCA.Common/Source via ProjectReference instead of consuming the published nuget.org packages. Use this only when the app sits beside the framework source in the same workspace."
     },
 
+    "sdkBand": {
+      "type": "generated",
+      "generator": "switch",
+      "replaces": "11.0.100",
+      "description": "The SDK version global.json pins. This repository builds MMCA.Common from source, and that source targets net10.0 and net11.0, so it needs the .NET 11 SDK. A scaffolded app on the published packages targets net10.0 only and must keep building with a .NET 10 SDK, so its global.json gets the .NET 10 band; only a -localMmca scaffold keeps the .NET 11 pin.",
+      "parameters": {
+        "evaluator": "C++",
+        "datatype": "string",
+        "cases": [
+          { "condition": "(localMmca)", "value": "11.0.100" },
+          { "condition": "(!localMmca)", "value": "10.0.100" }
+        ]
+      }
+    },
+
     "skipRestore": {
       "type": "parameter",
       "datatype": "bool",

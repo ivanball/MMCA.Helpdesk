@@ -18,7 +18,7 @@ The `MMCA.Templates` pack (`mmca-app`, `mmca-module`, `mmca-command`, `mmca-quer
 
 ## Build, test, run
 
-This scaffold defaults to **local-source mode**: `local.props` is **committed here** (unlike Store/ADC, where it is gitignored), sets `UseLocalMMCA=true` and points at `../MMCA.Common/Source`, so packages resolve via `ProjectReference` with no token. The swap lives in `Directory.Build.targets`; `nuget.config` lists nuget.org only. To consume published packages instead, just delete `local.props`. **Local-source mode requires `../MMCA.Common/Source` to exist on disk.**
+This scaffold defaults to **local-source mode**: `local.props` is **committed here** (unlike Store/ADC, where it is gitignored), sets `UseLocalMMCA=true` and points at `../MMCA.Common/Source`, so packages resolve via `ProjectReference` with no token. The swap lives in `Directory.Build.targets`; `nuget.config` lists nuget.org only. To consume published packages instead, just delete `local.props`. **Local-source mode requires `../MMCA.Common/Source` to exist on disk, and the .NET 11 SDK**: `global.json` pins it because the framework source targets `net10.0` and `net11.0`, and only the .NET 11 SDK compiles both. The app itself still targets `net10.0`. A scaffolded app on packages gets the .NET 10 SDK band instead (the `sdkBand` symbol in `.template.config/template.json`); only a local-MMCA scaffold keeps the .NET 11 pin.
 
 ```bash
 dotnet build MMCA.Helpdesk.slnx
