@@ -93,7 +93,12 @@ jobs:
 
       - uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: '10.0.x'
+          # global.json pins the .NET 11 SDK: this repo builds MMCA.Common from source, which targets
+          # net10.0 and net11.0. The 10.0 line is installed too: the app itself targets net10.0 and runs
+          # its tests on that runtime, and a package-mode scaffold pins the .NET 10 SDK band.
+          dotnet-version: |
+            10.0.x
+            11.0.x
 
       - name: Build (against MMCA.Common source)
         working-directory: MMCA.Helpdesk
@@ -125,7 +130,12 @@ jobs:
 
       - uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: '10.0.x'
+          # global.json pins the .NET 11 SDK: this repo builds MMCA.Common from source, which targets
+          # net10.0 and net11.0. The 10.0 line is installed too: the app itself targets net10.0 and runs
+          # its tests on that runtime, and a package-mode scaffold pins the .NET 10 SDK band.
+          dotnet-version: |
+            10.0.x
+            11.0.x
 
       # No MMCA.Common checkout on purpose: generated apps restore the pinned MMCA.Common.* release
       # from nuget.org with no token and no extra feed, and that is exactly the path being proven.
@@ -172,7 +182,12 @@ jobs:
 
       - uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: '10.0.x'
+          # global.json pins the .NET 11 SDK: this repo builds MMCA.Common from source, which targets
+          # net10.0 and net11.0. The 10.0 line is installed too: the app itself targets net10.0 and runs
+          # its tests on that runtime, and a package-mode scaffold pins the .NET 10 SDK band.
+          dotnet-version: |
+            10.0.x
+            11.0.x
 
       # The migration is scaffolded and applied by the CLI tool, not by the build, so it has to be
       # on PATH. Pinned to the EF version the seed's Microsoft.EntityFrameworkCore.Design pin
