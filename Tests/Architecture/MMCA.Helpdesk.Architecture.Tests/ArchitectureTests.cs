@@ -223,6 +223,36 @@ public sealed class TenantScopeConventionTests : TenantScopeConventionTestsBase
     protected override IArchitectureMap Map { get; } = new HelpdeskArchitectureMap();
 }
 
+// Strongly typed identifiers (ADR-115): every wrapper a mapped assembly declares is a readonly record
+// struct whose only instance state is the wrapped Value, which is the shape the framework's JSON
+// converter, EF converter and route binding are written against. Non-vacuous while the module's child
+// identifier is a wrapper; a scaffold with no child collection declares none and the base passes
+// vacuously, which is why the module-level count below sits in the child region.
+public sealed class StronglyTypedIdTests : StronglyTypedIdTestsBase
+{
+    protected override IArchitectureMap Map { get; } = new HelpdeskArchitectureMap();
+
+    // template:begin child
+    [Fact]
+    public void TheTicketsModule_DeclaresExactlyOneStronglyTypedId()
+    {
+        var identifiers = Map.Layers
+            .Where(layer => layer.Module == "Tickets")
+            .Select(layer => layer.Assembly)
+            .Distinct()
+            .SelectMany(assembly => assembly.GetTypes())
+            .Where(MMCA.Common.Shared.Identifiers.StronglyTypedId.IsStronglyTypedId)
+            .ToList();
+
+        identifiers.Should().ContainSingle(
+            "the module adopts one wrapper, its child identifier, and every other identifier stays the primitive alias")
+            .Which.Should().Be(typeof(MMCA.Helpdesk.Tickets.Shared.Tickets.TicketCommentId));
+        MMCA.Common.Shared.Identifiers.StronglyTypedId.GetValueType(identifiers[0]).Should().Be<int>(
+            "the wrapper keeps the int identity column it replaced");
+    }
+    // template:end child
+}
+
 // NOT adopted (legitimately inapplicable, not an enforcement gap): ConstructorDependencyCountTestsBase
 // scans Application *Service classes and deliberately fails when it finds none (anti-vacuity guard).
 // This seed's Application layer is handlers-only. Subclass it (ceiling 7, matching ADC) as soon as the

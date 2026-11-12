@@ -6,10 +6,10 @@ using MMCA.Helpdesk.Tickets.Domain.Tickets;
 // template:begin child
 using MMCA.Helpdesk.Tickets.Domain.Tickets.DomainEvents;
 // template:end child
-// template:begin status
+// template:begin child
 using MMCA.Helpdesk.Tickets.Shared.Tickets;
 
-// template:end status
+// template:end child
 namespace MMCA.Helpdesk.Tickets.Domain.Tests.Tickets;
 
 public class TicketTests
@@ -22,7 +22,7 @@ public class TicketTests
         result.IsSuccess.Should().BeTrue();
         result.Value!.Title.Should().Be("Cannot log in");
         // template:begin status
-        result.Value.Status.Should().Be(TicketStatus.Open);
+        result.Value.Status.Should().Be(TicketLifecycle.Open);
         // template:end status
         // template:begin owner
         result.Value.RequesterUserId.Should().Be(42);
@@ -69,7 +69,7 @@ public class TicketTests
     public void AddComment_OnClosedTicket_ReturnsFailure()
     {
         var ticket = CreateOpenTicket();
-        ticket.ChangeStatus(TicketStatus.Closed);
+        ticket.ChangeStatus(TicketLifecycle.Closed);
 
         var result = ticket.AddComment(id: null, "Late comment", authorUserId: 7);
 
@@ -84,10 +84,10 @@ public class TicketTests
     {
         var ticket = CreateOpenTicket();
 
-        var result = ticket.ChangeStatus(TicketStatus.Resolved);
+        var result = ticket.ChangeStatus(TicketLifecycle.Resolved);
 
         result.IsSuccess.Should().BeTrue();
-        ticket.Status.Should().Be(TicketStatus.Resolved);
+        ticket.Status.Should().Be(TicketLifecycle.Resolved);
     }
 
     // template:end status
@@ -149,7 +149,7 @@ public class TicketTests
     {
         var ticket = CreateOpenTicket();
 
-        var result = ticket.EditComment(commentId: 999, "Edited");
+        var result = ticket.EditComment(commentId: TicketCommentId.From(999), "Edited");
 
         result.IsFailure.Should().BeTrue();
     }
@@ -161,7 +161,7 @@ public class TicketTests
     {
         var ticket = CreateOpenTicket();
         var comment = ticket.AddComment(id: null, "Original", authorUserId: 7).Value!;
-        ticket.ChangeStatus(TicketStatus.Closed);
+        ticket.ChangeStatus(TicketLifecycle.Closed);
 
         var result = ticket.EditComment(comment.Id, "Edited");
 
@@ -174,7 +174,7 @@ public class TicketTests
     {
         var ticket = CreateOpenTicket();
         var comment = ticket.AddComment(id: null, "To remove", authorUserId: 7).Value!;
-        ticket.ChangeStatus(TicketStatus.Closed);
+        ticket.ChangeStatus(TicketLifecycle.Closed);
 
         var result = ticket.RemoveComment(comment.Id);
 
