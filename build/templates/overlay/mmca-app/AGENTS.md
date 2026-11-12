@@ -53,15 +53,18 @@ skill walks through the whole sequence.
 - **The decorator order is fixed by the framework** (commands: view-as guard, feature gate,
   authorization, logging, caching, validation, timeout, transaction, handler; queries drop the
   view-as guard and the transaction). Do not reorder it or wrap a handler by hand.
-- **`AddEntityCrud<...>()` runs after the module's convention scan** in the module's Application
-  `DependencyInjection.cs`. It registers with `TryAdd`, so a hand-written handler for the same verb
-  wins only when it was scanned first.
-- **Cache keys come from one builder per aggregate**, `<Aggregate>CacheKeys` in
-  `<App>.<Module>.Application/<Module>/`. A query's `IQueryCacheable.CacheKey` and a command's `ICacheInvalidating.CachePrefix`
-  are matched by string prefix, so both must be built from `<Aggregate>CacheKeys.Prefix`; a key that
-  drifts outside it is never evicted and nothing fails. Every `ICacheInvalidating` command needs a
-  test builder (an `ICacheInvalidatingCommandBuilder` in the module's Application test project, or
-  an entry in the cache-invalidation test's hand-written table); the test fails by name without one.
+- **A hand-written handler beats `AddEntityCrud<...>()` only when it is appended**, in the module's
+  Application `DependencyInjection.cs`. The convention scan appends, `AddEntityCrud` registers with
+  `TryAdd`, and the container resolves the last registration, so a scanned handler for the same verb
+  wins in either call order. A hand registration made with `TryAdd` AFTER `AddEntityCrud` loses the
+  verb to the generic handler, with no error.
+- **A command evicts its aggregate's cache through `ICacheInvalidating<Aggregate>`** and states no
+  `CachePrefix`: the framework supplies `"{typeof(Aggregate).FullName}:"`. A query's
+  `IQueryCacheable.CacheKey` is matched against that by string prefix, so build it from
+  `<Aggregate>CacheKeys` in `<App>.<Module>.Application/<Module>/`, whose `Prefix` is the same entity
+  prefix; a key that drifts outside it is never evicted and nothing fails.
+  `CacheInvalidationConventionTests` fails a command with a hand-written prefix, and the module's
+  cache-invalidation test fails one that names another aggregate.
 - **Every data-carrying command has a FluentValidation validator.** `CommandValidatorCoverageTests`
   fails the build otherwise. Validators check input shape; business rules live on the aggregate.
 - **Errors are `Result` / `Result<T>`, not exceptions.** Aggregates are created through a static

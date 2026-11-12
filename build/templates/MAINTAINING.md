@@ -27,7 +27,7 @@ Maintainer notes for the `MMCA.Templates` pack (`mmca-app`, `mmca-module`, `mmca
 ## `build/add-module.ps1` and `mmca-command`
 
 - **`build/add-module.ps1` is `copyOnly`, and its leak check is INVERTED.** Because it ships verbatim (so the flag names it passes through survive), it may use any hazard word in prose, but it must contain **no seed noun at all**: at run time inside a generated app, `MMCA.Helpdesk` / `Helpdesk` / `Ticket` name nothing. It discovers the solution file, existing modules and host/test projects by glob, and performs the seven wire-ups `mmca-module` can only print plus the first EF migration. `smoke.ps1` adds its second module THROUGH this script, so the wire-ups get CI coverage on the code path adopters run.
-- **`mmca-command` ships a cache-invalidation test builder with every command it scaffolds**, staged from `Tests/.../Tickets/UseCases/Delete/DeleteTicketCommandCacheBuilder.cs` and written by the template's second source seven levels up from the slice folder (the solution root), so a generated slice is green on arrival only when it is generated from the module's `<Module>/UseCases` folder, as `smoke.ps1` does.
+- **`mmca-command` ships no cache-invalidation test file.** Its command is staged from `DeleteTicketCommand`, which implements `ICacheInvalidating<Ticket>` and states no prefix, so the app's `CacheInvalidationConventionTests` and the module's cache-invalidation test check a scaffolded command by reflection on arrival. `stage.ps1` throws if the seed command leaves the generic marker.
 
 ## Releasing
 

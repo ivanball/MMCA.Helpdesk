@@ -23,16 +23,15 @@ it first.
 3. **Read the nearest existing slice** in
    `Source/Modules/<Module>/<App>.<Module>.Application/<Module>/UseCases/` and the module's
    controller. The existing code is the specification; do not invent a second way of doing this.
-4. **Generate the slice** from that `UseCases` folder (the command template writes its test builder
-   relative to it):
+4. **Generate the slice** from that `UseCases` folder:
    - Command: `dotnet new mmca-command -n <UseCase> --app <App> --module <Module> --aggregate <Aggregate> --domain-method <Method>`.
      Add `--child-collection <Navigation>` only when the handler must load a child collection.
    - Query: `dotnet new mmca-query -n <UseCase> --app <App> --module <Module> --aggregate <Aggregate>`.
 5. **Finish what the template printed:**
    - Command: add `<Method>` to the aggregate returning `Result`, with its rule in the aggregate's
      invariants; grow the generated validator as the command grows a payload (validators check
-     input shape only); confirm the generated `<UseCase>CommandCacheBuilder` landed in
-     `Tests/Modules/<Module>/<App>.<Module>.Application.Tests/<Module>/UseCases/<UseCase>/`.
+     input shape only); keep the command on `ICacheInvalidating<Aggregate>` with no `CachePrefix`
+     of its own.
    - Query: build its `CacheKey` from `<Aggregate>CacheKeys`, adding a method there when the key
      needs one, so it stays under `<Aggregate>CacheKeys.Prefix`.
    - Both: map it in the module's controller under

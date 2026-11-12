@@ -179,30 +179,46 @@ public class TicketCacheInvalidationTests
             "discovery replaced a hand-kept list, and must never check fewer commands than that list did");
 
     [Fact]
-    public void EveryTicketCommand_InvalidatesThePrefixTheReadIsKeyedUnder()
+    public void TheReadKey_IsUnderTheEntityPrefixTheCommandsEvict()
     {
         // Nothing at compile time ties CachePrefix to CacheKey: the decorator matches them as
-        // strings. This is the test that keeps a renamed key from silently going stale, and the
-        // commands are DISCOVERED, so a new ICacheInvalidating command is checked the day it lands.
-        string readKey = new GetTicketByIdQuery(TicketId).CacheKey;
-        var builders = CommandBuilders();
-        var discovered = DiscoveredCommandTypes();
+        // strings. The commands state no prefix (ICacheInvalidating<Ticket> evicts the entity
+        // prefix, and the shared CacheInvalidationConventionTests rule keeps them that way), so the
+        // half that can still drift is the read side, which this pins.
+        string entityPrefix = EntityCachePrefix.For<Ticket>();
 
-        string[] unbuilt = [.. discovered.Where(t => !builders.ContainsKey(t)).Select(t => t.ToString())];
-        unbuilt.Should().BeEmpty(
-            $"every discovered ICacheInvalidating command needs a builder (an entry in {nameof(HandWrittenBuilders)} or an {nameof(ICacheInvalidatingCommandBuilder)} in this project) so its CachePrefix can be checked; add one for: {string.Join(", ", unbuilt)}");
+        TicketCacheKeys.Prefix.Should().Be(
+            entityPrefix,
+            "every ticket read is keyed under TicketCacheKeys.Prefix, and the commands evict the entity prefix");
+        new GetTicketByIdQuery(TicketId).CacheKey.Should().StartWith(
+            entityPrefix,
+            "a read stored outside the prefix the commands evict would never be invalidated");
+    }
 
-        foreach (var commandType in discovered)
+    [Fact]
+    public void EveryTicketCommand_EvictsTheTicketEntityPrefix()
+    {
+        // The shared rule checks that each command is on the entity-keyed marker, not WHICH entity it
+        // names, and it allow-lists the framework's generic CRUD commands. Both are checked here, and
+        // the commands are DISCOVERED, so a new ICacheInvalidating command is checked the day it
+        // lands: a module command by its marker, with no instance to build, and a framework command
+        // by the default prefix it is constructed with.
+        string entityPrefix = EntityCachePrefix.For<Ticket>();
+        var frameworkCommands = FrameworkCommandBuilders();
+
+        foreach (var commandType in DiscoveredCommandTypes())
         {
-            var command = builders[commandType]();
-
-            command.Should().BeOfType(commandType, $"the builder registered for {commandType.Name} must build that type");
-            command.CachePrefix.Should().Be(
-                TicketCacheKeys.Prefix,
-                $"{commandType.Name} must invalidate the prefix every ticket read is keyed under");
-            readKey.Should().StartWith(
-                command.CachePrefix,
-                $"{commandType.Name} would otherwise leave the cached ticket read behind");
+            if (frameworkCommands.TryGetValue(commandType, out var build))
+            {
+                build().CachePrefix.Should().Be(
+                    entityPrefix,
+                    $"{commandType.Name} must default to the prefix every ticket read is keyed under");
+            }
+            else
+            {
+                commandType.Should().Implement<ICacheInvalidating<Ticket>>(
+                    $"{commandType.Name} must name the Ticket aggregate, or it evicts another aggregate's key space and leaves the cached ticket read behind");
+            }
         }
     }
 
@@ -235,54 +251,15 @@ public class TicketCacheInvalidationTests
         && typeof(ICacheInvalidating).IsAssignableFrom(type);
 
     /// <summary>
-    /// One builder per discovered command type: the table in <see cref="HandWrittenBuilders"/>, plus
-    /// every <see cref="ICacheInvalidatingCommandBuilder"/> in this assembly (the mmca-command slice
-    /// template ships one with each command it scaffolds). A command added to the module with neither
-    /// fails <see cref="EveryTicketCommand_InvalidatesThePrefixTheReadIsKeyedUnder"/> by name, which is
-    /// the prompt to add one, and a command built in both places fails here so there is one owner.
+    /// The framework's generic CRUD commands closed over the module's types. They carry a settable
+    /// prefix whose default comes from a property initializer, so they are checked through an
+    /// instance; every other discovered command is checked by its marker alone.
     /// </summary>
     /// <returns>The builders, keyed by the exact command type each one builds.</returns>
-    private static Dictionary<Type, Func<ICacheInvalidating>> CommandBuilders()
+    private static Dictionary<Type, Func<ICacheInvalidating>> FrameworkCommandBuilders() => new()
     {
-        var builders = HandWrittenBuilders();
-        var shipped = typeof(TicketCacheInvalidationTests).Assembly.GetTypes()
-            .Where(t => t is { IsClass: true, IsAbstract: false } && typeof(ICacheInvalidatingCommandBuilder).IsAssignableFrom(t))
-            .Select(t => (ICacheInvalidatingCommandBuilder)Activator.CreateInstance(t)!);
-
-        foreach (var builder in shipped)
-        {
-            builders.ContainsKey(builder.CommandType).Should().BeFalse(
-                $"{builder.GetType().Name} builds {builder.CommandType.Name}, which already has an entry in {nameof(HandWrittenBuilders)}; keep one");
-            builders[builder.CommandType] = builder.Build;
-        }
-
-        return builders;
-    }
-
-    /// <summary>The builders for the commands written by hand in this module.</summary>
-    /// <returns>The builders, keyed by the exact command type each one builds.</returns>
-    private static Dictionary<Type, Func<ICacheInvalidating>> HandWrittenBuilders() => new()
-    {
-        [typeof(TicketCreateRequest)] = () => new TicketCreateRequest
-        {
-            Title = "Cannot log in",
-            // template:begin description
-            Description = "Returns a 500.",
-            // template:end description
-            // template:begin owner
-            RequesterUserId = 42,
-            // template:end owner
-        },
         [typeof(UpdateEntityCommand<Ticket, TicketUpdateRequest, TicketIdentifierType>)] = () => UpdateCommand("Cannot log in"),
         [typeof(DeleteEntityCommand<Ticket, TicketIdentifierType>)] = () => new DeleteEntityCommand<Ticket, TicketIdentifierType>(TicketId),
-        // template:begin status
-        [typeof(ChangeTicketStatusCommand)] = () => new ChangeTicketStatusCommand(TicketId, TicketStatus.Closed) { RowVersion = ClientToken },
-        // template:end status
-        // template:begin child
-        [typeof(AddCommentCommand)] = () => new AddCommentCommand(TicketId, "Looking into it.", AuthorUserId: 7),
-        [typeof(EditCommentCommand)] = () => new EditCommentCommand(TicketId, CommentId: 1, "Still looking into it.") { RowVersion = ClientToken },
-        [typeof(RemoveCommentCommand)] = () => new RemoveCommentCommand(TicketId, CommentId: 1),
-        // template:end child
     };
 
     private static Result<TicketDTO> TicketResult() =>

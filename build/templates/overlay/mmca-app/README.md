@@ -84,11 +84,13 @@ Tests/
   already exist, so a handler registered after the call would run unwrapped; the seal makes that
   throw at startup instead. Non-handler registrations (`AddInfrastructure`, `AddAPI`,
   `AddModuleHealthChecks`, which follows the call) stay outside it.
-- **`AddEntityCrud<...>()` must come AFTER the module's convention scan**, in
+- **`AddEntityCrud<...>()` never displaces a scanned handler**, in
   `Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/DependencyInjection.cs`. It registers the
-  framework's create, update and delete handlers with `TryAdd`, which is what lets the module keep a
-  verb it wrote itself; above the scan it would take those verbs instead, with no error. Ordering
-  matters for the validator bridge too: the same call registers the `CommandRequestValidator` for the
+  framework's create, update and delete handlers with `TryAdd`, the module's convention scan appends
+  its own, and the container resolves the last registration, so a verb the module wrote itself stays
+  its own whichever of the two calls runs first. The hazard is a hand registration made with
+  `TryAdd` AFTER `AddEntityCrud`: the verb is taken by then, so it loses with no error. The same
+  call also wires the validator bridge: it registers the `CommandRequestValidator` for the
   closed `UpdateEntityCommand` (the module scan's own bridge only sees commands declared in the module
   assembly, and that command is declared in MMCA.Common), again with `TryAdd`, so a scan-registered
   explicit validator still wins. Without that registration the `*UpdateRequestValidator` silently

@@ -39,14 +39,16 @@ public static class DependencyInjection
             // on the aggregate, reached through the TicketUpdateApplier the scan picked up beside the
             // create mapper.
             //
-            // Deliberately AFTER the scan, because AddEntityCrud registers with TryAdd and the module
-            // keeps the create verb for itself: CreateTicketHandler publishes
+            // The module keeps the create verb for itself: CreateTicketHandler publishes
             // TicketOpenedIntegrationEvent after the commit.
             // template:begin child
             // The update verb too: TicketUpdateHandler eager-loads the children the response carries.
             // template:end child
-            // Moving this call above the scan would hand those verbs to the plain generic handlers,
-            // silently.
+            // Call order does not decide that. The scan above appends its handlers, AddEntityCrud only
+            // TryAdds its generic ones, and the container resolves the LAST registration for a
+            // service, so the hand-written handlers win whichever of the two runs first. The real
+            // hazard is a hand registration made with TryAdd AFTER this call: the verb is already
+            // registered by then, so that TryAdd is a silent no-op and the generic handler keeps it.
             //
             // The call also registers the CommandRequestValidator bridge for the closed
             // UpdateEntityCommand<,,>, which is what keeps TicketUpdateRequestValidator running in the

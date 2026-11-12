@@ -131,7 +131,7 @@ public class TicketConcurrencyTokenTests
 
         // The module's own registration rather than the bare scan: the update verb is registered by
         // AddEntityCrud (or, where the aggregate needs an eager load, by the module's subclass that
-        // the scan picks up ahead of it), and only AddModuleTicketsApplication runs both in order.
+        // the scan appends, which wins), and only AddModuleTicketsApplication runs both.
         var services = new ServiceCollection();
         services.AddSingleton(unitOfWork.Object);
         services.AddModuleTicketsApplication(new ApplicationSettings());

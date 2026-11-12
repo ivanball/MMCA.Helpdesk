@@ -1,4 +1,5 @@
 using MMCA.Common.Application.UseCases.Markers;
+using MMCA.Helpdesk.Tickets.Domain.Tickets;
 using MMCA.Helpdesk.Tickets.Shared.Tickets;
 
 namespace MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.ChangeStatus;
@@ -9,13 +10,11 @@ namespace MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.ChangeStatus;
 /// <c>If-Match</c> header.
 /// </summary>
 public sealed record ChangeTicketStatusCommand(TicketIdentifierType TicketId, TicketStatus Status)
-    : ICacheInvalidating
+    : ICacheInvalidating<Ticket>
 {
     /// <summary>
     /// The client's last-seen concurrency token (ADR-035). Required: the endpoint is conditional, so
     /// a request that states no precondition is refused with 428 before a command is ever built.
     /// </summary>
     public required byte[] RowVersion { get; init; }
-
-    public string CachePrefix => TicketCacheKeys.Prefix;
 }

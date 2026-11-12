@@ -1415,24 +1415,14 @@ foreach ($slice in $slices) {
     Write-Host "$($slice.Name) staged: $($slice.Files.Count) files -> $target"
 }
 
-# The command slice also ships its cache-invalidation test builder, for the same reason it ships its
-# validator: the module's <Aggregate>CacheInvalidationTests discovers every ICacheInvalidating
-# command and fails by name on one it has no builder for, so a scaffolded command that arrived
-# without one would turn the adopter's next test run red. The builder belongs to the Application.Tests
-# project, not to the slice folder, so it is staged under tests/ with the repo-relative path intact
-# (the template's second source writes it seven levels up from the slice folder, at the solution
-# root) and with the use-case folder named after the sourceName, so the slice name renames it.
-$commandBuilderFrom = Join-Path $repoRoot 'Tests/Modules/Tickets/MMCA.Helpdesk.Tickets.Application.Tests/Tickets/UseCases/Delete/DeleteTicketCommandCacheBuilder.cs'
-if (-not (Test-Path $commandBuilderFrom)) {
-    throw "mmca-command ships its cache-invalidation test builder from $commandBuilderFrom, which no longer exists. Update stage.ps1."
+# The command slice ships no cache-invalidation test file. Its command implements
+# ICacheInvalidating<Aggregate> and states no prefix, which the app's shared
+# CacheInvalidationConventionTests rule and the module's <Aggregate>CacheInvalidationTests both check
+# by reflection, so a scaffolded command is covered on arrival with nothing written beside it.
+$commandSource = Join-Path $useCases 'Delete/DeleteTicketCommand.cs'
+if (-not (Select-String -Path $commandSource -SimpleMatch -Pattern 'ICacheInvalidating<Ticket>' -Quiet)) {
+    throw "mmca-command stages $commandSource, which no longer implements ICacheInvalidating<Ticket>. A scaffolded command would then need a hand-written cache prefix the app's convention rule rejects; update stage.ps1 or the seed command."
 }
-$commandBuilderTo = Join-Path $OutputPath 'mmca-command/tests/Tests/Modules/Tickets/MMCA.Helpdesk.Tickets.Application.Tests/Tickets/UseCases/DeleteTicket'
-New-Item -ItemType Directory -Path $commandBuilderTo -Force | Out-Null
-Copy-Item -Path $commandBuilderFrom -Destination $commandBuilderTo -Force
-if ((Remove-TemplateMarkers -Path (Join-Path $commandBuilderTo 'DeleteTicketCommandCacheBuilder.cs')) -gt 0) {
-    Write-Host "mmca-command: template marker line(s) stripped from the test builder"
-}
-Write-Host "mmca-command: cache-invalidation test builder staged -> $commandBuilderTo"
 
 # ---- derived: make each slice's eager-load optional ----------------------------------------------
 # Both slices are staged from use cases whose aggregate owns a Comments collection: the command from
