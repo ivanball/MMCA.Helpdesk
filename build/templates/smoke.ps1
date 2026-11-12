@@ -283,7 +283,7 @@ Residual seed tokens survived the rename in $($offenders.Count) file(s):
         Invoke-Step "Shape sweep $appName ($shape)" {
             $shapePatterns = @()
             if ($case.Flat) { $shapePatterns += 'Comment' }
-            if ($case.NoStatus) { $shapePatterns += "$($case.Aggregate)Status", 'ChangeStatus' }
+            if ($case.NoStatus) { $shapePatterns += "$($case.Aggregate)Status", "$($case.Aggregate)Lifecycle", 'ChangeStatus' }
             if ($case.NoOwner) { $shapePatterns += 'Requester', 'requester' }
             if ($case.NoDescription) { $shapePatterns += 'Description', 'description' }
             if ($case.Title) { $shapePatterns += 'Title', 'title' }
@@ -316,7 +316,7 @@ Generated with $shape but $($offenders.Count) file(s) still carry a removed axis
     Invoke-Step "Retained-token presence $appName" {
         $expected = @()
         if (-not $case.Flat) { $expected += 'Comment' }
-        if (-not $case.NoStatus) { $expected += "$($case.Aggregate)Status" }
+        if (-not $case.NoStatus) { $expected += "$($case.Aggregate)Status", "$($case.Aggregate)Lifecycle" }
         if (-not $case.NoOwner) { $expected += 'RequesterUserId' }
         if (-not $case.NoDescription) { $expected += 'Description' }
         if (-not $case.Title) { $expected += 'Title' }

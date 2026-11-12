@@ -52,7 +52,7 @@ public sealed class TicketCommentIdTests
         var dto = JsonSerializer.Deserialize<TicketCommentDTO>(json, DefaultWebOptions);
 
         dto.Should().NotBeNull();
-        dto!.Id.Should().Be(TicketCommentId.From(5));
+        dto.Id.Should().Be(TicketCommentId.From(5));
     }
 
     [Fact]
@@ -66,12 +66,10 @@ public sealed class TicketCommentIdTests
         id.GetInt32().Should().Be(5);
     }
 
+    // URLs, aria labels and log lines interpolate the id, so its text must stay the bare number.
     [Fact]
-    public void ToString_IsTheInvariantInteger()
-    {
-        // URLs, aria labels and log lines interpolate the id, so its text must stay the bare number.
+    public void ToString_IsTheInvariantInteger() =>
         TicketCommentId.From(5).ToString().Should().Be("5");
-    }
 
     [Fact]
     public void TwoIdsWithSameValue_AreEqual()

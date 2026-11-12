@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Settings;
 using MMCA.Common.Infrastructure.Persistence;
 using MMCA.Helpdesk.Tickets.API;
@@ -36,8 +35,8 @@ public sealed class TicketsModuleRegistrationTests
             .Should().ContainSingle("the controller declares one primary constructor").Which
             .GetParameters()
             .Select(parameter => parameter.ParameterType)
-            .Where(type => !(type.IsGenericType && type.GetGenericTypeDefinition() == typeof(ILogger<>)))
-            .Where(type => !services.Any(descriptor => descriptor.ServiceType == type))
+            .Where(type => !(type.IsGenericType && type.GetGenericTypeDefinition() == typeof(ILogger<>))
+                && !services.Any(descriptor => descriptor.ServiceType == type))
             .Select(type => type.ToString())
             .ToList();
 
@@ -62,7 +61,7 @@ public sealed class TicketsModuleRegistrationTests
     public void ModuleRegister_LeavesTheTicketConfigurationDiscoverable()
     {
         _ = RegisterThroughTheModule();
-        var provider = new DefaultEntityConfigurationAssemblyProvider(Options.Create(new EntityConfigurationOptions()));
+        var provider = new DefaultEntityConfigurationAssemblyProvider(Microsoft.Extensions.Options.Options.Create(new EntityConfigurationOptions()));
 
         var configurationAssembly = provider.GetConfigurationAssemblies()
             .Should().Contain(

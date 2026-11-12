@@ -26,19 +26,31 @@ namespace MMCA.Helpdesk.UI.Web.Services;
 /// </summary>
 public sealed class HelpdeskApiClient(HttpClient httpClient)
 {
-    public Task<Result<IReadOnlyList<TicketDTO>>> GetTicketsAsync(CancellationToken cancellationToken = default) =>
+    /// <summary>
+    /// Reads one page of tickets, newest first, through the cursor-paged list endpoint
+    /// (<c>GET Tickets/cursor</c>). Pass <see langword="null"/> for the first page and the previous
+    /// page's <c>NextCursor</c> for each later one; a <see langword="null"/> <c>NextCursor</c> in the
+    /// answer means there is nothing more to load. Newest first is the id descending: ids are
+    /// database-generated, so a higher id is a later ticket, and the id is a column the ticket's
+    /// response contract declares, which the endpoint requires of a sort column.
+    /// </summary>
+    public Task<Result<KeysetCollectionResult<TicketDTO>>> GetTicketPageAsync(string? cursor, int pageSize, CancellationToken cancellationToken = default) =>
         HttpResultExecutor.ExecuteAsync(
             async () =>
             {
+                string url = string.Create(CultureInfo.InvariantCulture, $"Tickets/cursor?sortColumn=id&sortDirection=desc&pageSize={pageSize}");
+                if (cursor is not null)
+                {
+                    url += "&cursor=" + Uri.EscapeDataString(cursor);
+                }
+
                 using var response = await httpClient
-                    .GetAsync(new Uri("Tickets", UriKind.Relative), cancellationToken)
+                    .GetAsync(new Uri(url, UriKind.Relative), cancellationToken)
                     .ConfigureAwait(false);
 
-                var result = await ProblemDetailsResultReader
-                    .ReadAsync<CollectionResult<TicketDTO>>(response, cancellationToken: cancellationToken)
+                return await ProblemDetailsResultReader
+                    .ReadAsync<KeysetCollectionResult<TicketDTO>>(response, cancellationToken: cancellationToken)
                     .ConfigureAwait(false);
-
-                return result.Map<IReadOnlyList<TicketDTO>>(static collection => collection.Items is { } items ? [.. items] : []);
             },
             cancellationToken);
 
@@ -134,7 +146,7 @@ public sealed class HelpdeskApiClient(HttpClient httpClient)
     /// Edits a comment's body. The precondition is the OWNING ticket's token: concurrency is an
     /// aggregate-level invariant, and the ticket read's <c>ETag</c> is what carries it.
     /// </summary>
-    public Task<Result> EditCommentAsync(int id, int commentId, string body, byte[] rowVersion, CancellationToken cancellationToken = default) =>
+    public Task<Result> EditCommentAsync(int id, TicketCommentIdentifierType commentId, string body, byte[] rowVersion, CancellationToken cancellationToken = default) =>
         HttpResultExecutor.ExecuteAsync(
             async () =>
             {
@@ -145,7 +157,7 @@ public sealed class HelpdeskApiClient(HttpClient httpClient)
             },
             cancellationToken);
 
-    public Task<Result> RemoveCommentAsync(int id, int commentId, CancellationToken cancellationToken = default) =>
+    public Task<Result> RemoveCommentAsync(int id, TicketCommentIdentifierType commentId, CancellationToken cancellationToken = default) =>
         HttpResultExecutor.ExecuteAsync(
             async () =>
             {

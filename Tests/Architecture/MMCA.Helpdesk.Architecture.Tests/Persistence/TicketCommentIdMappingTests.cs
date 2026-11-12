@@ -9,7 +9,7 @@ namespace MMCA.Helpdesk.Architecture.Tests.Persistence;
 
 /// <summary>
 /// Pins the persistence half of the strongly typed child identifier (ADR-115): the key keeps the
-/// <c>int</c> identity column it had before the wrapper, through the framework's wrapper converter,
+/// <see langword="int"/> identity column it had before the wrapper, through the framework's wrapper converter,
 /// so adopting the wrapper is not a migration.
 /// <para>
 /// The model is built the way <c>dotnet ef</c> builds it, through the same
@@ -37,12 +37,10 @@ public sealed class TicketCommentIdMappingTests
     }
 
     [Fact]
-    public void CommentId_IsStoreGenerated()
-    {
+    public void CommentId_IsStoreGenerated() =>
         IdProperty().ValueGenerated.Should().Be(
             ValueGenerated.OnAdd,
             "the child is [IdValueGenerated], so a wrapped key must keep the database-generated identity a bare int key had");
-    }
 
     private IProperty IdProperty() =>
         _model.FindEntityType(typeof(TicketComment))!.FindProperty(nameof(TicketComment.Id))!;

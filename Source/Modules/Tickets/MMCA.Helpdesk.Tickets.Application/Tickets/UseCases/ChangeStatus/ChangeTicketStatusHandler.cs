@@ -38,10 +38,25 @@ public sealed class ChangeTicketStatusHandler(IUnitOfWork unitOfWork, TicketDTOM
     /// <returns>The client's last-observed row version.</returns>
     protected override byte[]? RowVersion(ChangeTicketStatusCommand command) => command.RowVersion;
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Resolves the wire status into the aggregate's <see cref="TicketLifecycle"/> (the one inbound
+    /// conversion point) and applies it. A value no member carries fails as is.
+    /// </summary>
+    /// <param name="ticket">The tracked ticket.</param>
+    /// <param name="command">The command being handled.</param>
+    /// <param name="cancellationToken">Unused; the mutation is synchronous.</param>
+    /// <returns>The result of the domain method, or the resolution failure.</returns>
     protected override Task<Result> MutateAsync(
         Ticket ticket,
         ChangeTicketStatusCommand command,
-        CancellationToken cancellationToken) =>
-        Task.FromResult(ticket.ChangeStatus(command.Status));
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(ticket);
+        ArgumentNullException.ThrowIfNull(command);
+
+        var lifecycle = TicketLifecycle.FromContract(command.Status);
+        return Task.FromResult(lifecycle.TryGetValue(out var status)
+            ? ticket.ChangeStatus(status)
+            : Result.Failure(lifecycle.Errors));
+    }
 }

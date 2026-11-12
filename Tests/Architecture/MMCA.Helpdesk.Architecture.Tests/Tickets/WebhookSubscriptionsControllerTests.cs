@@ -28,9 +28,9 @@ public sealed class WebhookSubscriptionsControllerTests
         var apiVersion = typeof(WebhookSubscriptionsController).GetCustomAttribute<ApiVersionAttribute>(inherit: false);
 
         route.Should().NotBeNull("the derived controller supplies the route");
-        route!.Template.Should().Be("Admin/WebhookSubscriptions");
+        route.Template.Should().Be("Admin/WebhookSubscriptions");
         apiVersion.Should().NotBeNull("the derived controller supplies the API version");
-        apiVersion!.Versions.Select(version => version.ToString()).Should().ContainSingle().Which.Should().Be("1.0");
+        apiVersion.Versions.Select(version => version.ToString()).Should().ContainSingle().Which.Should().Be("1.0");
     }
 
     [Fact]

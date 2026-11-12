@@ -5,10 +5,7 @@ using MMCA.Common.Domain.Extensions;
 using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Helpdesk.Tickets.Domain.Tickets.DomainEvents;
-// template:begin status
-using MMCA.Helpdesk.Tickets.Shared.Tickets;
 
-// template:end status
 namespace MMCA.Helpdesk.Tickets.Domain.Tickets;
 
 /// <summary>
@@ -34,7 +31,7 @@ public sealed class Ticket : AuditableAggregateRootEntity<TicketIdentifierType>,
     public string Description { get; private set; }
     // template:end description
     // template:begin status
-    public TicketStatus Status { get; private set; }
+    public TicketLifecycle Status { get; private set; }
     // template:end status
 
     // template:begin owner
@@ -59,7 +56,7 @@ public sealed class Ticket : AuditableAggregateRootEntity<TicketIdentifierType>,
         RequesterUserId = requesterUserId;
         // template:end owner
         // template:begin status
-        Status = TicketStatus.Open;
+        Status = TicketLifecycle.Open;
         // template:end status
     }
 
@@ -184,9 +181,11 @@ public sealed class Ticket : AuditableAggregateRootEntity<TicketIdentifierType>,
 
     // template:end child
     // template:begin status
-    public Result ChangeStatus(TicketStatus newStatus)
+    public Result ChangeStatus(TicketLifecycle newStatus)
     {
-        if (Status == newStatus)
+        ArgumentNullException.ThrowIfNull(newStatus);
+
+        if (Status.Equals(newStatus))
         {
             return Result.Success();
         }

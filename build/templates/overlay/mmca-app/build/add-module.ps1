@@ -738,7 +738,7 @@ if (-not (Test-Path $aliasPath)) {
         ) `
         -AlreadyApplied ([regex]::Escape($aliasFile)) `
         -Description "Directory.Build.props links $aliasFile into every project" `
-        -Manual "Add to Directory.Build.props, beside the existing <Compile Include ... Link ...> block:`n    <Compile Include=`"`$(MSBuildThisFileDirectory)Source\Modules\$Name\$app.$Name.Shared\$aliasFile`"`n             Link=`"GlobalUsings\$aliasFile`"`n             Condition=`"'`$(MSBuildProjectName)' != '$app.$Name.Shared'`" />"
+        -Manual "Add to Directory.Build.props, beside the existing <Compile Include ... Link ...> block and inside the same ItemGroup (its condition keeps the aliases out of the orchestration project and the template pack, which cannot see a strongly typed identifier):`n    <Compile Include=`"`$(MSBuildThisFileDirectory)Source\Modules\$Name\$app.$Name.Shared\$aliasFile`"`n             Link=`"GlobalUsings\$aliasFile`"`n             Condition=`"'`$(MSBuildProjectName)' != '$app.$Name.Shared'`" />"
 }
 
 # ---- 6. architecture map ------------------------------------------------------------------------
@@ -803,6 +803,20 @@ Add-AfterAnchor `
     -AlreadyApplied ([regex]::Escape("AddErrorResources<${Name}ErrorResources>")) `
     -Description "Program.cs calls AddErrorResources<${Name}ErrorResources>()" `
     -Manual "Add `"services.AddErrorResources<${Name}ErrorResources>();`" beside the existing AddErrorResources call in $webHostName/Program.cs."
+
+# The third: the module's Shared assembly joins the strongly typed identifier list (ADR-115). The
+# generated child identifier is a wrapper struct, and without its assembly in that list EF has no
+# converter for the wrapped key and MVC cannot bind it from a route. A module generated with -Flat
+# declares no wrapper, and the line is harmless then.
+$identifierLine = "typeof($app.$Name.Shared.$Name.${Aggregate}DTO).Assembly,"
+
+Add-AfterAnchor `
+    -Path $webProgram `
+    -Anchor '^\s*typeof\([A-Za-z0-9_.]+DTO\)\.Assembly,' `
+    -Insert @($identifierLine) `
+    -AlreadyApplied ([regex]::Escape($identifierLine)) `
+    -Description "Program.cs adds the $Name Shared assembly to AddStronglyTypedIds" `
+    -Manual "Add `"$identifierLine`" to the assembly list passed to AddStronglyTypedIds in $webHostName/Program.cs."
 
 # ---- 8. the frozen integration-event wire contract -----------------------------------------------
 Write-Step 'Integration-event wire contract'

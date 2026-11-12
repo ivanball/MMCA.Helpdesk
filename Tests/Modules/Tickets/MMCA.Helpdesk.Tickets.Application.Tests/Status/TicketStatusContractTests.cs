@@ -3,7 +3,6 @@ using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Application;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
-using MMCA.Common.Application.Settings;
 using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Identifiers;
@@ -79,7 +78,7 @@ public sealed class TicketStatusContractTests
         var request = JsonSerializer.Deserialize<ChangeTicketStatusRequest>(json, AddApiOptions);
 
         request.Should().NotBeNull();
-        request!.Status.Should().Be(TicketStatus.Resolved);
+        request.Status.Should().Be(TicketStatus.Resolved);
     }
 
     [Fact]
@@ -149,7 +148,7 @@ public sealed class TicketStatusContractTests
 
         var services = new ServiceCollection();
         services.AddSingleton(unitOfWork.Object);
-        services.AddModuleTicketsApplication(new ApplicationSettings());
+        services.AddModuleTicketsApplication();
 
         // Disposing the provider is safe here: the resolved handler already holds its dependencies.
         using var provider = services.BuildServiceProvider();

@@ -38,20 +38,16 @@ public sealed class TicketLifecycleTests
     // with no children keeps it: a locked ticket takes no further activity, though its status can
     // still be changed.
     [Fact]
-    public void IsLocked_IsTrueOnlyForClosed()
-    {
+    public void IsLocked_IsTrueOnlyForClosed() =>
         TicketLifecycle.All.Where(member => member.IsLocked)
             .Should().ContainSingle()
             .Which.Should().Be(TicketLifecycle.Closed);
-    }
 
     [Fact]
-    public void All_IsOrderedOpenInProgressResolvedClosed()
-    {
+    public void All_IsOrderedOpenInProgressResolvedClosed() =>
         TicketLifecycle.All.Should().Equal(
             TicketLifecycle.Open,
             TicketLifecycle.InProgress,
             TicketLifecycle.Resolved,
             TicketLifecycle.Closed);
-    }
 }

@@ -4,10 +4,10 @@ using MMCA.Common.Application;
 using MMCA.Common.Application.Interfaces.Mapping;
 using MMCA.Common.Application.Interfaces.Navigation;
 using MMCA.Common.Application.Services;
-using MMCA.Common.Application.Settings;
 using MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.Create;
 using MMCA.Helpdesk.Tickets.Domain.Tickets;
 using MMCA.Helpdesk.Tickets.Shared.Tickets;
+using MMCA.Helpdesk.Tickets.Shared.Tickets.IntegrationEvents;
 
 namespace MMCA.Helpdesk.Tickets.Application;
 
@@ -19,10 +19,8 @@ public static class DependencyInjection
 {
     extension(IServiceCollection services)
     {
-        public IServiceCollection AddModuleTicketsApplication(ApplicationSettings applicationSettings)
+        public IServiceCollection AddModuleTicketsApplication()
         {
-            _ = applicationSettings; // Reserved for future decorator configuration.
-
             // Eager loading goes through repository includes, so a null populator suffices here
             // (swap for a custom INavigationPopulator<Ticket> if the query service ever needs to
             // batch-load child collections).
@@ -55,6 +53,11 @@ public static class DependencyInjection
             // validating decorator: the scan's own bridge only sees commands declared in THIS
             // assembly, and that command is declared in MMCA.Common.
             services.AddEntityCrud<Ticket, TicketDTO, TicketIdentifierType, TicketCreateRequest, TicketUpdateRequest>();
+
+            // Outbound webhooks: the module publishes its existing opened event to subscribers as
+            // ticket.opened, beside its own handler and with no change to it. Inert in a host that
+            // does not call AddWebhooks(configuration) or leaves Webhooks:Enabled off.
+            services.AddWebhookEvent<TicketOpenedIntegrationEvent>("ticket.opened");
 
             return services;
         }

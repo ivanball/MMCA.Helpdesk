@@ -3,7 +3,6 @@ using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using MMCA.Common.Application.Interfaces;
-using MMCA.Common.Application.Settings;
 using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Application.UseCases.Crud;
 using MMCA.Common.Application.UseCases.Decorators;
@@ -236,7 +235,7 @@ public class TicketCacheInvalidationTests
         var declared = moduleAssemblies.Distinct().SelectMany(a => a.GetTypes()).Where(IsConcreteCacheInvalidating);
 
         var services = new ServiceCollection();
-        services.AddModuleTicketsApplication(new ApplicationSettings());
+        services.AddModuleTicketsApplication();
         var handled = services
             .Select(d => d.ServiceType)
             .Where(t => t.IsConstructedGenericType && t.GetGenericTypeDefinition() == typeof(ICommandHandler<,>))

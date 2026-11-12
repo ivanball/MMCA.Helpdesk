@@ -165,7 +165,7 @@ else
     @* template:begin child *@
     private string _newComment = string.Empty;
     private string _editCommentBody = string.Empty;
-    private int? _editingCommentId;
+    private TicketCommentIdentifierType? _editingCommentId;
     @* template:end child *@
     private bool _busy;
 
@@ -183,13 +183,13 @@ else
     // Focus management for the inline editor. Opening it moves focus into the field; leaving it hands
     // focus back to the button that opened it, which is the one a keyboard user was standing on
     // (WCAG 2.4.3). The dictionary is keyed by child id because the buttons come from a loop.
-    private readonly Dictionary<int, MudIconButton> _editButtons = [];
+    private readonly Dictionary<TicketCommentIdentifierType, MudIconButton> _editButtons = [];
     private MudTextField<string>? _newCommentField;
     private bool _newCommentInvalid;
     private MudTextField<string>? _editCommentField;
     private bool _editCommentInvalid;
     private bool _focusEditor;
-    private int? _restoreFocusTo;
+    private TicketCommentIdentifierType? _restoreFocusTo;
 
     @* template:end child *@
     protected override async Task OnParametersSetAsync() => await LoadAsync();
@@ -205,7 +205,7 @@ else
             await _editCommentField.FocusAsync();
         }
 
-        if (_restoreFocusTo is int restoreId && _editButtons.TryGetValue(restoreId, out var button))
+        if (_restoreFocusTo is { } restoreId && _editButtons.TryGetValue(restoreId, out var button))
         {
             _restoreFocusTo = null;
             await button.FocusAsync();
@@ -378,7 +378,7 @@ else
         _editCommentInvalid = false;
     }
 
-    private async Task SaveCommentAsync(int commentId)
+    private async Task SaveCommentAsync(TicketCommentIdentifierType commentId)
     {
         // The precondition is the OWNING ticket's version: concurrency is stamped on the aggregate
         // root, which is what the ticket read returned.
@@ -421,7 +421,7 @@ else
         }
     }
 
-    private async Task RemoveCommentAsync(int commentId)
+    private async Task RemoveCommentAsync(TicketCommentIdentifierType commentId)
     {
         _busy = true;
         try

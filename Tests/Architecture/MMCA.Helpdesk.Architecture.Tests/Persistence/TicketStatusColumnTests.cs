@@ -44,7 +44,7 @@ public sealed class TicketStatusColumnTests
 
         converter.Should().BeOfType<EnumerationNameValueConverter<TicketLifecycle>>(
             "the int converter would change the column type and rewrite every stored row");
-        converter!.ConvertToProvider(TicketLifecycle.Resolved).Should().Be("Resolved");
+        converter.ConvertToProvider(TicketLifecycle.Resolved).Should().Be("Resolved");
         converter.ConvertFromProvider("InProgress").Should().Be(TicketLifecycle.InProgress);
     }
 

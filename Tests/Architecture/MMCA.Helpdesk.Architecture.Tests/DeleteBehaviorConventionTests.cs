@@ -42,6 +42,7 @@ public sealed class DeleteBehaviorConventionTests : DeleteBehaviorConventionTest
             options.EnableAuditTrail = true;
             options.EnableScheduler = true;
             options.AddConfigurationAssembly(typeof(MMCA.Helpdesk.Tickets.Infrastructure.AssemblyReference).Assembly);
+            options.AddStronglyTypedIdAssembly(typeof(MMCA.Helpdesk.Tickets.Shared.Tickets.TicketDTO).Assembly);
         });
 
         return context.Model;

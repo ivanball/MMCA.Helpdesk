@@ -30,9 +30,9 @@ public sealed class AuditHistoryControllerTests
         var apiVersion = typeof(AuditHistoryController).GetCustomAttribute<ApiVersionAttribute>(inherit: false);
 
         route.Should().NotBeNull("the derived controller supplies the route");
-        route!.Template.Should().Be("Admin/AuditHistory");
+        route.Template.Should().Be("Admin/AuditHistory");
         apiVersion.Should().NotBeNull("the derived controller supplies the API version");
-        apiVersion!.Versions.Select(version => version.ToString()).Should().ContainSingle().Which.Should().Be("1.0");
+        apiVersion.Versions.Select(version => version.ToString()).Should().ContainSingle().Which.Should().Be("1.0");
     }
 
     [Fact]

@@ -380,7 +380,11 @@
             "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/Tickets/UseCases/AddComment/**",
             "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/Tickets/UseCases/EditComment/**",
             "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/Tickets/UseCases/RemoveComment/**",
-            "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Infrastructure/Persistence/EntityConfiguration/TicketCommentConfiguration.cs"
+            "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Infrastructure/Persistence/EntityConfiguration/TicketCommentConfiguration.cs",
+            "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Shared/Tickets/TicketCommentId.cs",
+            "Tests/Modules/Tickets/MMCA.Helpdesk.Tickets.Domain.Tests/Tickets/TicketCommentIdTests.cs",
+            "Tests/Modules/Tickets/MMCA.Helpdesk.Tickets.Application.Tests/Validation/RemoveCommentCommandValidatorTests.cs",
+            "Tests/Architecture/MMCA.Helpdesk.Architecture.Tests/Persistence/TicketCommentIdMappingTests.cs"
           ]
         },
         {
@@ -389,14 +393,19 @@
           "exclude": [
             "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Shared/Tickets/TicketStatus.cs",
             "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Shared/Tickets/ChangeTicketStatusRequest.cs",
-            "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/Tickets/UseCases/ChangeStatus/**"
+            "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/Tickets/UseCases/ChangeStatus/**",
+            "Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Domain/Tickets/TicketLifecycle.cs",
+            "Tests/Modules/Tickets/MMCA.Helpdesk.Tickets.Domain.Tests/Tickets/TicketLifecycleTests.cs",
+            "Tests/Modules/Tickets/MMCA.Helpdesk.Tickets.Application.Tests/Status/TicketStatusContractTests.cs",
+            "Tests/Architecture/MMCA.Helpdesk.Architecture.Tests/Persistence/TicketStatusColumnTests.cs"
           ]
         },
         {
-          "comment": "The seed's migrations describe the FULL sample schema (child table, status column, description column, requester column and its index) against SQL Server. Any shape flag makes them wrong on arrival, and a non-default engine makes them wrong for a second reason (they are SQL Server DDL, and their model snapshot names SQLServerDbContext), so they are dropped and the adopter runs 'dotnet ef migrations add InitialCreate' against the shape they asked for. Migrations/.editorconfig still ships: dotnet ef never recreates it.",
+          "comment": "The seed's migrations describe the FULL sample schema (child table, status column, description column, requester column and its index) against SQL Server. Any shape flag makes them wrong on arrival, and a non-default engine makes them wrong for a second reason (they are SQL Server DDL, and their model snapshot names SQLServerDbContext), so they are dropped and the adopter runs 'dotnet ef migrations add InitialCreate' against the shape they asked for. Migrations/.editorconfig still ships: dotnet ef never recreates it. WebhookMigrationTests goes with them: it reads the model snapshot those migrations leave behind, and with none shipped there is no snapshot until the adopter scaffolds one.",
           "condition": "(flat || noStatus || noOwner || noDescription || useSqlite || usePostgreSQL)",
           "exclude": [
-            "Source/Hosting/MMCA.Helpdesk.Migrations.SqlServer.Tickets/Migrations/*.cs"
+            "Source/Hosting/MMCA.Helpdesk.Migrations.SqlServer.Tickets/Migrations/*.cs",
+            "Tests/Architecture/MMCA.Helpdesk.Architecture.Tests/Tickets/WebhookMigrationTests.cs"
           ]
         },
         {

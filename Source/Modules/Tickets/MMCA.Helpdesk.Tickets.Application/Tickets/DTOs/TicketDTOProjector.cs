@@ -13,8 +13,8 @@ namespace MMCA.Helpdesk.Tickets.Application.Tickets.DTOs;
 /// <c>ScanModuleApplicationServices&lt;ClassReference&gt;()</c> scan picks up
 /// <c>IEntityDTOProjector</c> implementations beside the DTO mappers, which is what switches the
 /// query service's list reads from materialize-then-map onto projection pushdown. Kept in its own
-/// file rather than beside <see cref="TicketDTOMapper"/>: that file carries the scaffold's
-/// optional-axis marker regions, and a projection has no axis-specific lines of its own.
+/// file rather than beside <see cref="TicketDTOMapper"/>, so each Mapperly class declares exactly
+/// one mapping entry point.
 /// </summary>
 /// <remarks>
 /// A projection is an expression tree the database provider has to translate, so it cannot call an
@@ -31,4 +31,13 @@ public sealed partial class TicketDTOProjector
 {
     /// <inheritdoc />
     public partial IQueryable<TicketDTO> ProjectTo(IQueryable<Ticket> source);
+
+    // template:begin status
+    // The lifecycle member becomes the wire enum. Mapperly picks this user mapping up by its
+    // signature and inlines its expression body into the projection, and the provider evaluates it on
+    // the client in the final projection, after reading the status column through its converter.
+    // Internal rather than private: once inlined, nothing calls the method itself, and an unused
+    // private member is an analyzer error.
+    internal static TicketStatus MapStatus(TicketLifecycle status) => status.ToContract();
+    // template:end status
 }

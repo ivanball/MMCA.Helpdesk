@@ -31,7 +31,7 @@ public sealed class WebhookMigrationTests
         var entity = LoadSnapshotModel().FindEntityType(typeof(WebhookSubscription).FullName!);
 
         entity.Should().NotBeNull("the migrations must create the table the host's Webhooks:Enabled model maps");
-        entity!.GetTableName().Should().Be(WebhookSubscriptionModelBuilderExtensions.TableName);
+        entity.GetTableName().Should().Be(WebhookSubscriptionModelBuilderExtensions.TableName);
     }
 
     /// <summary>

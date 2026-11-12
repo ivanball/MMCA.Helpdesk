@@ -6,6 +6,7 @@ using MMCA.Common.Application.Modules;
 using MMCA.Common.Application.Settings;
 using MMCA.Common.Aspire;
 using MMCA.Common.Infrastructure;
+using MMCA.Common.Infrastructure.Webhooks;
 using MMCA.Helpdesk.Tickets.API;
 using MMCA.Helpdesk.Tickets.API.Resources;
 
@@ -76,8 +77,16 @@ services.AddCommonExceptionHandlers();
 
 services.AddInfrastructure(builder.Configuration);
 
-// Enterprise capability opt-ins (MMCA.Common v1.150.0). Each one is inert until the matching
-// configuration section turns it on, and each is a single call on top of AddInfrastructure:
+// Strongly typed identifiers (ADR-115): one assembly per module Shared project; build/add-module.ps1
+// appends new modules here.
+System.Reflection.Assembly[] identifierAssemblies =
+[
+    typeof(MMCA.Helpdesk.Tickets.Shared.Tickets.TicketDTO).Assembly,
+];
+services.AddStronglyTypedIds(identifierAssemblies);
+
+// Enterprise capability opt-ins. Each one is inert until the matching configuration section turns it
+// on, and each is a single call on top of AddInfrastructure:
 //   AddAuditTrail      field-level change history for IAuditedEntity aggregates (Ticket), written in
 //                      the same transaction as the data, plus the audit-trail-cleanup retention job.
 //   AddScheduledJobs   the cron runner over the ScheduledJobs table in the Default source. It is what
@@ -85,9 +94,17 @@ services.AddInfrastructure(builder.Configuration);
 //                      together here.
 //   AddMultiTenancy    binds and validates the Tenancy section. The resolution middleware is already
 //                      part of UseCommonMiddlewarePipeline(), so there is no second call to make.
+//   AddWebhooks        outbound webhooks (Webhooks section): the subscription table in the Default
+//                      source, the signed delivery client and the dedicated delivery lane. Two more
+//                      pieces complete it: pipeline.AddWebhookDelivery() below registers the decorated
+//                      delivery handler, and each module names the integration events it publishes
+//                      with AddWebhookEvent (the Tickets module publishes ticket.opened). Deliveries are
+//                      internal commands, so InternalCommands:Enabled stays on, and Webhooks:Enabled
+//                      must be the same on every replica.
 services.AddAuditTrail(builder.Configuration);
 services.AddScheduledJobs(builder.Configuration);
 services.AddMultiTenancy(builder.Configuration);
+services.AddWebhooks(builder.Configuration);
 
 services.AddOptions<ModulesSettings>()
     .Bind(builder.Configuration.GetSection(ModulesSettings.SectionName))
@@ -136,7 +153,11 @@ services.AddMmcaApplicationPipeline(pipeline => pipeline
     // extracted, the provider and its connection string arrive as configuration (the orchestrator's
     // WithBroker call locally, deployment settings in the cloud) and this same call wires the
     // broker. It stays after discovery so its Replace calls still win over the loader's.
-    .Register(s => s.AddBrokerMessaging(builder.Configuration)));
+    .Register(s => s.AddBrokerMessaging(builder.Configuration))
+
+    // The outbound webhook delivery handler (AddWebhooks above is its infrastructure half). Inside
+    // the pipeline so the decorators wrap it like every other command handler.
+    .AddWebhookDelivery());
 
 services.AddModuleHealthChecks(moduleLoader);
 

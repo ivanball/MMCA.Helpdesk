@@ -33,4 +33,10 @@ public sealed partial class TicketDTOMapper
         ArgumentNullException.ThrowIfNull(entityCollection);
         return [.. entityCollection.Select(MapToDTO)];
     }
+
+    // template:begin status
+    // The outbound conversion point: the aggregate's lifecycle member becomes the wire enum the DTO
+    // carries, so the API keeps answering with numbers.
+    private static TicketStatus MapStatus(TicketLifecycle status) => status.ToContract();
+    // template:end status
 }

@@ -30,8 +30,9 @@ module compiles and still misses wiring that the templates get right and the tes
 - **A whole module**: from the solution root, `pwsh build/add-module.ps1 -Name <Module> -Aggregate <Aggregate>`
   (run it with `-?` for the shape options). It drives `dotnet new mmca-module` and then performs
   the wire-ups the template can only print: solution entries, host and architecture-test
-  references, the identifier-alias link, the architecture-map lines, error resources, the module's
-  database and data-source routing, and the first EF migration. `dotnet new mmca-module` on its own
+  references, the identifier-alias link, the architecture-map lines, error resources, the strongly
+  typed identifier registration, the module's database and data-source routing, and the first EF
+  migration. `dotnet new mmca-module` on its own
   leaves all of those to you.
 - **A command (write) slice**: from `Source/Modules/<Module>/<App>.<Module>.Application/<Module>/UseCases`,
   `dotnet new mmca-command -n <UseCase> --app <App> --module <Module> --aggregate <Aggregate> --domain-method <Method>`.

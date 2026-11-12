@@ -620,6 +620,33 @@ $moduleOnlyRewrites = @(
             // framework tables (ScheduledJobs) into this module's migrations. Never used to connect.
             options.ConnectionStrings = new ConnectionStringSettings { SQLServerConnectionString = "Server=localhost;Database=__AppDefaultPlaceholder" };
 '@
+    },
+    @{
+        # The webhook subscription table is mapped only into the source Webhooks:DataSourceName names
+        # (Default), so the running model of a later module never has it. The design-time switch maps
+        # it into whichever source the factory builds, so a later module that kept the flag would
+        # scaffold a table its runtime model lacks, and EF refuses to migrate a database whose model
+        # has pending changes.
+        Path = 'Source/Hosting/MMCA.Helpdesk.Migrations.SqlServer.Tickets/DesignTimeSQLServerDbContextFactory.cs'
+        Description = 'the design-time webhook switch a later module must not carry'
+        From = @'
+            // Framework tables that only exist when the host opts in. Keep these in step with the host's
+            // AuditTrail:Enabled / Scheduler:Enabled / Webhooks:Enabled, or the scaffolded model drifts
+            // from the running one. Tenancy needs no flag here: the TenantId column follows from
+            // ITenantEntity on the entities.
+            options.EnableAuditTrail = true;
+            options.EnableScheduler = true;
+            options.EnableWebhooks = true;
+'@
+        To = @'
+            // Framework tables that only exist when the host opts in. Keep these in step with the host's
+            // AuditTrail:Enabled / Scheduler:Enabled, or the scaffolded model drifts from the running one.
+            // Tenancy needs no flag here: the TenantId column follows from ITenantEntity on the entities.
+            // No EnableWebhooks: the webhook subscription table lives in the solution's Default source
+            // only, and a module added to an existing solution is never that source.
+            options.EnableAuditTrail = true;
+            options.EnableScheduler = true;
+'@
     }
 )
 

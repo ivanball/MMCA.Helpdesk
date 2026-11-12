@@ -1,7 +1,6 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
-using MMCA.Common.Application.Settings;
 using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Application.UseCases.Crud;
 using MMCA.Common.Shared.Abstractions;
@@ -134,7 +133,7 @@ public class TicketConcurrencyTokenTests
         // the scan appends, which wins), and only AddModuleTicketsApplication runs both.
         var services = new ServiceCollection();
         services.AddSingleton(unitOfWork.Object);
-        services.AddModuleTicketsApplication(new ApplicationSettings());
+        services.AddModuleTicketsApplication();
 
         // Disposing the provider is safe here: the resolved handler already holds its dependencies.
         using var provider = services.BuildServiceProvider();

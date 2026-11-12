@@ -22,16 +22,16 @@ public sealed class WebhookHostSettingsTests
 {
     private const string DevelopmentFile = "appsettings.Development.json";
 
+    private const string EnabledKey = $"{WebhookSettings.SectionName}:{nameof(WebhookSettings.Enabled)}";
+
+    private const string InsecureTargetsKey =
+        $"{WebhookSettings.SectionName}:{nameof(WebhookSettings.AllowInsecureTargetsInDevelopment)}";
+
     private static readonly string HostDirectory = Path.Combine(
         ArchitectureMapBase.FindRepoRoot("MMCA.Helpdesk.slnx"),
         "Source",
         "Hosts",
         "MMCA.Helpdesk.Web");
-
-    private static readonly string EnabledKey = $"{WebhookSettings.SectionName}:{nameof(WebhookSettings.Enabled)}";
-
-    private static readonly string InsecureTargetsKey =
-        $"{WebhookSettings.SectionName}:{nameof(WebhookSettings.AllowInsecureTargetsInDevelopment)}";
 
     private static readonly string InternalCommandsEnabledKey =
         $"{InternalCommandsSettings.SectionName}:{nameof(InternalCommandsSettings.Enabled)}";

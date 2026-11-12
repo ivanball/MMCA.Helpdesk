@@ -15,5 +15,5 @@ public sealed class TicketsModule : IModule
     public string Name => "Tickets";
 
     public void Register(IServiceCollection services, IConfigurationBuilder configuration, ApplicationSettings applicationSettings) =>
-        services.AddTicketsModule(applicationSettings);
+        services.AddTicketsModule();
 }

@@ -13,7 +13,7 @@ namespace MMCA.Helpdesk.Tickets.Application.Tests.Paging;
 
 /// <summary>
 /// Pins the module side of cursor paging (items 10 and 47): the ticket list pages through
-/// <c>GET Tickets/cursor?sortColumn=createdOn&amp;sortDirection=desc</c>, newest first, so the query
+/// <c>GET Tickets/cursor?sortColumn=id&amp;sortDirection=desc</c>, newest first, so the query
 /// service the module registers must accept that sort column and hand the page request to the
 /// repository's keyset read. A column the response contract refuses comes back as a validation failure
 /// and the repository is never called, which the ticket list would show as an empty, failed page.
@@ -24,12 +24,10 @@ namespace MMCA.Helpdesk.Tickets.Application.Tests.Paging;
 /// </summary>
 public sealed class TicketCursorPagingTests
 {
-    // DESIGN-QUESTION: design-api.md item 10 (e) names sortColumn=createdOn for the ticket list, but
-    // the query service validates a client sort column against the response contract (TicketDTO), and
-    // TicketDTO declares no CreatedOn today. Either the DTO gains it, the module's query service maps it
-    // (DTOToEntityPropertyMap), or the client sorts by another column; this test pins the column the
-    // design names.
-    private const string ListSortColumn = "createdOn";
+    // The query service validates a client sort column against the response contract (TicketDTO),
+    // which declares no CreatedOn, so the list sorts by id descending: ids are database-generated, so
+    // the highest id is the newest ticket (helpdesk sweep ruling 2).
+    private const string ListSortColumn = "id";
 
     [Fact]
     public async Task CursorPage_NewestFirst_ReachesTheRepository()
