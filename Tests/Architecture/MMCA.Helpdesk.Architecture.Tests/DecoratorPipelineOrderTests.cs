@@ -65,7 +65,10 @@ public sealed class DecoratorPipelineOrderTests
         // helper the host does: a regression in the helper's ordering would surface here as a wrong
         // nesting, not just as a startup failure nobody runs.
         services.AddMmcaApplicationPipeline(pipeline => pipeline
-            .Register(s => s.AddModuleTicketsApplication(new ApplicationSettings())));
+            .Register(s => s.AddModuleTicketsApplication(new ApplicationSettings()))
+            // The host's webhook delivery handler (item 35) registers inside the pipeline too, so the
+            // whole-set check below covers it the way the host composes it.
+            .AddWebhookDelivery());
     }
 
     [Fact]

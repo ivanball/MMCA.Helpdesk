@@ -28,11 +28,18 @@ public sealed class AnonymousEndpointTests : AnonymousEndpointTestsBase
         // default). Adding the Identity module (GETTING-STARTED.md Phase 8) means flipping the type
         // to [Authorize] and deleting this entry.
         "MMCA.Helpdesk.Tickets.API.Controllers.TicketsController",
+
+        // The audit-history reader (item 12) is anonymous for the same issuer-less reason and goes
+        // the same way: flip it to the inherited audit:view gate and delete this entry once an issuer
+        // exists. The webhook subscription admin is NOT listed: it re-declares webhooks:manage, so it
+        // denies every caller until then.
+        "MMCA.Helpdesk.Tickets.API.Controllers.AuditHistoryController",
     ];
 
-    // The exact count today: one controller type and no routable components in the API assembly. A
-    // renamed or missing assembly would make the allow-list check vacuous, so the floor fails first.
-    protected override int MinimumScannedTypes => 1;
+    // The exact count: three controller types (tickets, audit history, webhook subscriptions) and no
+    // routable components in the API assembly. A renamed or missing assembly would make the
+    // allow-list check vacuous, so the floor fails first.
+    protected override int MinimumScannedTypes => 3;
 
     // The stricter half of the gate (SEC-ADC-03), opted into here because this seed passes it: the
     // allow-list above can only see an endpoint that CARRIES [AllowAnonymous], so an endpoint
