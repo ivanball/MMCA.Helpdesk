@@ -52,8 +52,12 @@
     </PackageReference>
   </ItemGroup>
 
-  <!-- Module identifier type aliases linked into every project solution-wide -->
-  <ItemGroup Condition="'$(MSBuildProjectExtension)' != '.dcproj'">
+  <!-- Module identifier type aliases linked into every project solution-wide, so an alias may only
+       name a primitive: a strongly typed identifier gets NO alias, because it is a type of its module
+       that another module's projects cannot reference, and code names the wrapper directly. Not
+       linked into the orchestration project (it does not reference its projects' assemblies) or the
+       template pack (it compiles with no references), neither of which uses an alias. -->
+  <ItemGroup Condition="'$(MSBuildProjectExtension)' != '.dcproj' and '$(IsAspireHost)' != 'true' and '$(PackageType)' != 'Template'">
     <Compile Include="$(MSBuildThisFileDirectory)Source\Modules\Tickets\MMCA.Helpdesk.Tickets.Shared\MMCA.Helpdesk.Tickets.GlobalUsings.IdentifierType.cs"
              Link="GlobalUsings\MMCA.Helpdesk.Tickets.GlobalUsings.IdentifierType.cs"
              Condition="'$(MSBuildProjectName)' != 'MMCA.Helpdesk.Tickets.Shared'" />

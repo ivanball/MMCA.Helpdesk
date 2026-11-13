@@ -1,9 +1,6 @@
 using MMCA.Common.Domain.Invariants;
 using MMCA.Common.Shared.Abstractions;
-// template:begin childStatus
-using MMCA.Helpdesk.Tickets.Shared.Tickets;
 
-// template:end childStatus
 namespace MMCA.Helpdesk.Tickets.Domain.Tickets;
 
 /// <summary>
@@ -43,8 +40,8 @@ public static class TicketInvariants
 
     // template:end child
     // template:begin childStatus
-    public static Result EnsureStatusAllowsComments(TicketStatus status, string source)
-        => status == TicketStatus.Closed
+    public static Result EnsureStatusAllowsComments(TicketLifecycle status, string source)
+        => status is { IsLocked: true }
             ? Result.Failure(Error.Invariant(
                 code: "Ticket.Closed",
                 message: "Comments cannot be added to a closed ticket.",

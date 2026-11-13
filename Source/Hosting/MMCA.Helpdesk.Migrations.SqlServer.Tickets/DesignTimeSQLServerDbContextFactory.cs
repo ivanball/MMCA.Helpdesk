@@ -38,10 +38,17 @@ public sealed class DesignTimeSQLServerDbContextFactory : IDesignTimeDbContextFa
             };
 
             // Framework tables that only exist when the host opts in. Keep these in step with the host's
-            // AuditTrail:Enabled / Scheduler:Enabled, or the scaffolded model drifts from the running one.
-            // Tenancy needs no flag here: the TenantId column follows from ITenantEntity on the entities.
+            // AuditTrail:Enabled / Scheduler:Enabled / Webhooks:Enabled, or the scaffolded model drifts
+            // from the running one. Tenancy needs no flag here: the TenantId column follows from
+            // ITenantEntity on the entities.
             options.EnableAuditTrail = true;
             options.EnableScheduler = true;
+            options.EnableWebhooks = true;
             options.AddConfigurationAssembly(typeof(MMCA.Helpdesk.Tickets.Infrastructure.AssemblyReference).Assembly);
+
+            // The assembly declaring the module's strongly typed identifiers (ADR-115), the same one the
+            // host passes to AddStronglyTypedIds: without it a wrapped key has no converter and the
+            // design-time model does not build.
+            options.AddStronglyTypedIdAssembly(typeof(MMCA.Helpdesk.Tickets.Shared.Tickets.TicketDTO).Assembly);
         });
 }

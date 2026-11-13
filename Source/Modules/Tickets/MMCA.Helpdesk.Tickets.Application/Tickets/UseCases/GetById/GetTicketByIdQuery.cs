@@ -8,8 +8,8 @@ namespace MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.GetById;
 /// This is the read half of the framework's caching pair. Implementing
 /// <see cref="IQueryCacheable"/> puts the query behind <c>CachingQueryDecorator</c>: the first call
 /// runs the handler and stores the result, later calls are served from the cache without touching
-/// the database, and every ticket command (each implements <see cref="ICacheInvalidating"/> over
-/// <see cref="TicketCacheKeys.Prefix"/>) evicts the entry after it succeeds. Without a cacheable
+/// the database, and every ticket command (each implements <c>ICacheInvalidating&lt;Ticket&gt;</c>,
+/// whose prefix is <see cref="TicketCacheKeys.Prefix"/>) evicts the entry after it succeeds. Without a cacheable
 /// read on the other side those commands invalidate nothing, which is exactly how an extension
 /// point ends up shipped but undemonstrated.
 /// </para>

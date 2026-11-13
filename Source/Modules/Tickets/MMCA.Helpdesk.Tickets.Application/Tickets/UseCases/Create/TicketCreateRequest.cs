@@ -1,17 +1,17 @@
 using MMCA.Common.Application.Interfaces.Mapping;
 using MMCA.Common.Application.UseCases.Markers;
+using MMCA.Helpdesk.Tickets.Domain.Tickets;
 
 namespace MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.Create;
 
 /// <summary>
 /// Command/request to open a new ticket. Used directly as the command (validated by the pipeline's
 /// Validating decorator via <see cref="TicketCreateRequestValidator"/>); implements
-/// <see cref="ICacheInvalidating"/> so cached ticket reads are evicted after a successful create.
+/// <see cref="ICacheInvalidating{TEntity}"/> over <see cref="Ticket"/> so cached ticket reads are
+/// evicted after a successful create.
 /// </summary>
-public record class TicketCreateRequest : ICreateRequest, ICacheInvalidating
+public record class TicketCreateRequest : ICreateRequest, ICacheInvalidating<Ticket>
 {
-    public string CachePrefix => TicketCacheKeys.Prefix;
-
     public required string Title { get; init; }
     // template:begin description
     public required string Description { get; init; }

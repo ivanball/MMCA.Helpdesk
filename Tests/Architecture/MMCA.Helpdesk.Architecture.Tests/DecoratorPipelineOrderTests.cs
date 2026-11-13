@@ -6,7 +6,6 @@ using MMCA.Common.Application;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
-using MMCA.Common.Application.Settings;
 using MMCA.Common.Application.UseCases.Crud;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth.Permissions;
@@ -65,7 +64,10 @@ public sealed class DecoratorPipelineOrderTests
         // helper the host does: a regression in the helper's ordering would surface here as a wrong
         // nesting, not just as a startup failure nobody runs.
         services.AddMmcaApplicationPipeline(pipeline => pipeline
-            .Register(s => s.AddModuleTicketsApplication(new ApplicationSettings())));
+            .Register(s => s.AddModuleTicketsApplication())
+            // The host's webhook delivery handler (item 35) registers inside the pipeline too, so the
+            // whole-set check below covers it the way the host composes it.
+            .AddWebhookDelivery());
     }
 
     [Fact]

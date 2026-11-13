@@ -89,8 +89,24 @@
     </NoRecordsContent>
 </MudTable>
 
+@* The list pages by cursor, newest first: each "load more" asks for the page after the last one
+   loaded, so a ticket added meanwhile never shifts a row onto the next page twice. The button is
+   there only while the server says more remain. *@
+@if (_nextCursor is not null)
+{
+    <div class="d-flex justify-center mt-4">
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="LoadMoreAsync" Disabled="_busy">
+            @L["Button.LoadMore"]
+        </MudButton>
+    </div>
+}
+
 @code {
-    private IReadOnlyList<TicketDTO> _tickets = [];
+    // One page of the list per request; "load more" appends the next one.
+    private const int PageSize = 20;
+
+    private readonly List<TicketDTO> _tickets = [];
+    private string? _nextCursor;
     private string _title = string.Empty;
     @* template:begin description *@
     private string _description = string.Empty;
@@ -115,7 +131,12 @@
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
 
-    private async Task LoadAsync()
+    // Reloads from the first page: after a write the rows already shown may have changed.
+    private async Task LoadAsync() => await LoadPageAsync(cursor: null);
+
+    private async Task LoadMoreAsync() => await LoadPageAsync(_nextCursor);
+
+    private async Task LoadPageAsync(string? cursor)
     {
         _busy = true;
         try
@@ -123,10 +144,20 @@
             // The client returns a result rather than throwing, so the page branches instead of
             // catching: TryGetValue unwraps the success, LocalizedErrorMessage composes the failure
             // (ProblemDetails errors, most severe first) through this page's own localizer.
-            var result = await Api.GetTicketsAsync();
-            if (result.TryGetValue(out var tickets))
+            var result = await Api.GetTicketPageAsync(cursor, PageSize);
+            if (result.TryGetValue(out var page))
             {
-                _tickets = tickets;
+                if (cursor is null)
+                {
+                    _tickets.Clear();
+                }
+
+                if (page.Items is { } items)
+                {
+                    _tickets.AddRange(items);
+                }
+
+                _nextCursor = page.NextCursor;
             }
             else
             {

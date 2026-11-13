@@ -1,26 +1,23 @@
 using Microsoft.Extensions.DependencyInjection;
-using MMCA.Common.Application.Settings;
 using MMCA.Helpdesk.Tickets.Application;
 using MMCA.Helpdesk.Tickets.Infrastructure;
 
 namespace MMCA.Helpdesk.Tickets.API;
 
 /// <summary>
-/// Composes the Tickets module across its Application, Infrastructure, and API layers.
+/// Composes the Tickets module across its Application and Infrastructure layers. The API layer itself
+/// registers nothing: its controllers are discovered by MVC.
 /// </summary>
 public static class DependencyInjection
 {
     extension(IServiceCollection services)
     {
-        public IServiceCollection AddTicketsModule(ApplicationSettings applicationSettings)
+        public IServiceCollection AddTicketsModule()
         {
-            services.AddModuleTicketsApplication(applicationSettings);
+            services.AddModuleTicketsApplication();
             services.AddModuleTicketsInfrastructure();
-            services.AddModuleTicketsAPI();
 
             return services;
         }
-
-        public IServiceCollection AddModuleTicketsAPI() => services;
     }
 }

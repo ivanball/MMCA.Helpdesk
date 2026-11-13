@@ -11,6 +11,9 @@ using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Infrastructure.Persistence.Configuration;
 // template:end owner
 using MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration;
+// template:begin status
+using MMCA.Common.Infrastructure.Persistence.Conversions;
+// template:end status
 using MMCA.Helpdesk.Tickets.Domain.Tickets;
 
 namespace MMCA.Helpdesk.Tickets.Infrastructure.Persistence.EntityConfiguration;
@@ -36,8 +39,10 @@ internal sealed class TicketConfiguration : EntityTypeConfigurationSQLServer<Tic
 
         // template:end description
         // template:begin status
+        // Stored as the member NAME, the text the column held when the property was the wire enum,
+        // so the domain enumeration changes neither the column type nor any stored value.
         builder.Property(p => p.Status)
-            .HasConversion<string>()
+            .HasConversion(new EnumerationNameValueConverter<TicketLifecycle>())
             .HasMaxLength(32)
             .IsRequired();
 

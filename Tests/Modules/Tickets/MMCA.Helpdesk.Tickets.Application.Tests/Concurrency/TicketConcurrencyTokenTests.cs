@@ -1,7 +1,6 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
-using MMCA.Common.Application.Settings;
 using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Application.UseCases.Crud;
 using MMCA.Common.Shared.Abstractions;
@@ -131,10 +130,10 @@ public class TicketConcurrencyTokenTests
 
         // The module's own registration rather than the bare scan: the update verb is registered by
         // AddEntityCrud (or, where the aggregate needs an eager load, by the module's subclass that
-        // the scan picks up ahead of it), and only AddModuleTicketsApplication runs both in order.
+        // the scan appends, which wins), and only AddModuleTicketsApplication runs both.
         var services = new ServiceCollection();
         services.AddSingleton(unitOfWork.Object);
-        services.AddModuleTicketsApplication(new ApplicationSettings());
+        services.AddModuleTicketsApplication();
 
         // Disposing the provider is safe here: the resolved handler already holds its dependencies.
         using var provider = services.BuildServiceProvider();

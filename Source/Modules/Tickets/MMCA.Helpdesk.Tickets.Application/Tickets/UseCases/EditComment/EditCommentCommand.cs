@@ -1,4 +1,6 @@
 using MMCA.Common.Application.UseCases.Markers;
+using MMCA.Helpdesk.Tickets.Domain.Tickets;
+using MMCA.Helpdesk.Tickets.Shared.Tickets;
 
 namespace MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.EditComment;
 
@@ -9,8 +11,8 @@ namespace MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.EditComment;
 /// </summary>
 public sealed record EditCommentCommand(
     TicketIdentifierType TicketId,
-    TicketCommentIdentifierType CommentId,
-    string Body) : ICacheInvalidating
+    TicketCommentId CommentId,
+    string Body) : ICacheInvalidating<Ticket>
 {
     /// <summary>
     /// The client's last-seen concurrency token for the owning ticket (ADR-035). Concurrency is
@@ -19,6 +21,4 @@ public sealed record EditCommentCommand(
     /// with 428 before a command is ever built.
     /// </summary>
     public required byte[] RowVersion { get; init; }
-
-    public string CachePrefix => TicketCacheKeys.Prefix;
 }

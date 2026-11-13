@@ -2,7 +2,6 @@ using AwesomeAssertions;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Application.Interfaces.Mapping;
-using MMCA.Common.Application.Settings;
 using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Application.UseCases.Crud;
 using MMCA.Common.Application.Validation;
@@ -65,16 +64,17 @@ public sealed class TicketsCrudRegistrationTests
             && d.ImplementationType.GetGenericTypeDefinition() == typeof(CommandRequestValidator<,>));
 
     /// <summary>
-    /// <c>AddEntityCrud</c> registers all three verbs with <c>TryAdd</c> and runs after the module
-    /// scan, so the module's own create handler (the one that publishes the integration event after
-    /// the commit) keeps the create verb. Moving the call above the scan would silently hand creates
-    /// to the framework's generic handler instead.
+    /// The module's own create handler (the one that publishes the integration event after the
+    /// commit) keeps the create verb. The scan appends it and <c>AddEntityCrud</c> only
+    /// <c>TryAdd</c>s the generic one, so it wins in either call order; what would lose it is a hand
+    /// registration made with <c>TryAdd</c> after <c>AddEntityCrud</c>. The assertion reads the LAST
+    /// descriptor for the service type, because that is the one the container resolves: a
+    /// registration that is merely present can still be shadowed by a later one.
     /// </summary>
     [Fact]
     public void AddEntityCrud_DoesNotDisplace_TheModulesOwnCreateHandler() =>
-        Registrations.Should().Contain(d =>
-            d.ServiceType == typeof(ICommandHandler<TicketCreateRequest, Result<TicketDTO>>)
-            && d.ImplementationType == typeof(CreateTicketHandler));
+        Registrations.Last(d => d.ServiceType == typeof(ICommandHandler<TicketCreateRequest, Result<TicketDTO>>))
+            .ImplementationType.Should().Be<CreateTicketHandler>();
 
     /// <summary>
     /// The delete verb deliberately does NOT go through the framework's generic handler, which
@@ -92,22 +92,22 @@ public sealed class TicketsCrudRegistrationTests
 
     // template:begin child
     /// <summary>
-    /// Same ordering rule, for the update verb: the DTO a ticket update answers with carries the
-    /// comments, so the module subclasses the framework handler to declare the eager load, and the
-    /// scan has to register it AHEAD of <c>AddEntityCrud</c> for that subclass to survive.
+    /// Same rule, for the update verb: the DTO a ticket update answers with carries the comments, so
+    /// the module subclasses the framework handler to declare the eager load. The scan appends that
+    /// subclass, so it is the effective registration whichever of the scan and <c>AddEntityCrud</c>
+    /// runs first; the assertion reads the last descriptor, the one the container resolves.
     /// </summary>
     [Fact]
     public void AddEntityCrud_DoesNotDisplace_TheModulesOwnUpdateHandler() =>
-        Registrations.Should().Contain(d =>
-            d.ServiceType == typeof(
-                ICommandHandler<UpdateEntityCommand<Ticket, TicketUpdateRequest, TicketIdentifierType>, Result<TicketDTO>>)
-            && d.ImplementationType == typeof(TicketUpdateHandler));
+        Registrations.Last(d => d.ServiceType == typeof(
+                ICommandHandler<UpdateEntityCommand<Ticket, TicketUpdateRequest, TicketIdentifierType>, Result<TicketDTO>>))
+            .ImplementationType.Should().Be<TicketUpdateHandler>();
 
     // template:end child
     private static ServiceCollection BuildRegistrations()
     {
         var services = new ServiceCollection();
-        services.AddModuleTicketsApplication(new ApplicationSettings());
+        services.AddModuleTicketsApplication();
         return services;
     }
 }

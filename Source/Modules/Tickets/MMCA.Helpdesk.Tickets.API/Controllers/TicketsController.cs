@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using MMCA.Common.API.Concurrency;
 using MMCA.Common.API.Controllers;
 using MMCA.Common.API.Idempotency;
+using MMCA.Common.API.Pagination;
 using MMCA.Common.Application.Interfaces.Mapping;
 using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Application.UseCases.Crud;
@@ -43,6 +44,9 @@ namespace MMCA.Helpdesk.Tickets.API.Controllers;
 // Identity module (GETTING-STARTED.md Phase 8) and set Authentication:JwtBearer:Authority, switch
 // this to [Authorize] (optionally with a policy) to require authenticated callers.
 [AllowAnonymous]
+// Opts in to the framework's cursor-paged list read, GET Tickets/cursor (newest first by id), which
+// the UI's ticket list pages through with "load more". Without it the inherited action is removed.
+[SupportsCursorPaging]
 public sealed class TicketsController(
     IEntityQueryService<Ticket, TicketDTO, TicketIdentifierType> queryService,
     IQueryHandler<GetTicketByIdQuery, Result<TicketDTO>> getByIdHandler,
@@ -108,8 +112,10 @@ public sealed class TicketsController(
     /// answers 412 (ADR-035). The body never carries the token.
     /// <para>
     /// The command is the framework's generic <c>UpdateEntityCommand</c>, constructed here rather
-    /// than mapped: it carries the request whole, so the action names no ticket field and the HTTP
-    /// contract (route, body, status codes) is unchanged.
+    /// than mapped: it carries the request whole, so the action names no ticket field. The framework
+    /// helper states the decoded token on the command, dispatches it, and answers 200 with the
+    /// refreshed ticket and its <c>ETag</c>, so a client can chain its next conditional write without
+    /// a second read. <c>[SupportsIfMatch]</c> documents the 412 and 428 answers itself.
     /// </para>
     /// </summary>
     [HttpPut("{id}")]
@@ -117,50 +123,40 @@ public sealed class TicketsController(
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
-    [ProducesResponseType(StatusCodes.Status428PreconditionRequired)]
-    public async Task<ActionResult<TicketDTO>> UpdateAsync(
+    public Task<ActionResult<TicketDTO>> UpdateAsync(
         TicketIdentifierType id,
         TicketUpdateRequest request,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var result = await updateHandler.HandleAsync(
-            new UpdateEntityCommand<Ticket, TicketUpdateRequest, TicketIdentifierType>(
-                id,
-                request,
-                SupportsIfMatchAttribute.RequiredToken(HttpContext)),
-            cancellationToken).ConfigureAwait(false);
-        return result.IsFailure ? HandleFailure(result.Errors) : Ok(result.Value);
+        return HandleConditionalCommandWithResponseAsync(
+            updateHandler,
+            token => new UpdateEntityCommand<Ticket, TicketUpdateRequest, TicketIdentifierType>(id, request, token),
+            cancellationToken: cancellationToken);
     }
 
     // template:begin status
     /// <summary>
     /// Changes a ticket's status. A conditional write through <c>If-Match</c>, same contract as the
-    /// details update (ADR-035).
+    /// details update (ADR-035), answered with the refreshed ticket and its <c>ETag</c>.
     /// </summary>
     [HttpPut("{id}/status")]
     [SupportsIfMatch]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
-    [ProducesResponseType(StatusCodes.Status428PreconditionRequired)]
-    public async Task<ActionResult<TicketDTO>> ChangeStatusAsync(
+    public Task<ActionResult<TicketDTO>> ChangeStatusAsync(
         TicketIdentifierType id,
         ChangeTicketStatusRequest request,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var result = await changeStatusHandler.HandleAsync(
-            new ChangeTicketStatusCommand(id, request.Status)
-            {
-                RowVersion = SupportsIfMatchAttribute.RequiredToken(HttpContext),
-            },
-            cancellationToken).ConfigureAwait(false);
-        return result.IsFailure ? HandleFailure(result.Errors) : Ok(result.Value);
+        return HandleConditionalCommandWithResponseAsync(
+            changeStatusHandler,
+            token => new ChangeTicketStatusCommand(id, request.Status) { RowVersion = token },
+            cancellationToken: cancellationToken);
     }
 
     // template:end status
@@ -213,23 +209,18 @@ public sealed class TicketsController(
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
-    [ProducesResponseType(StatusCodes.Status428PreconditionRequired)]
     public async Task<IActionResult> EditCommentAsync(
         TicketIdentifierType id,
-        TicketCommentIdentifierType commentId,
+        TicketCommentId commentId,
         EditCommentRequest request,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var result = await editCommentHandler.HandleAsync(
-            new EditCommentCommand(id, commentId, request.Body)
-            {
-                RowVersion = SupportsIfMatchAttribute.RequiredToken(HttpContext),
-            },
-            cancellationToken).ConfigureAwait(false);
-        return result.IsFailure ? HandleFailure(result.Errors) : NoContent();
+        return await HandleConditionalCommandAsync(
+            editCommentHandler,
+            token => new EditCommentCommand(id, commentId, request.Body) { RowVersion = token },
+            cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Removes (soft-deletes) a comment from a ticket.</summary>
@@ -238,7 +229,7 @@ public sealed class TicketsController(
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RemoveCommentAsync(
         TicketIdentifierType id,
-        TicketCommentIdentifierType commentId,
+        TicketCommentId commentId,
         CancellationToken cancellationToken)
     {
         var result = await removeCommentHandler.HandleAsync(

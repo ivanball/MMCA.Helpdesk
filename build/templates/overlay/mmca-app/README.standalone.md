@@ -92,11 +92,13 @@ Tests/
   already exist, so a handler registered after the call would run unwrapped; the seal makes that
   throw at startup instead. Non-handler registrations (`AddInfrastructure`, `AddAPI`,
   `AddModuleHealthChecks`, which follows the call) stay outside it.
-- **`AddEntityCrud<...>()` must come AFTER the module's convention scan**, in
+- **`AddEntityCrud<...>()` never displaces a scanned handler**, in
   `Source/Modules/Tickets/MMCA.Helpdesk.Tickets.Application/DependencyInjection.cs`. It registers the
-  framework's create, update and delete handlers with `TryAdd`, which is what lets the module keep a
-  verb it wrote itself; above the scan it would take those verbs instead, with no error. Ordering
-  matters for the validator bridge too: the same call registers the `CommandRequestValidator` for the
+  framework's create, update and delete handlers with `TryAdd`, the module's convention scan appends
+  its own, and the container resolves the last registration, so a verb the module wrote itself stays
+  its own whichever of the two calls runs first. The hazard is a hand registration made with
+  `TryAdd` AFTER `AddEntityCrud`: the verb is taken by then, so it loses with no error. The same
+  call also wires the validator bridge: it registers the `CommandRequestValidator` for the
   closed `UpdateEntityCommand` (the module scan's own bridge only sees commands declared in the module
   assembly, and that command is declared in MMCA.Common), again with `TryAdd`, so a scan-registered
   explicit validator still wins. Without that registration the `*UpdateRequestValidator` silently
@@ -115,12 +117,11 @@ Tests/
 ## The one-time fixup the scaffold deliberately left to you
 
 **Re-sort the using directives.** Renaming every namespace moved where your own usings sort
-against `MMCA.Common.*` and the third-party ones, so `SA1210` starts as a suggestion, and `SA1211`
-with it: the identifier-alias file's two aliases sort differently depending on the aggregate and
-child names you asked for (see the scaffold delta at the bottom of `.editorconfig`). Sort them with:
+against `MMCA.Common.*` and the third-party ones, so `SA1210` starts as a suggestion (see the
+scaffold delta at the bottom of `.editorconfig`). Sort them with:
 
 ```bash
-dotnet format analyzers MMCA.Helpdesk.slnx --diagnostics SA1210 SA1211 --severity info
+dotnet format analyzers MMCA.Helpdesk.slnx --diagnostics SA1210 --severity info
 ```
 
 Every `mmca-command` / `mmca-query` slice arrives with the same skew, so either re-run that after
@@ -196,7 +197,7 @@ never generated, so there is nothing to delete afterwards.
 
 | Option | Effect |
 |---|---|
-| `--flat` | No child collection at all: no child entity, DTO, requests, mapper, EF configuration, Add/Edit/Remove slices, controller endpoints, identifier alias, or tests. Use it when the aggregate owns no growable children. |
+| `--flat` | No child collection at all: no child entity, DTO, requests, mapper, EF configuration, Add/Edit/Remove slices, controller endpoints, or tests. Use it when the aggregate owns no growable children. |
 | `--no-status` | No status axis: no status enum, no `ChangeStatus` slice, request, or endpoint, no `Status` property, no status invariant or tests. Use it when the aggregate has no lifecycle state. |
 | `--no-description` | No long-text property: no `Description` property or invariant, no max-length constant, no DTO, request, or command field, no validator rule, no EF max-length configuration, no error-resource entries, no UI field, no tests. Use it when the aggregate's main text property is all the text it needs. |
 | `--no-owner` | No owning-user property: no `RequesterUserId` property, no create-request field or validator rule, no member on the creation integration event, no EF index, no UI field or column, no tests. Use it when the aggregate is not owned by a single user, or until you add an Identity module to resolve one. |

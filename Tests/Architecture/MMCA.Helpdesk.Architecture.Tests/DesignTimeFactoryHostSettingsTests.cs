@@ -2,6 +2,8 @@ using System.Runtime.Loader;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.Configuration;
+using MMCA.Common.Application.Webhooks;
+using MMCA.Common.Domain.Webhooks;
 using MMCA.Common.Infrastructure.Persistence.AuditTrail;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Scheduling;
@@ -39,6 +41,7 @@ public sealed class DesignTimeFactoryHostSettingsTests
         [
             ("EnableAuditTrail", $"{AuditTrailSettings.SectionName}:{nameof(AuditTrailSettings.Enabled)}", model.FindEntityType(typeof(AuditTrailEntry)) is not null),
             ("EnableScheduler", $"{SchedulerSettings.SectionName}:{nameof(SchedulerSettings.Enabled)}", model.FindEntityType(typeof(ScheduledJobEntry)) is not null),
+            ("EnableWebhooks", $"{WebhookSettings.SectionName}:{nameof(WebhookSettings.Enabled)}", model.FindEntityType(typeof(WebhookSubscription)) is not null),
         ];
 
         var mismatches = new List<string>();
