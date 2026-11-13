@@ -10,7 +10,7 @@ namespace MMCA.Helpdesk.Tickets.Application.Tickets.DTOs;
 /// </summary>
 [Mapper]
 public sealed partial class TicketCommentDTOMapper
-    : IEntityDTOMapper<TicketComment, TicketCommentDTO, TicketCommentIdentifierType>
+    : IEntityDTOMapper<TicketComment, TicketCommentDTO, TicketCommentId>
 {
     public partial TicketCommentDTO MapToDTO(TicketComment entity);
 

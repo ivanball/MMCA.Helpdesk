@@ -1,10 +1,8 @@
 // Tickets module entity identifier type aliases.
 // The entities use database-generated integer IDs (the [IdValueGenerated] attribute on the
 // domain entities). This file is linked into every project solution-wide via Directory.Build.props,
-// so the aliases are visible everywhere. Always use the alias instead of the raw type.
-// template:begin child
-// The child id is a strongly typed wrapper over the same int (ADR-115); the ticket id stays the
-// primitive alias, so the module shows both styles side by side.
-global using TicketCommentIdentifierType = MMCA.Helpdesk.Tickets.Shared.Tickets.TicketCommentId;
-// template:end child
+// so an alias here may only name a type every project can see: a primitive. Always use the alias
+// instead of the raw primitive.
+// A strongly typed identifier (ADR-115) gets NO alias: it is a type of this module, which another
+// module's projects cannot reference, so code names the wrapper type directly.
 global using TicketIdentifierType = int;

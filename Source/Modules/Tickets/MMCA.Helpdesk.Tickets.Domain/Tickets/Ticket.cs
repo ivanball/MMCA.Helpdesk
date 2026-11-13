@@ -5,7 +5,10 @@ using MMCA.Common.Domain.Extensions;
 using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Helpdesk.Tickets.Domain.Tickets.DomainEvents;
+// template:begin child
+using MMCA.Helpdesk.Tickets.Shared.Tickets;
 
+// template:end child
 namespace MMCA.Helpdesk.Tickets.Domain.Tickets;
 
 /// <summary>
@@ -84,7 +87,7 @@ public sealed class Ticket : AuditableAggregateRootEntity<TicketIdentifierType>,
 
     // template:begin child
     public Result<TicketComment> AddComment(
-        TicketCommentIdentifierType? id,
+        TicketCommentId? id,
         string body,
         int authorUserId)
     {
@@ -127,7 +130,7 @@ public sealed class Ticket : AuditableAggregateRootEntity<TicketIdentifierType>,
     }
 
     // template:begin child
-    public Result EditComment(TicketCommentIdentifierType commentId, string body)
+    public Result EditComment(TicketCommentId commentId, string body)
     {
         // template:begin status
         var statusValidation = TicketInvariants.EnsureStatusAllowsComments(Status, nameof(EditComment));
@@ -154,7 +157,7 @@ public sealed class Ticket : AuditableAggregateRootEntity<TicketIdentifierType>,
         return Result.Success();
     }
 
-    public Result RemoveComment(TicketCommentIdentifierType commentId)
+    public Result RemoveComment(TicketCommentId commentId)
     {
         // template:begin status
         var statusValidation = TicketInvariants.EnsureStatusAllowsComments(Status, nameof(RemoveComment));

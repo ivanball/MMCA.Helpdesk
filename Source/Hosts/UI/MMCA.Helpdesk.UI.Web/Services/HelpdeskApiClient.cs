@@ -146,7 +146,7 @@ public sealed class HelpdeskApiClient(HttpClient httpClient)
     /// Edits a comment's body. The precondition is the OWNING ticket's token: concurrency is an
     /// aggregate-level invariant, and the ticket read's <c>ETag</c> is what carries it.
     /// </summary>
-    public Task<Result> EditCommentAsync(int id, TicketCommentIdentifierType commentId, string body, byte[] rowVersion, CancellationToken cancellationToken = default) =>
+    public Task<Result> EditCommentAsync(int id, TicketCommentId commentId, string body, byte[] rowVersion, CancellationToken cancellationToken = default) =>
         HttpResultExecutor.ExecuteAsync(
             async () =>
             {
@@ -157,7 +157,7 @@ public sealed class HelpdeskApiClient(HttpClient httpClient)
             },
             cancellationToken);
 
-    public Task<Result> RemoveCommentAsync(int id, TicketCommentIdentifierType commentId, CancellationToken cancellationToken = default) =>
+    public Task<Result> RemoveCommentAsync(int id, TicketCommentId commentId, CancellationToken cancellationToken = default) =>
         HttpResultExecutor.ExecuteAsync(
             async () =>
             {

@@ -1237,11 +1237,10 @@ if ($declaredVersion -ne $frameworkVersion) {
 # is correct for every generated name and SA1210 fails the first build. (SA1210 has no notion of
 # blank-line-separated groups, so spacing them apart does not help.)
 #
-# SA1211 is the same problem one level down, on the identifier-alias file. The seed's two aliases sort
-# TicketCommentIdentifierType before TicketIdentifierType; --child Line renames them to
-# ShipmentLineIdentifierType and ShipmentIdentifierType, which sort the other way round. No checked-in
-# order satisfies both, and that file is linked into EVERY project, so one wrong name fails the whole
-# solution rather than one file.
+# SA1211 (alias order) is NOT relaxed. Each module's identifier-alias file declares exactly one alias,
+# the primitive one for its root entity: a strongly typed child identifier gets no alias, because
+# that file is linked into EVERY project, including the other modules' ones, which cannot reference
+# the module's own types. With one alias per file there is no order for a rename to break.
 #
 # IDE0021 is the same shape of problem on the shape flags rather than the renames. The aggregate's
 # private constructor assigns one property per axis, so --no-status --no-description --no-owner
@@ -1259,9 +1258,9 @@ if ($declaredVersion -ne $frameworkVersion) {
 #
 # This is appended to the STAGED copy, never to the seed's own .editorconfig: that file stays the
 # single source of the shared analyzer baseline that compare-analyzer-config.ps1 enforces across the
-# four repos. Three rules are relaxed (the delta ADDS entries; none of the three appears among the
-# seed's own explicit severities, which are all untouched), and the generated app carries the one
-# command that restores SA1210/SA1211 plus the by-hand note for IDE0021.
+# four repos. Two rules are relaxed (the delta ADDS entries; neither appears among the seed's own
+# explicit severities, which are all untouched), and the generated app carries the one command that
+# restores SA1210 plus the by-hand note for IDE0021.
 $editorConfig = Join-Path $appStaging '.editorconfig'
 if (-not (Test-Path $editorConfig)) {
     throw "No .editorconfig in staging. Generated apps would build without the five analyzers."
@@ -1274,13 +1273,11 @@ $delta = @'
 #
 # Scaffolding renamed every namespace in this solution. That changes where your own usings sort
 # against MMCA.Common.* and the third-party ones, so the using directives you were handed are not
-# in alphabetical order and SA1210 would fail your first build. SA1211 is the same story for the
-# identifier-alias file, whose two aliases sort differently depending on the aggregate and child
-# names you asked for.
+# in alphabetical order and SA1210 would fail your first build.
 #
 # Sort them with:
 #
-#     dotnet format analyzers <YourApp>.slnx --diagnostics SA1210 SA1211 --severity info
+#     dotnet format analyzers <YourApp>.slnx --diagnostics SA1210 --severity info
 #
 # Every dotnet new mmca-command / mmca-query slice arrives with the same skew, so either re-run
 # that command after scaffolding, or leave this block in place until you have stopped scaffolding
@@ -1291,11 +1288,10 @@ $delta = @'
 # statement, which the baseline would then require you to write as an expression body. Fold it to
 # an expression body by hand (or add your own second property) and you can delete this line.
 #
-# Only these three rules are relaxed. Every other analyzer stays at error severity.
+# Only these two rules are relaxed. Every other analyzer stays at error severity.
 # ---------------------------------------------------------------------------------------------
 [*.cs]
 dotnet_diagnostic.SA1210.severity = suggestion
-dotnet_diagnostic.SA1211.severity = suggestion
 dotnet_diagnostic.IDE0021.severity = suggestion
 '@
 

@@ -117,12 +117,11 @@ Tests/
 ## The one-time fixup the scaffold deliberately left to you
 
 **Re-sort the using directives.** Renaming every namespace moved where your own usings sort
-against `MMCA.Common.*` and the third-party ones, so `SA1210` starts as a suggestion, and `SA1211`
-with it: the identifier-alias file's two aliases sort differently depending on the aggregate and
-child names you asked for (see the scaffold delta at the bottom of `.editorconfig`). Sort them with:
+against `MMCA.Common.*` and the third-party ones, so `SA1210` starts as a suggestion (see the
+scaffold delta at the bottom of `.editorconfig`). Sort them with:
 
 ```bash
-dotnet format analyzers MMCA.Helpdesk.slnx --diagnostics SA1210 SA1211 --severity info
+dotnet format analyzers MMCA.Helpdesk.slnx --diagnostics SA1210 --severity info
 ```
 
 Every `mmca-command` / `mmca-query` slice arrives with the same skew, so either re-run that after
@@ -198,7 +197,7 @@ never generated, so there is nothing to delete afterwards.
 
 | Option | Effect |
 |---|---|
-| `--flat` | No child collection at all: no child entity, DTO, requests, mapper, EF configuration, Add/Edit/Remove slices, controller endpoints, identifier alias, or tests. Use it when the aggregate owns no growable children. |
+| `--flat` | No child collection at all: no child entity, DTO, requests, mapper, EF configuration, Add/Edit/Remove slices, controller endpoints, or tests. Use it when the aggregate owns no growable children. |
 | `--no-status` | No status axis: no status enum, no `ChangeStatus` slice, request, or endpoint, no `Status` property, no status invariant or tests. Use it when the aggregate has no lifecycle state. |
 | `--no-description` | No long-text property: no `Description` property or invariant, no max-length constant, no DTO, request, or command field, no validator rule, no EF max-length configuration, no error-resource entries, no UI field, no tests. Use it when the aggregate's main text property is all the text it needs. |
 | `--no-owner` | No owning-user property: no `RequesterUserId` property, no create-request field or validator rule, no member on the creation integration event, no EF index, no UI field or column, no tests. Use it when the aggregate is not owned by a single user, or until you add an Identity module to resolve one. |

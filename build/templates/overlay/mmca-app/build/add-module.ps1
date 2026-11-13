@@ -712,10 +712,13 @@ Add-AfterAnchor `
 # ---- 5. identifier alias ------------------------------------------------------------------------
 Write-Step 'Identifier-alias link'
 
-# The alias file declares `global using <Aggregate>IdentifierType = ...`. It lives in the module's
+# The alias file declares `global using <Aggregate>IdentifierType = int;`. It lives in the module's
 # Shared project and is LINKED into every other project in the solution, which is what makes the
 # alias mean the same thing in the domain, the handlers and the controller. Without this block the
 # alias is visible only inside the project that declares it, and the module does not compile.
+# Because the file reaches every project, including the OTHER modules' ones, it aliases primitives
+# only: the strongly typed child identifier gets no alias, and the generated code names the wrapper
+# type directly. An alias to a module's own type would break the first module's build here.
 $aliasFile = "$app.$Name.GlobalUsings.IdentifierType.cs"
 $aliasPath = Join-Path $moduleRoot "$app.$Name.Shared/$aliasFile"
 
@@ -738,7 +741,7 @@ if (-not (Test-Path $aliasPath)) {
         ) `
         -AlreadyApplied ([regex]::Escape($aliasFile)) `
         -Description "Directory.Build.props links $aliasFile into every project" `
-        -Manual "Add to Directory.Build.props, beside the existing <Compile Include ... Link ...> block and inside the same ItemGroup (its condition keeps the aliases out of the orchestration project and the template pack, which cannot see a strongly typed identifier):`n    <Compile Include=`"`$(MSBuildThisFileDirectory)Source\Modules\$Name\$app.$Name.Shared\$aliasFile`"`n             Link=`"GlobalUsings\$aliasFile`"`n             Condition=`"'`$(MSBuildProjectName)' != '$app.$Name.Shared'`" />"
+        -Manual "Add to Directory.Build.props, beside the existing <Compile Include ... Link ...> block and inside the same ItemGroup (its condition keeps the aliases out of the orchestration project and the template pack, which use none):`n    <Compile Include=`"`$(MSBuildThisFileDirectory)Source\Modules\$Name\$app.$Name.Shared\$aliasFile`"`n             Link=`"GlobalUsings\$aliasFile`"`n             Condition=`"'`$(MSBuildProjectName)' != '$app.$Name.Shared'`" />"
 }
 
 # ---- 6. architecture map ------------------------------------------------------------------------

@@ -1,5 +1,6 @@
 using MMCA.Common.Application.UseCases.Markers;
 using MMCA.Helpdesk.Tickets.Domain.Tickets;
+using MMCA.Helpdesk.Tickets.Shared.Tickets;
 
 namespace MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.EditComment;
 
@@ -10,7 +11,7 @@ namespace MMCA.Helpdesk.Tickets.Application.Tickets.UseCases.EditComment;
 /// </summary>
 public sealed record EditCommentCommand(
     TicketIdentifierType TicketId,
-    TicketCommentIdentifierType CommentId,
+    TicketCommentId CommentId,
     string Body) : ICacheInvalidating<Ticket>
 {
     /// <summary>

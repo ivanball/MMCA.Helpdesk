@@ -211,7 +211,7 @@ public sealed class TicketsController(
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> EditCommentAsync(
         TicketIdentifierType id,
-        TicketCommentIdentifierType commentId,
+        TicketCommentId commentId,
         EditCommentRequest request,
         CancellationToken cancellationToken)
     {
@@ -229,7 +229,7 @@ public sealed class TicketsController(
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RemoveCommentAsync(
         TicketIdentifierType id,
-        TicketCommentIdentifierType commentId,
+        TicketCommentId commentId,
         CancellationToken cancellationToken)
     {
         var result = await removeCommentHandler.HandleAsync(

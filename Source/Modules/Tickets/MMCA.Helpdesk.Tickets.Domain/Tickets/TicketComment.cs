@@ -3,6 +3,7 @@ using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Extensions;
 using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Shared.Abstractions;
+using MMCA.Helpdesk.Tickets.Shared.Tickets;
 
 namespace MMCA.Helpdesk.Tickets.Domain.Tickets;
 
@@ -13,7 +14,7 @@ namespace MMCA.Helpdesk.Tickets.Domain.Tickets;
 /// here, because the audit trail records history per aggregate.
 /// </summary>
 [IdValueGenerated]
-public sealed class TicketComment : AuditableBaseEntity<TicketCommentIdentifierType>, ITenantEntity
+public sealed class TicketComment : AuditableBaseEntity<TicketCommentId>, ITenantEntity
 {
     [Navigation]
     public Ticket? Ticket { get; private set; }
@@ -35,7 +36,7 @@ public sealed class TicketComment : AuditableBaseEntity<TicketCommentIdentifierT
     }
 
     public static Result<TicketComment> Create(
-        TicketCommentIdentifierType? id,
+        TicketCommentId? id,
         string body,
         int authorUserId)
     {

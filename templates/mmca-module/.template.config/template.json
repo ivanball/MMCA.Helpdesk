@@ -100,7 +100,7 @@
       "type": "parameter",
       "datatype": "bool",
       "defaultValue": "false",
-      "description": "Generate the module WITHOUT a child collection: no child entity, DTO, requests, mapper, EF configuration, Add/Edit/Remove slices, controller endpoints, identifier alias, or tests. Use it when your aggregate owns no growable children. Makes --child irrelevant."
+      "description": "Generate the module WITHOUT a child collection: no child entity, DTO, requests, mapper, EF configuration, Add/Edit/Remove slices, controller endpoints, or tests. Use it when your aggregate owns no growable children. Makes --child irrelevant."
     },
     "noStatus": {
       "type": "parameter",

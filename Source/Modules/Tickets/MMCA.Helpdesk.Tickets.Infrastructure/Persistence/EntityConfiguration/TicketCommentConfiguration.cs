@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration;
 using MMCA.Helpdesk.Tickets.Domain.Tickets;
+using MMCA.Helpdesk.Tickets.Shared.Tickets;
 
 namespace MMCA.Helpdesk.Tickets.Infrastructure.Persistence.EntityConfiguration;
 
@@ -9,7 +10,7 @@ namespace MMCA.Helpdesk.Tickets.Infrastructure.Persistence.EntityConfiguration;
 /// <see cref="TicketConfiguration"/> owns the relationship; this configures the comment's own columns.
 /// </summary>
 internal sealed class TicketCommentConfiguration
-    : EntityTypeConfigurationSQLServer<TicketComment, TicketCommentIdentifierType>
+    : EntityTypeConfigurationSQLServer<TicketComment, TicketCommentId>
 {
     public override void Configure(EntityTypeBuilder<TicketComment> builder)
     {
