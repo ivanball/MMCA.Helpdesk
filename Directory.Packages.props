@@ -27,9 +27,9 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.15" />
     <!-- template:end sqlserverOrSqlite -->
     <PackageVersion Include="xunit.v3" Version="4.0.3" />
-    <PackageVersion Include="MudBlazor" Version="9.12.0" />
+    <PackageVersion Include="MudBlazor" Version="9.13.0" />
     <!-- bUnit v2 (BunitContext / Render API) — xUnit v3 / Microsoft Testing Platform compatible. -->
-    <PackageVersion Include="bunit" Version="2.14.0" />
+    <PackageVersion Include="bunit" Version="2.15.2" />
     <PackageVersion Include="NetArchTest.eNhancedEdition" Version="1.4.5" />
     <PackageVersion Include="Riok.Mapperly" Version="4.3.1" />
     <PackageVersion Include="Meziantou.Analyzer" Version="3.0.339" />
