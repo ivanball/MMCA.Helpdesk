@@ -87,7 +87,7 @@ skill walks through the whole sequence.
 - Never name a sub-folder `Domain`, `Application`, `Infrastructure`, `API` or `UI` inside a module
   project: the module name is derived from those namespace segments.
 - Namespaces follow folders. File-scoped namespaces, braces always, `_camelCase` private fields,
-  `var` only when the type is apparent.
+  `var` by default (required where the type is apparent; an explicit type elsewhere is allowed).
 - Every new layer assembly is registered in the architecture map under `Tests/Architecture/`, or
   the layering rules silently stop covering it (`build/add-module.ps1` does this for a module).
 
