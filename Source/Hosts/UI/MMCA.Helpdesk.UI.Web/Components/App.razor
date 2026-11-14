@@ -20,14 +20,24 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
     <meta name="theme-color" content="#1565C0" />
-    <HeadOutlet @rendermode="InteractiveServer" />
+    <HeadOutlet @rendermode="PageRenderMode" />
 </head>
 
 <body>
-    <Routes @rendermode="InteractiveServer" />
+    <Routes @rendermode="PageRenderMode" />
     <script src="_framework/blazor.web.js"></script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
     <script src="_content/MMCA.Common.UI.Web/pwa-register.js"></script>
 </body>
 
 </html>
+
+@code {
+    // A page that opts out of interactive routing (the framework /Error page) renders statically: the
+    // interactive router does not know it and would answer it with "Page Not Found" once the circuit
+    // starts (ADC Run 17 U-58). Every other page runs in a Server circuit.
+    private IComponentRenderMode? PageRenderMode =>
+        HttpContext.AcceptsInteractiveRouting() ? RenderMode.InteractiveServer : null;
+
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+}
