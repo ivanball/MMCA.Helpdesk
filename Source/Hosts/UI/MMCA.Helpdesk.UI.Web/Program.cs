@@ -3,6 +3,7 @@ using MMCA.Common.Aspire;
 using MMCA.Common.UI;
 using MMCA.Common.UI.Services.Culture;
 using MMCA.Common.UI.Theme;
+using MMCA.Common.UI.Web.Hosting;
 using MMCA.Common.UI.Web.Pwa;
 using MMCA.Helpdesk.UI.Web.Components;
 using MMCA.Helpdesk.UI.Web.Services;
@@ -85,6 +86,8 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()
     // The shared SSR /Error page (MMCA.Common.UI.Web): UseExceptionHandler("/Error") above re-executes
     // to that route, which this host does not define itself.
-    .AddAdditionalAssemblies(typeof(MMCA.Common.UI.Web._Imports).Assembly);
+    .AddAdditionalAssemblies(typeof(MMCA.Common.UI.Web._Imports).Assembly)
+    // HEAD on a page a GET renders (an uptime probe, link checker or crawler) gets its status, not a 404.
+    .AllowHead();
 
 await app.RunAsync();
