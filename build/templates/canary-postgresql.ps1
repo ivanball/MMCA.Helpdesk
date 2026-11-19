@@ -127,18 +127,18 @@ Invoke-Step 'Shape' {
     }
 
     $props = Join-Path $appRoot 'Directory.Packages.props'
-    foreach ($id in @('Npgsql.EntityFrameworkCore.PostgreSQL', 'AspNetCore.HealthChecks.NpgSql', 'Aspire.Hosting.PostgreSQL')) {
+    foreach ($id in @('Npgsql.EntityFrameworkCore.PostgreSQL', 'Aspire.Hosting.PostgreSQL')) {
         if (-not (Select-String -Path $props -Pattern ([regex]::Escape("Include=`"$id`"")) -Quiet)) {
             throw "Directory.Packages.props pins no $id. The postgresql package swap did not reach it; check the engine alternatives in build/templates/stage.ps1."
         }
     }
-    foreach ($id in @('Microsoft.EntityFrameworkCore.SqlServer', 'AspNetCore.HealthChecks.SqlServer', 'Microsoft.EntityFrameworkCore.PostgreSQL', 'AspNetCore.HealthChecks.PostgreSQL')) {
+    foreach ($id in @('Microsoft.EntityFrameworkCore.SqlServer', 'Microsoft.EntityFrameworkCore.PostgreSQL')) {
         if (Select-String -Path $props -Pattern ([regex]::Escape("Include=`"$id`"")) -Quiet) {
-            throw "Directory.Packages.props still pins $id in a postgresql solution. Either the SQL Server branch survived, or the engineName rename reached an id it must not (there is no Microsoft or HealthChecks package spelled that way for PostgreSQL)."
+            throw "Directory.Packages.props still pins $id in a postgresql solution. Either the SQL Server branch survived, or the engineName rename reached an id it must not (there is no Microsoft package spelled that way for PostgreSQL)."
         }
     }
 
-    Write-Host "  migrations project, design-time factory and all three PostgreSQL package pins are in place"
+    Write-Host "  migrations project, design-time factory and both PostgreSQL package pins are in place"
 }
 
 # The mirror of the shape check, and the reason it is not vacuous: an absence check passes just as

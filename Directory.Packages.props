@@ -10,20 +10,17 @@
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.15" />
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.15" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.15" />
-    <!-- The two engine provider pins, kept together because scaffolding swaps them as a pair.
-         Both ids carry the engine's name as a substring, and the engineName symbol in
-         .template.config/template.json rewrites exactly that substring, so the sqlite database
-         option lands on AspNetCore.HealthChecks.Sqlite and Microsoft.EntityFrameworkCore.Sqlite at
-         these same versions. Keep the ids spelled so the substring stays intact, or the rename stops
-         reaching them.
-         PostgreSQL is the exception, which is why these two lines sit inside a marker region rather
-         than relying on the rename: its provider is Npgsql.EntityFrameworkCore.PostgreSQL and its
-         readiness check is AspNetCore.HealthChecks.NpgSql, neither of which shares a substring with
-         its SQL Server peer. build/templates/stage.ps1 injects that branch as the sibling postgresql
-         region; the versions there are the ones MMCA.Common itself resolves.
+    <!-- The engine provider pin. The id carries the engine's name as a substring, and the
+         engineName symbol in .template.config/template.json rewrites exactly that substring, so the
+         sqlite database option lands on Microsoft.EntityFrameworkCore.Sqlite at this same version.
+         Keep the id spelled so the substring stays intact, or the rename stops reaching it.
+         PostgreSQL is the exception, which is why this line sits inside a marker region rather than
+         relying on the rename: its provider is Npgsql.EntityFrameworkCore.PostgreSQL, which shares
+         no substring with its SQL Server peer. build/templates/stage.ps1 injects that branch as the
+         sibling postgresql region; the version there is the one MMCA.Common itself resolves.
+         The readiness checks need no pin here: MMCA.Common.Aspire ships them for every engine.
          XML comments cannot carry a double hyphen, so option names are spelled out in prose here. -->
     <!-- template:begin sqlserverOrSqlite -->
-    <PackageVersion Include="AspNetCore.HealthChecks.SqlServer" Version="9.0.0" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.15" />
     <!-- template:end sqlserverOrSqlite -->
     <PackageVersion Include="xunit.v3" Version="4.0.3" />
