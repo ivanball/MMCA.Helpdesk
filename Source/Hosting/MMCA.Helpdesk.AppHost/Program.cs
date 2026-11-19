@@ -29,7 +29,7 @@ var globexDb = sql.AddDatabase("helpdesk-globex", "Helpdesk_Globex");
 // WaitFor the SQL server (healthy once the container accepts connections), not the database
 // resource. The web host CREATES the database via EF Migrate at startup, so waiting on the
 // database's existence would deadlock: it never exists until the app that is waiting runs.
-var web = builder.AddProject<Projects.MMCA_Helpdesk_Web>("web")
+var web = builder.AddDotnetProject("web", "../../Hosts/MMCA.Helpdesk.Web/MMCA.Helpdesk.Web.csproj")
     .WithSQLServerDataSource(helpdeskDb, "Tickets")
     .WithEnvironment("ConnectionStrings__SQLServerConnectionString", helpdeskDb.Resource.ConnectionStringExpression)
     .WithEnvironment(
@@ -49,7 +49,7 @@ var web = builder.AddProject<Projects.MMCA_Helpdesk_Web>("web")
 // the endpoint the UI's typed HttpClient resolves. WaitFor(web) holds the UI back until the API's
 // health check above reports healthy, so the first page render cannot race a host that is still
 // migrating the database.
-builder.AddProject<Projects.MMCA_Helpdesk_UI_Web>("ui")
+builder.AddDotnetProject("ui", "../../Hosts/UI/MMCA.Helpdesk.UI.Web/MMCA.Helpdesk.UI.Web.csproj")
     .WithReference(web)
     .WaitFor(web)
     .WithExternalHttpEndpoints();

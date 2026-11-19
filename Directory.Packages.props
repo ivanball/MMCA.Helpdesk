@@ -10,20 +10,17 @@
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.15" />
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.15" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.15" />
-    <!-- The two engine provider pins, kept together because scaffolding swaps them as a pair.
-         Both ids carry the engine's name as a substring, and the engineName symbol in
-         .template.config/template.json rewrites exactly that substring, so the sqlite database
-         option lands on AspNetCore.HealthChecks.Sqlite and Microsoft.EntityFrameworkCore.Sqlite at
-         these same versions. Keep the ids spelled so the substring stays intact, or the rename stops
-         reaching them.
-         PostgreSQL is the exception, which is why these two lines sit inside a marker region rather
-         than relying on the rename: its provider is Npgsql.EntityFrameworkCore.PostgreSQL and its
-         readiness check is AspNetCore.HealthChecks.NpgSql, neither of which shares a substring with
-         its SQL Server peer. build/templates/stage.ps1 injects that branch as the sibling postgresql
-         region; the versions there are the ones MMCA.Common itself resolves.
+    <!-- The engine provider pin. The id carries the engine's name as a substring, and the
+         engineName symbol in .template.config/template.json rewrites exactly that substring, so the
+         sqlite database option lands on Microsoft.EntityFrameworkCore.Sqlite at this same version.
+         Keep the id spelled so the substring stays intact, or the rename stops reaching it.
+         PostgreSQL is the exception, which is why this line sits inside a marker region rather than
+         relying on the rename: its provider is Npgsql.EntityFrameworkCore.PostgreSQL, which shares
+         no substring with its SQL Server peer. build/templates/stage.ps1 injects that branch as the
+         sibling postgresql region; the version there is the one MMCA.Common itself resolves.
+         The readiness checks need no pin here: MMCA.Common.Aspire ships them for every engine.
          XML comments cannot carry a double hyphen, so option names are spelled out in prose here. -->
     <!-- template:begin sqlserverOrSqlite -->
-    <PackageVersion Include="AspNetCore.HealthChecks.SqlServer" Version="9.0.0" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.15" />
     <!-- template:end sqlserverOrSqlite -->
     <PackageVersion Include="xunit.v3" Version="4.0.3" />
@@ -38,23 +35,28 @@
     <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.36.0.15337" />
     <PackageVersion Include="StyleCop.Analyzers" Version="1.3.180" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.23.0" />
-    <PackageVersion Include="coverlet.collector" Version="10.1.0" />
+    <PackageVersion Include="coverlet.collector" Version="10.1.1" />
     <!-- Lockstep with the resolved Microsoft.Testing.Platform (2.5.2, via xunit.v3 4.0.3). -->
     <PackageVersion Include="Microsoft.Testing.Extensions.Retry" Version="2.5.2" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.15" />
     <PackageVersion Include="Moq" Version="4.21.0" />
     <PackageVersion Include="Respawn" Version="7.0.0" />
     <PackageVersion Include="Deque.AxeCore.Playwright" Version="4.14.0" />
-    <PackageVersion Include="Microsoft.Playwright" Version="1.65.0" />
+    <PackageVersion Include="Microsoft.Playwright" Version="1.65.1" />
     <PackageVersion Include="Testcontainers.MsSql" Version="4.17.0" />
     <!-- Aspire. Every comment about the orchestration project lives INSIDE its region, so a solution
          generated without one is not handed prose about a project it does not have. -->
     <!-- template:begin aspire -->
-    <!-- These three pins belong to the orchestration project alone, which the no-aspire option does
-         not generate. Aspire.StackExchange.* and the service-discovery/resilience pins below belong
-         to the service hosts and stay in every shape, because AddServiceDefaults() does. -->
-    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.6.5" />
-    <PackageVersion Include="Aspire.Hosting.Redis" Version="13.6.5" />
+    <!-- These pins belong to the orchestration project alone, which the no-aspire option does not
+         generate. Aspire.StackExchange.* and the service-discovery/resilience pins below belong to the
+         service hosts and stay in every shape, because AddServiceDefaults() does.
+         Aspire.Hosting.AppHost and Aspire.Hosting.Dotnet make the orchestration project an AppHost:
+         Aspire 17 retired the AppHost project SDK, so the AppHost is a Microsoft.NET.Sdk
+         project that takes the orchestrator from the first and AddDotnetProject from the second. -->
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="17.0.0" />
+    <PackageVersion Include="Aspire.Hosting.Dotnet" Version="17.0.0" />
+    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="17.0.0" />
+    <PackageVersion Include="Aspire.Hosting.Redis" Version="17.0.0" />
     <!-- template:end aspire -->
     <!-- template:begin aspireSqlServer -->
     <!-- The one engine-specific orchestration pin: SQLite has no container resource, so the sqlite
@@ -63,9 +65,9 @@
          The postgresql option DOES declare a container, and its hosting integration is spelled
          Aspire.Hosting.PostgreSQL at the same version, which is exactly what the engineName rename
          produces from this id. So this one line serves both server engines unchanged. -->
-    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.6.5" />
+    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="17.0.0" />
     <!-- template:end aspireSqlServer -->
-    <PackageVersion Include="Aspire.StackExchange.Redis.DistributedCaching" Version="13.6.5" />
+    <PackageVersion Include="Aspire.StackExchange.Redis.DistributedCaching" Version="17.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.11.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.11.0" />
     <!-- OpenTelemetry.Api pinned directly to force transitive resolution to non-vulnerable version. -->
@@ -78,22 +80,22 @@
     <PackageVersion Include="Grpc.AspNetCore.Server.Reflection" Version="2.85.0" />
     <PackageVersion Include="Grpc.Net.ClientFactory" Version="2.85.0" />
     <PackageVersion Include="Grpc.Tools" Version="2.85.0" />
-    <PackageVersion Include="MMCA.Common.Grpc" Version="1.306.0" />
+    <PackageVersion Include="MMCA.Common.Grpc" Version="1.307.0" />
     <!-- MMCA Common Packages -->
-    <PackageVersion Include="MMCA.Common.Shared" Version="1.306.0" />
-    <PackageVersion Include="MMCA.Common.Domain" Version="1.306.0" />
-    <PackageVersion Include="MMCA.Common.Application" Version="1.306.0" />
-    <PackageVersion Include="MMCA.Common.Infrastructure" Version="1.306.0" />
-    <PackageVersion Include="MMCA.Common.API" Version="1.306.0" />
-    <PackageVersion Include="MMCA.Common.Aspire" Version="1.306.0" />
-    <PackageVersion Include="MMCA.Common.Aspire.Hosting" Version="1.306.0" />
+    <PackageVersion Include="MMCA.Common.Shared" Version="1.307.0" />
+    <PackageVersion Include="MMCA.Common.Domain" Version="1.307.0" />
+    <PackageVersion Include="MMCA.Common.Application" Version="1.307.0" />
+    <PackageVersion Include="MMCA.Common.Infrastructure" Version="1.307.0" />
+    <PackageVersion Include="MMCA.Common.API" Version="1.307.0" />
+    <PackageVersion Include="MMCA.Common.Aspire" Version="1.307.0" />
+    <PackageVersion Include="MMCA.Common.Aspire.Hosting" Version="1.307.0" />
     <PackageVersion Include="Yarp.ReverseProxy" Version="2.3.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery.Yarp" Version="10.11.0" />
-    <PackageVersion Include="MMCA.Common.Testing" Version="1.306.0" />
-    <PackageVersion Include="MMCA.Common.Testing.E2E" Version="1.306.0" />
-    <PackageVersion Include="MMCA.Common.Testing.UI" Version="1.306.0" />
-    <PackageVersion Include="MMCA.Common.Testing.Architecture" Version="1.306.0" />
-    <PackageVersion Include="MMCA.Common.UI" Version="1.306.0" />
-    <PackageVersion Include="MMCA.Common.UI.Web" Version="1.306.0" />
+    <PackageVersion Include="MMCA.Common.Testing" Version="1.307.0" />
+    <PackageVersion Include="MMCA.Common.Testing.E2E" Version="1.307.0" />
+    <PackageVersion Include="MMCA.Common.Testing.UI" Version="1.307.0" />
+    <PackageVersion Include="MMCA.Common.Testing.Architecture" Version="1.307.0" />
+    <PackageVersion Include="MMCA.Common.UI" Version="1.307.0" />
+    <PackageVersion Include="MMCA.Common.UI.Web" Version="1.307.0" />
   </ItemGroup>
 </Project>

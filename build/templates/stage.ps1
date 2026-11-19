@@ -143,13 +143,13 @@ function Copy-Tree {
 # engines' code at once, so those branches are INJECTED at staging time by Add-EngineAlternative
 # below, which writes them as ordinary marker regions for this same pass to convert.
 #
-# 'sqlserverOrSqlite' is the one label that is about PACKAGE IDS rather than about code. Two ids in
-# this tree carry the engine as a substring and are renamed by the engineName symbol
-# (Microsoft.EntityFrameworkCore.SqlServer, AspNetCore.HealthChecks.SqlServer), which lands sqlite on
-# real packages and postgresql on two that do not exist: its provider is
-# Npgsql.EntityFrameworkCore.PostgreSQL and its readiness check AspNetCore.HealthChecks.NpgSql. So
-# those lines are conditioned on NOT being postgresql, and the postgresql branch is injected beside
-# them like any other engine alternative. Aspire.Hosting.SqlServer is deliberately NOT in that set:
+# 'sqlserverOrSqlite' is the one label that is about a PACKAGE ID rather than about code. The EF
+# provider id carries the engine as a substring and is renamed by the engineName symbol
+# (Microsoft.EntityFrameworkCore.SqlServer), which lands sqlite on a real package and postgresql on
+# one that does not exist: its provider is Npgsql.EntityFrameworkCore.PostgreSQL. So those lines are
+# conditioned on NOT being postgresql, and the postgresql branch is injected beside them like any
+# other engine alternative. The readiness checks need no swap: MMCA.Common.Aspire ships them for
+# every engine, so no host carries a per-engine health-check package. Aspire.Hosting.SqlServer is deliberately NOT in that set:
 # the rename produces Aspire.Hosting.PostgreSQL, which is the real id at the same version.
 $markerConditions = @{
     'child'             = '!flat'
@@ -416,7 +416,7 @@ $engineAlternatives = @(
             '// file. Equal values are what make the two names collapse onto one database.'
             'var helpdeskDbPath = Path.Combine(builder.AppHostDirectory, "helpdesk.db");'
             ''
-            'var web = builder.AddProject<Projects.MMCA_Helpdesk_Web>("web")'
+            'var web = builder.AddDotnetProject("web", "../../Hosts/MMCA.Helpdesk.Web/MMCA.Helpdesk.Web.csproj")'
             '    .WithSqliteDataSource("Tickets", helpdeskDbPath)'
             '    .WithEnvironment("ConnectionStrings__SqliteConnectionString", $"Data Source={helpdeskDbPath}")'
             '    // Declares the readiness probe as this resource''s health check, which is what makes the'
@@ -460,7 +460,7 @@ $engineAlternatives = @(
             '// WaitFor the server (healthy once the container accepts connections), not the database'
             '// resource. The web host CREATES the schema via EF Migrate at startup, so waiting on the'
             '// database being populated would deadlock: it never is until the app that is waiting runs.'
-            'var web = builder.AddProject<Projects.MMCA_Helpdesk_Web>("web")'
+            'var web = builder.AddDotnetProject("web", "../../Hosts/MMCA.Helpdesk.Web/MMCA.Helpdesk.Web.csproj")'
             '    .WithPostgreSQLDataSource(helpdeskDb, "Tickets")'
             '    .WithEnvironment("ConnectionStrings__PostgreSQLConnectionString", helpdeskDb.Resource.ConnectionStringExpression)'
             '    .WithEnvironment('
@@ -489,27 +489,17 @@ $engineAlternatives = @(
             '    <PackageReference Include="Aspire.Hosting.PostgreSQL" />'
         )
     },
-    # The three package-id swaps the engineName rename cannot make. Everywhere else the two provider
-    # ids are the SQL Server ids with one substring rewritten, which is true for sqlite and false for
-    # PostgreSQL: its EF provider is Npgsql.EntityFrameworkCore.PostgreSQL and its readiness check
-    # AspNetCore.HealthChecks.NpgSql. The versions are the ones MMCA.Common itself resolves (ADR-113).
+    # The two package-id swaps the engineName rename cannot make (the pin and the reference).
+    # Everywhere else the EF provider id is the SQL Server id with one substring rewritten, which is
+    # true for sqlite and false for PostgreSQL: its EF provider is Npgsql.EntityFrameworkCore.PostgreSQL.
+    # The version is the one MMCA.Common itself resolves (ADR-113).
     @{
         Scope = 'app'
         Path = 'Directory.Packages.props'
         Marker = 'sqlserverOrSqlite'
         Alternative = 'postgresql'
         Lines = @(
-            '    <PackageVersion Include="AspNetCore.HealthChecks.NpgSql" Version="9.0.0" />'
             '    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />'
-        )
-    },
-    @{
-        Scope = 'app'
-        Path = 'Source/Hosts/MMCA.Helpdesk.Web/MMCA.Helpdesk.Web.csproj'
-        Marker = 'sqlserverOrSqlite'
-        Alternative = 'postgresql'
-        Lines = @(
-            '    <PackageReference Include="AspNetCore.HealthChecks.NpgSql" />'
         )
     },
     @{

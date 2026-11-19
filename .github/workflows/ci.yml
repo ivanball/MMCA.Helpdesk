@@ -100,6 +100,19 @@ jobs:
             10.0.x
             11.0.x
 
+      # Aspire 17 builds a C# AppHost against the matching Aspire CLI bundle (ASPIRE013, which cannot
+      # be suppressed), and the solution build includes the AppHost. Same version as the Aspire.*
+      # pins in Directory.Packages.props; bump this with them. --skip-path plus the explicit
+      # GITHUB_PATH line keeps the installer from editing shell profiles on the runner.
+      - name: Install Aspire CLI 17.0.0
+        env:
+          ASPIRE_CLI_VERSION: 17.0.0
+        run: |
+          set -euo pipefail
+          curl -fsSL https://aspire.dev/install.sh | bash -s -- --version "$ASPIRE_CLI_VERSION" --install-path "$HOME/.aspire/bin" --skip-path
+          echo "$HOME/.aspire/bin" >> "$GITHUB_PATH"
+          "$HOME/.aspire/bin/aspire" --version
+
       - name: Build (against MMCA.Common source)
         working-directory: MMCA.Helpdesk
         run: dotnet build MMCA.Helpdesk.slnx -c Release
@@ -136,6 +149,17 @@ jobs:
           dotnet-version: |
             10.0.x
             11.0.x
+
+      # The generated apps that keep the AppHost build it, which needs the Aspire CLI bundle
+      # (ASPIRE013). Same version as the Aspire.* pins in Directory.Packages.props.
+      - name: Install Aspire CLI 17.0.0
+        env:
+          ASPIRE_CLI_VERSION: 17.0.0
+        run: |
+          set -euo pipefail
+          curl -fsSL https://aspire.dev/install.sh | bash -s -- --version "$ASPIRE_CLI_VERSION" --install-path "$HOME/.aspire/bin" --skip-path
+          echo "$HOME/.aspire/bin" >> "$GITHUB_PATH"
+          "$HOME/.aspire/bin/aspire" --version
 
       # No MMCA.Common checkout on purpose: generated apps restore the pinned MMCA.Common.* release
       # from nuget.org with no token and no extra feed, and that is exactly the path being proven.
@@ -199,6 +223,17 @@ jobs:
           # Global tools land here, and whether the runner already has it on PATH depends on the
           # setup-dotnet version. Adding it unconditionally is idempotent and one line.
           echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+      # The postgresql scaffold keeps its AppHost, and building it needs the Aspire CLI bundle
+      # (ASPIRE013). Same version as the Aspire.* pins in Directory.Packages.props.
+      - name: Install Aspire CLI 17.0.0
+        env:
+          ASPIRE_CLI_VERSION: 17.0.0
+        run: |
+          set -euo pipefail
+          curl -fsSL https://aspire.dev/install.sh | bash -s -- --version "$ASPIRE_CLI_VERSION" --install-path "$HOME/.aspire/bin" --skip-path
+          echo "$HOME/.aspire/bin" >> "$GITHUB_PATH"
+          "$HOME/.aspire/bin/aspire" --version
 
       # No MMCA.Common checkout, for the same reason template-smoke has none: the generated app
       # restores the pinned MMCA.Common.* release from nuget.org, and that package-mode build is

@@ -15,11 +15,6 @@
   "preferNameDirectory": true,
 
   "forms": {
-    "toUnderscores": {
-      "identifier": "replace",
-      "pattern": "\\.",
-      "replacement": "_"
-    },
     "toLastSegment": {
       "identifier": "replace",
       "pattern": "^.*\\.",
@@ -92,13 +87,6 @@
   },
 
   "symbols": {
-    "appNameUnderscores": {
-      "type": "derived",
-      "valueSource": "name",
-      "valueTransform": "toUnderscores",
-      "replaces": "MMCA_Helpdesk",
-      "description": "Underscore form of the app name. Aspire generates a Projects.<Underscored_Project_Name> type per referenced project, so the AppHost needs this form."
-    },
     "appShortName": {
       "type": "derived",
       "valueSource": "name",
@@ -281,7 +269,7 @@
       "valueTransform": "toEngineName",
       "replaces": "SqlServer",
       "fileRename": "SqlServer",
-      "description": "Pascal spelling of the engine (SqlServer / Sqlite / PostgreSQL). It is what renames the migrations project (folder, csproj, namespace, assembly, and every reference to it), the Aspire hosting integration package id, and the design-time helper call DesignTimeDbContextHelper.CreateSqlServer -> CreateSqlite / CreatePostgreSQL. DERIVED from --database; there is no flag of its own. The two EF provider package ids are NOT renamed by substring on the postgresql choice (Npgsql.EntityFrameworkCore.PostgreSQL and AspNetCore.HealthChecks.NpgSql share no spelling with their SQL Server peers), so they are swapped by a marker region instead: see the sqlserverOrSqlite label in build/templates/stage.ps1."
+      "description": "Pascal spelling of the engine (SqlServer / Sqlite / PostgreSQL). It is what renames the migrations project (folder, csproj, namespace, assembly, and every reference to it), the Aspire hosting integration package id, and the design-time helper call DesignTimeDbContextHelper.CreateSqlServer -> CreateSqlite / CreatePostgreSQL. DERIVED from --database; there is no flag of its own. The EF provider package id is NOT renamed by substring on the postgresql choice (Npgsql.EntityFrameworkCore.PostgreSQL shares no spelling with its SQL Server peer), so it is swapped by a marker region instead: see the sqlserverOrSqlite label in build/templates/stage.ps1."
     },
     "engineNameUpper": {
       "type": "derived",
