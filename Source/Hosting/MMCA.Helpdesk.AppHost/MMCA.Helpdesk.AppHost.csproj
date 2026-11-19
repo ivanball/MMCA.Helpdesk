@@ -1,25 +1,25 @@
-<Project Sdk="Aspire.AppHost.Sdk/13.6.5">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <IsAspireHost>true</IsAspireHost>
     <UserSecretsId>mmca-helpdesk-apphost</UserSecretsId>
-    <!-- This AppHost runs via dotnet run, not the Aspire CLI bundle; ASPIRE010 nudges toward the
-         bundle and is suppressed until that workflow change is adopted deliberately. -->
-    <NoWarn>$(NoWarn);ASPIRE010</NoWarn>
   </PropertyGroup>
 
+  <!-- Aspire 17 AppHost: a plain Microsoft.NET.Sdk project. Aspire.Hosting.AppHost brings the
+       orchestrator and the AppHost build targets, Aspire.Hosting.Dotnet brings AddDotnetProject. The
+       web and ui hosts are declared by path in Program.cs, so there is no ProjectReference to them. -->
   <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.AppHost" />
+    <PackageReference Include="Aspire.Hosting.Dotnet" />
     <!-- template:begin sqlserver -->
     <PackageReference Include="Aspire.Hosting.SqlServer" />
     <!-- template:end sqlserver -->
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Hosts\MMCA.Helpdesk.Web\MMCA.Helpdesk.Web.csproj" />
-    <ProjectReference Include="..\..\Hosts\UI\MMCA.Helpdesk.UI.Web\MMCA.Helpdesk.UI.Web.csproj" />
-    <PackageReference Include="MMCA.Common.Aspire" IsAspireProjectResource="false" />
-    <PackageReference Include="MMCA.Common.Aspire.Hosting" IsAspireProjectResource="false" />
+    <PackageReference Include="MMCA.Common.Aspire" />
+    <PackageReference Include="MMCA.Common.Aspire.Hosting" />
   </ItemGroup>
 
 </Project>

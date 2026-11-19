@@ -15,11 +15,6 @@
   "preferNameDirectory": true,
 
   "forms": {
-    "toUnderscores": {
-      "identifier": "replace",
-      "pattern": "\\.",
-      "replacement": "_"
-    },
     "toLastSegment": {
       "identifier": "replace",
       "pattern": "^.*\\.",
@@ -92,13 +87,6 @@
   },
 
   "symbols": {
-    "appNameUnderscores": {
-      "type": "derived",
-      "valueSource": "name",
-      "valueTransform": "toUnderscores",
-      "replaces": "MMCA_Helpdesk",
-      "description": "Underscore form of the app name. Aspire generates a Projects.<Underscored_Project_Name> type per referenced project, so the AppHost needs this form."
-    },
     "appShortName": {
       "type": "derived",
       "valueSource": "name",

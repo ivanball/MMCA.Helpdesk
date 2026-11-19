@@ -50,11 +50,16 @@
     <!-- Aspire. Every comment about the orchestration project lives INSIDE its region, so a solution
          generated without one is not handed prose about a project it does not have. -->
     <!-- template:begin aspire -->
-    <!-- These three pins belong to the orchestration project alone, which the no-aspire option does
-         not generate. Aspire.StackExchange.* and the service-discovery/resilience pins below belong
-         to the service hosts and stay in every shape, because AddServiceDefaults() does. -->
-    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.6.5" />
-    <PackageVersion Include="Aspire.Hosting.Redis" Version="13.6.5" />
+    <!-- These pins belong to the orchestration project alone, which the no-aspire option does not
+         generate. Aspire.StackExchange.* and the service-discovery/resilience pins below belong to the
+         service hosts and stay in every shape, because AddServiceDefaults() does.
+         Aspire.Hosting.AppHost and Aspire.Hosting.Dotnet make the orchestration project an AppHost:
+         Aspire 17 retired the AppHost project SDK, so the AppHost is a Microsoft.NET.Sdk
+         project that takes the orchestrator from the first and AddDotnetProject from the second. -->
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="17.0.0" />
+    <PackageVersion Include="Aspire.Hosting.Dotnet" Version="17.0.0" />
+    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="17.0.0" />
+    <PackageVersion Include="Aspire.Hosting.Redis" Version="17.0.0" />
     <!-- template:end aspire -->
     <!-- template:begin aspireSqlServer -->
     <!-- The one engine-specific orchestration pin: SQLite has no container resource, so the sqlite
@@ -63,9 +68,9 @@
          The postgresql option DOES declare a container, and its hosting integration is spelled
          Aspire.Hosting.PostgreSQL at the same version, which is exactly what the engineName rename
          produces from this id. So this one line serves both server engines unchanged. -->
-    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.6.5" />
+    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="17.0.0" />
     <!-- template:end aspireSqlServer -->
-    <PackageVersion Include="Aspire.StackExchange.Redis.DistributedCaching" Version="13.6.5" />
+    <PackageVersion Include="Aspire.StackExchange.Redis.DistributedCaching" Version="17.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.11.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.11.0" />
     <!-- OpenTelemetry.Api pinned directly to force transitive resolution to non-vulnerable version. -->
