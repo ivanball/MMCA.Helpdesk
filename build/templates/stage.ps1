@@ -492,14 +492,14 @@ $engineAlternatives = @(
     # The two package-id swaps the engineName rename cannot make (the pin and the reference).
     # Everywhere else the EF provider id is the SQL Server id with one substring rewritten, which is
     # true for sqlite and false for PostgreSQL: its EF provider is Npgsql.EntityFrameworkCore.PostgreSQL.
-    # The version is the one MMCA.Common itself resolves (ADR-113).
+    # The version is the one MMCA.Common itself resolves for net10.0 (ADR-113; its MmcaNpgsqlVersion).
     @{
         Scope = 'app'
         Path = 'Directory.Packages.props'
         Marker = 'sqlserverOrSqlite'
         Alternative = 'postgresql'
         Lines = @(
-            '    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />'
+            '    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.4" />'
         )
     },
     @{
