@@ -3,9 +3,10 @@ root = true
 # =============================================================================
 # SHARED ANALYZER BASELINE
 # Everything above the "REPO-SPECIFIC DELTAS" marker near the bottom of this
-# file is byte-identical across MMCA.Common, MMCA.Store, MMCA.ADC and
-# MMCA.Helpdesk. Edit it in all four repos in the same pass and verify with
-# the workspace script: Tools\Scripts\compare-analyzer-config.ps1
+# file holds the same lines in MMCA.Common, MMCA.Store, MMCA.ADC and
+# MMCA.Helpdesk (the check ignores case and line order, so keep the order
+# identical by hand). Edit it in all four repos in the same pass and verify
+# with the workspace script: Tools\Scripts\compare-analyzer-config.ps1
 # =============================================================================
 
 ###############################################################################

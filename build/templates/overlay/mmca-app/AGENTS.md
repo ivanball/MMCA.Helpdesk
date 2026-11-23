@@ -40,9 +40,10 @@ module compiles and still misses wiring that the templates get right and the tes
 - **A query (read) slice**: from the same folder,
   `dotnet new mmca-query -n <UseCase> --app <App> --module <Module> --aggregate <Aggregate>`.
 
-Generate slices from that exact folder: the command template also writes a cache-invalidation test
-builder relative to it, into the module's Application test project. The `.claude/skills/slice`
-skill walks through the whole sequence.
+Generate slices from that exact folder: the templates write their files relative to it. The command
+slice writes no cache-invalidation test; the shared convention test and the module's
+cache-invalidation tests cover a new command by reflection. The `.claude/skills/slice` skill walks
+through the whole sequence.
 
 ## Framework rules that fail quietly when broken
 
