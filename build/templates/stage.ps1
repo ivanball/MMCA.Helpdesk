@@ -1306,8 +1306,8 @@ if ($sharedHeaderHits -eq 1) {
         '# ANALYZER BASELINE'
         '# Scaffolded by dotnet new mmca-app. In the reference seed this block is kept'
         '# byte-identical across the framework repos; here it is yours, edit it freely.'
-        '# The SCAFFOLD DELTA at the bottom of this file is the only rule the scaffold'
-        '# relaxes, and it says how to put it back.'
+        '# The SCAFFOLD DELTA at the bottom of this file holds the only two rules the'
+        '# scaffold relaxes, and it says how to put them back.'
         '# ============================================================================='
     )
     $newline = if ($editorConfigText.Contains("`r`n")) { "`r`n" } else { "`n" }
