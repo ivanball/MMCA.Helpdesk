@@ -254,6 +254,9 @@ namespace MMCA.Helpdesk.Migrations.SqlServer.Tickets.Migrations
                         .IsUnicode(false)
                         .HasColumnType("varchar(64)");
 
+                    b.Property<byte?>("TraceFlags")
+                        .HasColumnType("tinyint");
+
                     b.Property<string>("TraceId")
                         .HasMaxLength(64)
                         .IsUnicode(false)
@@ -343,6 +346,9 @@ namespace MMCA.Helpdesk.Migrations.SqlServer.Tickets.Migrations
                         .HasMaxLength(64)
                         .IsUnicode(false)
                         .HasColumnType("varchar(64)");
+
+                    b.Property<byte?>("TraceFlags")
+                        .HasColumnType("tinyint");
 
                     b.Property<string>("TraceId")
                         .HasMaxLength(64)
