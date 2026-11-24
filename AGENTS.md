@@ -86,7 +86,7 @@ The other opt-ins are configuration only. `AuditTrail:Enabled` and `Scheduler:En
 
 - **Issuer-less auth by default.** No Identity module ships here, so `Web/Program.cs` registers a bare auth scheme when `Authentication:JwtBearer:Authority` is unset, and `TicketsController` and `AuditHistoryController` are `[AllowAnonymous]` (both on the `AnonymousEndpointTests` allow-list). To add real RS256/JWKS auth: add the Identity module (BUILD-BY-HAND Phase 8), set the authority, flip `TicketsController` back to `[Authorize]`, and delete `[AllowAnonymous]` from `AuditHistoryController` so its inherited `audit:view` gate applies. **Do not add `[Authorize]` without an issuer** or the pipeline rejects every request.
 - **Extraction is host-only.** Turning Tickets into its own service changes only the hosting/AppHost (per-service DB, broker, YARP gateway, JWKS): the Domain/Application/Shared/Infrastructure/API code does **not** change. Preserve that property.
-- **Architecture fitness functions are real tests.** `Tests/Architecture/` subclasses the shared NetArchTest bases parameterized by `HelpdeskArchitectureMap` (ADR-015). A new module or layer assembly must be registered in that map or the layering rules silently stop covering it.
+- **Architecture fitness functions are real tests.** `Tests/Architecture/` subclasses the shared `MMCA.Common.Testing.Architecture` bases parameterized by `HelpdeskArchitectureMap` (ADR-015). A new module or layer assembly must be registered in that map or the layering rules silently stop covering it.
 
 ## Contribution Flow (PR-based)
 

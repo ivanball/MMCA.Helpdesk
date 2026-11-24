@@ -20,7 +20,7 @@
   </PropertyGroup>
 
   <!-- Test-wide suppressions (mirrors MMCA.Common): xUnit1051 (CancellationToken propagation) for
-       every test project; CA2263 (prefer generic overload) for the NetArchTest-based architecture
+       every test project; CA2263 (prefer generic overload) for the reflection-based architecture
        tests. Kept here so individual test csproj files carry no per-project NoWarn duplication. -->
   <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('Tests'))">
     <NoWarn>$(NoWarn);xUnit1051</NoWarn>

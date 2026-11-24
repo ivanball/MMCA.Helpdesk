@@ -1,7 +1,7 @@
 namespace MMCA.Helpdesk.Architecture.Tests;
 
 /// <summary>
-/// Declares every framework and module layer assembly for MMCA.Helpdesk. The shared NetArchTest
+/// Declares every framework and module layer assembly for MMCA.Helpdesk. The shared architecture
 /// rule library (in MMCA.Common.Testing.Architecture) is parameterized by this map, so the layering,
 /// module-isolation, and transport-at-edges rules run identically here (ADR-015).
 /// </summary>
