@@ -345,7 +345,14 @@ else
             var result = await Api.AddCommentAsync(Id, _newComment, authorUserId: 1);
             if (result.IsSuccess)
             {
-                _newComment = string.Empty;
+                // Cleared through the control, not by assigning the bound field: a value pushed in from
+                // here re-runs the control's Required check on a field the user already left, so the
+                // emptied entry would come back showing its error. ResetAsync clears both together.
+                if (_newCommentField is not null)
+                {
+                    await _newCommentField.ResetAsync();
+                }
+
                 await LoadAsync();
             }
             else

@@ -29,5 +29,6 @@
     <Project Path="Tests/Modules/Tickets/MMCA.Helpdesk.Tickets.Domain.Tests/MMCA.Helpdesk.Tickets.Domain.Tests.csproj" />
     <Project Path="Tests/Modules/Tickets/MMCA.Helpdesk.Tickets.Application.Tests/MMCA.Helpdesk.Tickets.Application.Tests.csproj" />
     <Project Path="Tests/Architecture/MMCA.Helpdesk.Architecture.Tests/MMCA.Helpdesk.Architecture.Tests.csproj" />
+    <Project Path="Tests/Hosts/UI/MMCA.Helpdesk.UI.Web.Tests/MMCA.Helpdesk.UI.Web.Tests.csproj" />
   </Folder>
 </Solution>
