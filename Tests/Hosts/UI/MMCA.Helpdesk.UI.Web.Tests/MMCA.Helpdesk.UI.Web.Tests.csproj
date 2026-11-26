@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="AwesomeAssertions" />
+    <PackageReference Include="bunit" />
+    <PackageReference Include="Moq" />
+    <!-- BunitComponentTestBase: MudBlazor services, loose JSInterop, localization and the toast facades. -->
+    <PackageReference Include="MMCA.Common.Testing.UI" />
+    <PackageReference Include="coverlet.collector">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\Source\Hosts\UI\MMCA.Helpdesk.UI.Web\MMCA.Helpdesk.UI.Web.csproj" />
+  </ItemGroup>
+</Project>

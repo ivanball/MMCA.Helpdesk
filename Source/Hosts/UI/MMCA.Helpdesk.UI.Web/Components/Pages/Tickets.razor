@@ -231,10 +231,7 @@
             if (result.IsSuccess)
             {
                 Toast.Success(L["Snackbar.Opened"]);
-                _title = string.Empty;
-                @* template:begin description *@
-                _description = string.Empty;
-                @* template:end description *@
+                await ClearFormAsync();
                 await LoadAsync();
             }
             else
@@ -246,6 +243,25 @@
         {
             _busy = false;
         }
+    }
+
+    // Clears through each control rather than by assigning the bound fields: a value pushed in from
+    // here re-runs the control's own Required check on a field the user already left, so the emptied
+    // form would come back showing the very errors a missing value earns. ResetAsync empties the value
+    // AND the validation state together.
+    private async Task ClearFormAsync()
+    {
+        if (_titleField is not null)
+        {
+            await _titleField.ResetAsync();
+        }
+        @* template:begin description *@
+
+        if (_descriptionField is not null)
+        {
+            await _descriptionField.ResetAsync();
+        }
+        @* template:end description *@
     }
 
     // First invalid control wins, in visual order, which is what a sighted user would reach first too.
